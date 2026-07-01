@@ -25,19 +25,17 @@
 const todo = () => Array(100).fill(null)
 
 export const LEVELS = [
-  { id: 'beginner',     label: 'Beginner',     description: 'Levels 1–2 · Ages 5–7' },
-  { id: 'elementary',   label: 'Elementary',   description: 'Levels 3–4 · Ages 7–9' },
-  { id: 'intermediate', label: 'Intermediate', description: 'Levels 5–6 · Ages 9–11' },
-  { id: 'advanced',     label: 'Advanced',     description: 'Levels 7–8 · Ages 11+' },
-  { id: 'expert',       label: 'Expert',       description: 'Levels 9–10 · Masters' },
+  { id: '1',     label: '1',     description: 'Level 1' },
+  { id: '2',     label: '2',     description: 'Level 2' },
+  { id: '3',     label: '3',     description: 'Level 3' },
+  { id: '4',     label: '4',     description: 'Level 4' },
 ]
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  BEGINNER  (100 form URLs, one per day)
-// ─────────────────────────────────────────────────────────────────────────────
-const BEGINNER_FORMS = [
+const Level3_FORMS = [
   // Day 1  – Day 10
-  null, null, null, null, null, null, null, null, null, null,
+  "https://docs.google.com/forms/d/e/1FAIpQLSfrDhixcWG-EHKUK4SlrKAM6dbhGhOGSN7b7dVLWFqCDgZuEw/viewform?embedded=true", 
+  "https://docs.google.com/forms/d/e/1FAIpQLSfpTBoLDDj7gTQSQmm8Witsr-rRVRiARYVG6lHagVzuFcuNxA/viewform?embedded=true",
+  null, null, null, null, null, null, null, null,
   // Day 11 – Day 20
   null, null, null, null, null, null, null, null, null, null,
   // Day 21 – Day 30
