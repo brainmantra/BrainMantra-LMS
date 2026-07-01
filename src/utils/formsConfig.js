@@ -25,20 +25,121 @@
 const todo = () => Array(100).fill(null)
 
 export const LEVELS = [
-  { id: '1',     label: '1',     description: 'Level 1'},
-  { id: '2',   label: '2',   description: 'Level 2'},
-  { id: '3', label: '3', description: 'Level 3'},
-  { id: '4', label: '4', description: 'Level 4'},
-  { id: '5', label: '5', description: 'Level 5'},
-  { id: '6', label: '6', description: 'Level 6'},
-  { id: '7', label: '7', description: 'Level 7'},
-  { id: '8', label: '8', description: 'Level 8'},
+  { id: 'beginner',     label: 'Beginner',     description: 'Levels 1–2 · Ages 5–7' },
+  { id: 'elementary',   label: 'Elementary',   description: 'Levels 3–4 · Ages 7–9' },
+  { id: 'intermediate', label: 'Intermediate', description: 'Levels 5–6 · Ages 9–11' },
+  { id: 'advanced',     label: 'Advanced',     description: 'Levels 7–8 · Ages 11+' },
+  { id: 'expert',       label: 'Expert',       description: 'Levels 9–10 · Masters' },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  BEGINNER  (100 form URLs, one per day)
 // ─────────────────────────────────────────────────────────────────────────────
-const Level1_FORMS = [
+const BEGINNER_FORMS = [
+  // Day 1  – Day 10
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 11 – Day 20
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 21 – Day 30
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 31 – Day 40
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 41 – Day 50
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 51 – Day 60
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 61 – Day 70
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 71 – Day 80
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 81 – Day 90
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 91 – Day 100
+  null, null, null, null, null, null, null, null, null, null,
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ELEMENTARY  (100 form URLs, one per day)
+// ─────────────────────────────────────────────────────────────────────────────
+const ELEMENTARY_FORMS = [
+  // Day 1  – Day 10
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 11 – Day 20
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 21 – Day 30
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 31 – Day 40
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 41 – Day 50
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 51 – Day 60
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 61 – Day 70
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 71 – Day 80
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 81 – Day 90
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 91 – Day 100
+  null, null, null, null, null, null, null, null, null, null,
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  INTERMEDIATE  (100 form URLs, one per day)
+// ─────────────────────────────────────────────────────────────────────────────
+const INTERMEDIATE_FORMS = [
+  // Day 1  – Day 10
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 11 – Day 20
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 21 – Day 30
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 31 – Day 40
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 41 – Day 50
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 51 – Day 60
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 61 – Day 70
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 71 – Day 80
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 81 – Day 90
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 91 – Day 100
+  null, null, null, null, null, null, null, null, null, null,
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ADVANCED  (100 form URLs, one per day)
+// ─────────────────────────────────────────────────────────────────────────────
+const ADVANCED_FORMS = [
+  // Day 1  – Day 10
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 11 – Day 20
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 21 – Day 30
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 31 – Day 40
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 41 – Day 50
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 51 – Day 60
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 61 – Day 70
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 71 – Day 80
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 81 – Day 90
+  null, null, null, null, null, null, null, null, null, null,
+  // Day 91 – Day 100
+  null, null, null, null, null, null, null, null, null, null,
+]
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  EXPERT  (100 form URLs, one per day)
+// ─────────────────────────────────────────────────────────────────────────────
+const EXPERT_FORMS = [
   // Day 1  – Day 10
   null, null, null, null, null, null, null, null, null, null,
   // Day 11 – Day 20
@@ -65,14 +166,11 @@ const Level1_FORMS = [
 //  Master lookup map
 // ─────────────────────────────────────────────────────────────────────────────
 const FORM_MAP = {
-  '1':     Level1_FORMS,
-  '2':     Level2_FORMS,
-  '3':     Level3_FORMS,
-  '4':     Level4_FORMS,
-  '5':     Level5_FORMS,
-  '6':     Level6_FORMS,
-  '7':     Level7_FORMS,
-  '8':     Level8_FORMS,
+  beginner:     BEGINNER_FORMS,
+  elementary:   ELEMENTARY_FORMS,
+  intermediate: INTERMEDIATE_FORMS,
+  advanced:     ADVANCED_FORMS,
+  expert:       EXPERT_FORMS,
 }
 
 /**
@@ -95,4 +193,4 @@ export function isFormConfigured(level, dayNumber) {
 // URL of the Google Form used for initial registration (linked on the login page).
 // Students fill this out once; it populates the Google Sheet used for verification.
 export const REGISTRATION_FORM_URL =
-  'https://docs.google.com/forms/d/e/17uasmqIXH7XWxIMDA9b4UeF8KQRR4kwQVSvSEsgjElQ/viewform'
+  'https://docs.google.com/forms/d/e/YOUR_REGISTRATION_FORM_ID/viewform'
