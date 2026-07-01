@@ -48,3 +48,8 @@ logs/
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.local
 .cache/
+
+.env.example
+api/.env
+.env.local
+google-credentials.json
