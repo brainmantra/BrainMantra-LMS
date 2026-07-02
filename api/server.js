@@ -4,6 +4,7 @@ import cors from 'cors'
 import pool from './db.js'
 import studentsRouter    from './routes/students.js'
 import leaderboardRouter from './routes/leaderboard.js'
+import cronRouter        from './routes/cron.js'
 import { startStreakCron } from './jobs/streakCron.js'
 
 const app  = express()
@@ -29,6 +30,7 @@ app.get('/api/health', async (req, res) => {
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/students',    studentsRouter)
 app.use('/api/leaderboard', leaderboardRouter)
+app.use('/api/cron',        cronRouter)
 
 // ── 404 ──────────────────────────────────────────────────────────────────────
 app.use('/api', (req, res) => {
@@ -46,7 +48,12 @@ async function start() {
   try {
     await pool.query('SELECT 1')     // verify DB connection before accepting traffic
     console.log('[server] PostgreSQL connected')
-    startStreakCron()
+    
+    // Only run the background node-cron if we are not on Vercel (e.g. local or Render deployment)
+    if (!process.env.VERCEL) {
+      startStreakCron()
+    }
+    
     app.listen(PORT, () => {
       console.log(`[server] 100 Days of Abacus API listening on port ${PORT}`)
     })

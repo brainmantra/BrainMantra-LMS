@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS students (
   name                 TEXT        NOT NULL,
   mobile               VARCHAR(10) NOT NULL UNIQUE,
   level                VARCHAR(20) NOT NULL
-                         CHECK (level IN ('beginner','elementary','intermediate','advanced','expert')),
+                         CHECK (level IN ('1','2','3','4','5','6','7','8','9','10','beginner','elementary','intermediate','advanced','expert')),
   registration_date    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   streak               INTEGER     NOT NULL DEFAULT 0,
   longest_streak       INTEGER     NOT NULL DEFAULT 0,
@@ -48,6 +48,13 @@ CREATE INDEX IF NOT EXISTS idx_day_records_completed ON day_records(completed, c
 async function migrate() {
   const client = await pool.connect()
   try {
+    // Attempt to drop the old constraint if it exists (ignoring error if it doesn't)
+    try {
+      await client.query(`ALTER TABLE students DROP CONSTRAINT IF EXISTS students_level_check;`)
+    } catch (e) {
+      console.log('[migrate] No existing constraint to drop or could not drop:', e.message)
+    }
+
     await client.query(SQL)
     console.log('[migrate] All tables created / verified.')
   } catch (err) {
