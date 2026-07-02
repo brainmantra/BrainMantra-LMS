@@ -172,41 +172,4 @@ router.post('/:id/progress/:dayNumber/open', async (req, res) => {
   }
 })
 
-// ── Mark day "completed" ─────────────────────────────────────────────────
-router.post('/:id/progress/:dayNumber/complete', async (req, res) => {
-  try {
-    const studentId = parseInt(req.params.id, 10)
-    const dayNumber = parseInt(req.params.dayNumber, 10)
-    const { accuracy, time_taken_seconds } = req.body ?? {}
-
-    // Must be opened first
-    const { rows: existing } = await pool.query(
-      `SELECT * FROM day_records WHERE student_id = $1 AND day_number = $2`,
-      [studentId, dayNumber]
-    )
-    if (!existing[0]?.opened) {
-      return res.status(400).json({ message: 'Day must be opened before it can be completed.' })
-    }
-
-    const { rows } = await pool.query(
-      `UPDATE day_records
-          SET completed = TRUE, completed_at = NOW(),
-              accuracy = COALESCE($3, accuracy),
-              time_taken_seconds = COALESCE($4, time_taken_seconds),
-              updated_at = NOW()
-        WHERE student_id = $1 AND day_number = $2
-        RETURNING *`,
-      [studentId, dayNumber, accuracy ?? null, time_taken_seconds ?? null]
-    )
-
-    const student = await getStudentById(studentId)
-    await recalculateStreak(studentId, student.registration_date)
-
-    res.json(rows[0])
-  } catch (err) {
-    console.error('[complete] Error:', err)
-    res.status(500).json({ message: 'Server error completing day.' })
-  }
-})
-
 export default router

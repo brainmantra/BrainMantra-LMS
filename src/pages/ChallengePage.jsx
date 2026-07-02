@@ -113,7 +113,7 @@ export default function ChallengePage() {
           </div>
         ) : (
           <section className="day-grid animate-fade" style={{ animationDelay: '0.1s' }}>
-            {Array.from({ length: 100 }, (_, i) => i + 1).map(dayNum => (
+            {Array.from({ length: clampedCurrentDay }, (_, i) => i + 1).map(dayNum => (
               <DayCard
                 key={dayNum}
                 dayNumber={dayNum}

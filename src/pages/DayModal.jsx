@@ -90,14 +90,18 @@ export default function DayModal() {
     }
   }
 
-  const handleConfirmSubmitted = async () => {
+  const handleCheckVerification = async () => {
     setSubmitting(true)
     try {
-      await api.post(`/students/${student._id}/progress/${dayNum}/complete`)
-      setPhase('submitted')
-      toast.success('Day marked complete! Great work 🎉')
+      const res = await api.get(`/students/${student._id}/progress/${dayNum}`)
+      if (res.data?.completed) {
+        setPhase('submitted')
+        toast.success('Day marked complete! Great work 🎉')
+      } else {
+        toast.error('We have not received your submission yet. Please wait a few seconds and try again, or make sure you submitted the form.')
+      }
     } catch {
-      toast.error('Could not confirm submission. Please try again.')
+      toast.error('Could not verify status. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -230,14 +234,14 @@ export default function DayModal() {
 
         <div className="day-modal-form-footer">
           <p className="day-modal-form-hint">
-            Submitted the form above? Click confirm to record your completion.
+            Submitted the form above? Our system verifies it automatically. If it doesn't close on its own, you can manually check the status.
           </p>
           <button
             className="btn btn-primary"
-            onClick={handleConfirmSubmitted}
+            onClick={handleCheckVerification}
             disabled={submitting}
           >
-            {submitting ? 'Confirming…' : "I've submitted ✓"}
+            {submitting ? 'Checking…' : "Check Verification Status"}
           </button>
         </div>
       </div>

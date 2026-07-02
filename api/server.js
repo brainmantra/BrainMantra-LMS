@@ -5,6 +5,7 @@ import pool from './db.js'
 import studentsRouter    from './routes/students.js'
 import leaderboardRouter from './routes/leaderboard.js'
 import cronRouter        from './routes/cron.js'
+import webhooksRouter    from './routes/webhooks.js'
 import { startStreakCron } from './jobs/streakCron.js'
 
 const app  = express()
@@ -31,6 +32,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/students',    studentsRouter)
 app.use('/api/leaderboard', leaderboardRouter)
 app.use('/api/cron',        cronRouter)
+app.use('/api/webhooks',    webhooksRouter)
 
 // ── 404 ──────────────────────────────────────────────────────────────────────
 app.use('/api', (req, res) => {
