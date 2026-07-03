@@ -245,25 +245,7 @@ export default function DayModal() {
     }
   }
 
-  const submitTest = async (finalAnswers, finalTimes) => {
-    setPhase('submitting')
-    setLoadingMsg('Evaluating your speed & syncing...')
-    const totalTimeSeconds = finalTimes.reduce((acc, curr) => acc + curr.timeTaken, 0)
-    setTotalTime(totalTimeSeconds)
 
-    try {
-      await api.post(`/students/${student.id}/progress/${dayNum}/submit`, {
-        submitUrl,
-        answers: finalAnswers,
-        questionTimes: finalTimes,
-        totalTimeSeconds
-      })
-      setPhase('summary')
-    } catch (err) {
-      toast.error('Could not submit test. Please try again.')
-      setPhase('error')
-    }
-  }
 
   const handleClose = () => navigate('/challenge')
 
