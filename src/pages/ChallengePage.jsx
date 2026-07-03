@@ -26,7 +26,7 @@ export default function ChallengePage() {
     let mounted = true
     async function load() {
       try {
-        const res = await api.get(`/students/${student._id}/progress`)
+        const res = await api.get(`/students/${student.id}/progress`)
         if (!mounted) return
         setDays(res.data.days || [])
         setStreak(res.data.streak ?? 0)
@@ -37,7 +37,7 @@ export default function ChallengePage() {
         if (mounted) setLoading(false)
       }
     }
-    if (student?._id) load()
+    if (student?.id) load()
     return () => { mounted = false }
   }, [student])
 

@@ -43,7 +43,7 @@ export default function DayModal() {
       }
       const today = isDayToday(student.registration_date, dayNum)
       try {
-        const res = await api.get(`/students/${student._id}/progress/${dayNum}`)
+        const res = await api.get(`/students/${student.id}/progress/${dayNum}`)
         if (!mounted) return
         const record = res.data || null
 
@@ -79,7 +79,7 @@ export default function DayModal() {
   const handleStart = async () => {
     setSubmitting(true)
     try {
-      await api.post(`/students/${student._id}/progress/${dayNum}/open`)
+      await api.post(`/students/${student.id}/progress/${dayNum}/open`)
       setPhase('form')
       window.open(formUrl, '_blank')
     } catch (err) {
@@ -93,7 +93,7 @@ export default function DayModal() {
   const handleCheckVerification = async () => {
     setSubmitting(true)
     try {
-      const res = await api.get(`/students/${student._id}/progress/${dayNum}`)
+      const res = await api.get(`/students/${student.id}/progress/${dayNum}`)
       if (res.data?.completed) {
         setPhase('submitted')
         toast.success('Day marked complete! Great work 🎉')

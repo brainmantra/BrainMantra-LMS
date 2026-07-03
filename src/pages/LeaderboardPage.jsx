@@ -76,9 +76,9 @@ export default function LeaderboardPage() {
           <div className="lb-podium-wrap">
             {/* Top 3 podium */}
             <div className="lb-podium animate-fade">
-              {leaders.slice(0, 3).map((leader, i) => (
-                <div key={leader._id} className={`lb-podium-slot lb-podium-slot--${i + 1}`}>
-                  <span className="lb-medal">{medals[i]}</span>
+              {top3.map((leader, i) => (
+                <div key={leader.id} className={`lb-podium-slot lb-podium-slot--${i + 1}`}>
+                  <div className="lb-medal">{medals[i]}</div>
                   <div className="lb-podium-avatar">{leader.name.charAt(0).toUpperCase()}</div>
                   <span className="lb-podium-name">{leader.name}</span>
                   <span className="lb-podium-stats">{leader.accuracy}% · {leader.avgTime}s avg</span>
@@ -89,9 +89,9 @@ export default function LeaderboardPage() {
             {/* Full list */}
             {leaders.length > 3 && (
               <div className="lb-list animate-fade" style={{ animationDelay: '0.1s' }}>
-                {leaders.slice(3).map((leader, i) => (
-                  <div key={leader._id} className="lb-row">
-                    <span className="lb-row-rank">{i + 4}</span>
+                {rest.map((leader, index) => (
+                  <div key={leader.id} className="lb-row">
+                    <span className="lb-row-rank">{index + 4}</span>
                     <span className="lb-row-name">{leader.name}</span>
                     <span className="lb-row-stat">{leader.accuracy}% accuracy</span>
                     <span className="lb-row-stat">{leader.avgTime}s avg</span>
