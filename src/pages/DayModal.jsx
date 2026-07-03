@@ -1,17 +1,23 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { isDayToday } from '../utils/dateUtils'
 import { isFormConfigured } from '../utils/formsConfig'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
+import Confetti from 'react-confetti'
+import { useWindowSize } from 'react-use'
 import './DayModal.css'
+
+const SECONDS_PER_QUESTION = 15;
+const MAX_XP_PER_QUESTION = 1000;
 
 export default function DayModal() {
   const { dayNumber } = useParams()
   const dayNum = parseInt(dayNumber, 10)
   const { student } = useAuth()
   const navigate = useNavigate()
+  const { width, height } = useWindowSize()
 
   const [phase, setPhase] = useState('checking') 
   const [blockReason, setBlockReason] = useState('')
@@ -29,9 +35,14 @@ export default function DayModal() {
   const [questionStart, setQuestionStart] = useState(0)
   
   const [totalTime, setTotalTime] = useState(0)
+  const [totalXp, setTotalXp] = useState(0)
+  const [lastXpGained, setLastXpGained] = useState(0)
+  const [showXpAnim, setShowXpAnim] = useState(false)
   
   // UI Timer for current question
   const [uiTimer, setUiTimer] = useState(0)
+  // Sub-second precision for the shrinking bar
+  const [msElapsed, setMsElapsed] = useState(0)
 
   const formReady = isFormConfigured(student?.level, dayNum)
 
@@ -78,8 +89,10 @@ export default function DayModal() {
     let interval;
     if (phase === 'test') {
       interval = setInterval(() => {
-        setUiTimer(Math.floor((Date.now() - questionStart) / 1000))
-      }, 1000)
+        const elapsed = Date.now() - questionStart
+        setMsElapsed(elapsed)
+        setUiTimer(Math.floor(elapsed / 1000))
+      }, 50) // 50ms for smooth progress bar
     }
     return () => clearInterval(interval)
   }, [phase, questionStart])
@@ -88,14 +101,10 @@ export default function DayModal() {
     setPhase('fetching')
     setLoadingMsg('Preparing your questions...')
     try {
-      // 1. Mark day opened
       await api.post(`/students/${student.id}/progress/${dayNum}/open`)
-      
-      // 2. Fetch questions
       const qRes = await api.get(`/students/${student.id}/progress/${dayNum}/questions`)
       setQuestions(qRes.data.questions)
       setSubmitUrl(qRes.data.submitUrl)
-      
       startCountdown()
     } catch (err) {
       const msg = err.response?.data?.message || 'Could not load questions.'
@@ -126,8 +135,15 @@ export default function DayModal() {
     setAnswers([])
     setQuestionTimes([])
     setCurrentAnswer('')
+    setTotalXp(0)
     setQuestionStart(Date.now())
     setPhase('test')
+  }
+
+  const calculateXp = (timeSec) => {
+    if (timeSec >= SECONDS_PER_QUESTION) return 100; // Minimum points
+    const ratio = (SECONDS_PER_QUESTION - timeSec) / SECONDS_PER_QUESTION;
+    return 100 + Math.round(ratio * (MAX_XP_PER_QUESTION - 100));
   }
 
   const handleNext = async () => {
@@ -136,9 +152,20 @@ export default function DayModal() {
       return
     }
 
-    const timeTaken = Math.floor((Date.now() - questionStart) / 1000)
+    const elapsedMs = Date.now() - questionStart
+    const timeSec = elapsedMs / 1000
+    const timeTaken = Math.floor(timeSec)
     const currentQ = questions[currentIndex]
     
+    // XP Calculation
+    const xpGained = calculateXp(timeSec)
+    setLastXpGained(xpGained)
+    setTotalXp(prev => prev + xpGained)
+    
+    // Trigger XP animation
+    setShowXpAnim(true)
+    setTimeout(() => setShowXpAnim(false), 800)
+
     const newAnswers = [...answers, {
       questionId: currentQ.id,
       entryId: currentQ.entryId,
@@ -157,16 +184,16 @@ export default function DayModal() {
       setCurrentIndex(currentIndex + 1)
       setCurrentAnswer('')
       setQuestionStart(Date.now())
+      setMsElapsed(0)
       setUiTimer(0)
     } else {
-      // Finished
       submitTest(newAnswers, newTimes)
     }
   }
 
   const submitTest = async (finalAnswers, finalTimes) => {
     setPhase('submitting')
-    setLoadingMsg('Submitting your answers...')
+    setLoadingMsg('Evaluating your speed & syncing...')
     const totalTimeSeconds = finalTimes.reduce((acc, curr) => acc + curr.timeTaken, 0)
     setTotalTime(totalTimeSeconds)
 
@@ -177,7 +204,6 @@ export default function DayModal() {
         questionTimes: finalTimes,
         totalTimeSeconds
       })
-      
       setPhase('summary')
     } catch (err) {
       toast.error('Could not submit test. Please try again.')
@@ -187,7 +213,6 @@ export default function DayModal() {
 
   const handleClose = () => navigate('/challenge')
 
-  // Render formatters
   const formatTime = (sec) => {
     const m = Math.floor(sec / 60)
     const s = sec % 60
@@ -199,6 +224,16 @@ export default function DayModal() {
       <div key={i}>{line}</div>
     ))
   }
+
+  /* ── Progress Bar Logic ── */
+  const getTimerColor = (pct) => {
+    if (pct > 75) return '#ef4444'; // Red
+    if (pct > 50) return '#f5a623'; // Yellow
+    return '#10b981'; // Green
+  }
+  const timeLimitMs = SECONDS_PER_QUESTION * 1000
+  const timerPct = Math.min(100, (msElapsed / timeLimitMs) * 100)
+  const timerColor = getTimerColor(timerPct)
 
   /* ── Overlays ── */
   if (phase === 'checking' || phase === 'fetching' || phase === 'submitting') {
@@ -225,9 +260,23 @@ export default function DayModal() {
     return (
       <div className="day-modal-overlay day-modal-overlay--form">
         <div className="day-modal-test-card animate-pop">
+          
           <div className="test-header">
-            <div className="test-progress">Question {currentIndex + 1} of {questions.length}</div>
-            <div className="test-timer">⏱ {formatTime(uiTimer)}</div>
+            <div className="test-progress-pill">
+              <span className="q-label">Question {currentIndex + 1}</span>
+              <span className="q-total">/ {questions.length}</span>
+            </div>
+            <div className="test-xp-pill">
+              <span>{totalXp} XP</span>
+              {showXpAnim && <div className="xp-float-anim">+{lastXpGained}</div>}
+            </div>
+          </div>
+          
+          <div className="test-timer-bar-wrap">
+            <div 
+              className="test-timer-bar-fill" 
+              style={{ width: \`\${100 - timerPct}%\`, backgroundColor: timerColor }}
+            />
           </div>
           
           <div className="test-body">
@@ -258,27 +307,35 @@ export default function DayModal() {
   if (phase === 'summary') {
     return (
       <div className="day-modal-overlay day-modal-overlay--form">
+        <Confetti width={width} height={height} recycle={false} numberOfPieces={400} />
         <div className="day-modal-test-card animate-pop" style={{ height: 'auto', maxHeight: '90vh' }}>
-          <div className="test-header" style={{ justifyContent: 'center' }}>
-            <h3>Day {dayNum} Summary</h3>
+          
+          <div className="summary-header">
+            <div className="summary-icon">🏆</div>
+            <h2 className="summary-title">Challenge Complete!</h2>
+            <div className="summary-xp-total">{totalXp} XP Earned</div>
           </div>
           
           <div className="test-body summary-body">
-            <div className="summary-stat-box">
-              <div className="stat-label">Total Time</div>
-              <div className="stat-value">{formatTime(totalTime)}</div>
-            </div>
-            <div className="summary-stat-box">
-              <div className="stat-label">Avg Time / Question</div>
-              <div className="stat-value">{formatTime(Math.round(totalTime / questions.length))}</div>
+            <div className="summary-stats-grid">
+              <div className="summary-stat-card">
+                <div className="stat-card-label">Total Time</div>
+                <div className="stat-card-value">{formatTime(totalTime)}</div>
+              </div>
+              <div className="summary-stat-card">
+                <div className="stat-card-label">Avg Speed</div>
+                <div className="stat-card-value">{formatTime(Math.round(totalTime / questions.length))} /q</div>
+              </div>
             </div>
             
-            <h4 className="summary-subtitle">Per Question Breakdown</h4>
+            <h4 className="summary-subtitle">Speed Breakdown</h4>
             <div className="summary-list">
               {questionTimes.map((qt, i) => (
                 <div key={i} className="summary-list-item">
-                  <span>Q{i + 1}</span>
-                  <span>{formatTime(qt.timeTaken)}</span>
+                  <span>Question {i + 1}</span>
+                  <span style={{ color: qt.timeTaken > SECONDS_PER_QUESTION ? '#ef4444' : '#10b981' }}>
+                    {formatTime(qt.timeTaken)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -286,7 +343,7 @@ export default function DayModal() {
 
           <div className="test-footer">
             <button className="btn btn-primary btn-block" onClick={handleClose}>
-              Back to Challenge
+              Return to Dashboard
             </button>
           </div>
         </div>
@@ -294,8 +351,6 @@ export default function DayModal() {
     )
   }
 
-  // Fallback for errors or blocks...
-  // I will append the old block code here...
   if (phase === 'error') {
     return (
       <div className="day-modal-overlay" onClick={handleClose}>
@@ -352,10 +407,10 @@ export default function DayModal() {
     return (
       <div className="day-modal-overlay" onClick={handleClose}>
         <div className="day-modal-card animate-pop" onClick={e => e.stopPropagation()}>
-          <div className="day-modal-icon day-modal-icon--ready">🧮</div>
+          <div className="day-modal-icon day-modal-icon--ready">⚡</div>
           <h2 className="day-modal-title">Ready for Day {dayNum}?</h2>
           <p className="day-modal-text">
-            Make sure you're focused and have enough time. As soon as you start, the timer will begin!
+            Answer as fast as you can to earn maximum Speed XP! You have 15 seconds for bonus XP on each question.
           </p>
           {!formReady && (
             <div className="day-modal-warn-banner">
@@ -371,7 +426,7 @@ export default function DayModal() {
               onClick={handleStart}
               disabled={!formReady}
             >
-              I'm ready →
+              Start Game →
             </button>
           </div>
         </div>
