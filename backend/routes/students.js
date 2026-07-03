@@ -175,11 +175,16 @@ router.post('/:id/progress/:dayNumber/open', async (req, res) => {
 })
 
 // ── Migration Check ────────────────────────────────────────────────────────
-// Add question_times column if it doesn't exist (runs once on startup)
+// Add question_times, answers, and xp_earned columns if they don't exist
 // Guard against null pool during Vercel build (no DATABASE_URL at build time)
 if (pool) {
-  pool.query('ALTER TABLE day_records ADD COLUMN IF NOT EXISTS question_times JSONB;').catch(err => {
-    console.log('[db] Could not add question_times (already exists or DB error):', err.message)
+  pool.query(`
+    ALTER TABLE day_records 
+    ADD COLUMN IF NOT EXISTS question_times JSONB,
+    ADD COLUMN IF NOT EXISTS answers JSONB,
+    ADD COLUMN IF NOT EXISTS xp_earned INT DEFAULT 0;
+  `).catch(err => {
+    console.log('[db] Could not alter day_records table:', err.message)
   })
 }
 
@@ -214,7 +219,7 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
   try {
     const studentId = parseInt(req.params.id, 10)
     const dayNumber = parseInt(req.params.dayNumber, 10)
-    const { submitUrl, answers, questionTimes, totalTimeSeconds } = req.body
+    const { submitUrl, answers, questionTimes, totalTimeSeconds, xpEarned, accuracy } = req.body
 
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
@@ -239,13 +244,19 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
       }
     })
     
-    // Save the time metrics in day_records
+    // Save the metrics in day_records
     await pool.query(
-      `INSERT INTO day_records (student_id, day_number, time_taken_seconds, question_times)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO day_records (student_id, day_number, time_taken_seconds, question_times, answers, xp_earned, accuracy)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (student_id, day_number)
-       DO UPDATE SET time_taken_seconds = $3, question_times = $4, updated_at = NOW()`,
-      [studentId, dayNumber, totalTimeSeconds, JSON.stringify(questionTimes)]
+       DO UPDATE SET 
+         time_taken_seconds = $3, 
+         question_times = $4, 
+         answers = $5, 
+         xp_earned = $6, 
+         accuracy = $7, 
+         updated_at = NOW()`,
+      [studentId, dayNumber, totalTimeSeconds, JSON.stringify(questionTimes), JSON.stringify(answers), xpEarned || 0, accuracy || 0]
     )
 
     res.json({ success: true })

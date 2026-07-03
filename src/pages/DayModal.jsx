@@ -39,6 +39,7 @@ export default function DayModal() {
   
   // Sub-second precision for the shrinking bar
   const [msElapsed, setMsElapsed] = useState(0)
+  const [answerFeedback, setAnswerFeedback] = useState(null)
 
   const formReady = isFormConfigured(student?.level, dayNum)
 
@@ -157,25 +158,39 @@ export default function DayModal() {
       toast.error('Please enter an answer.')
       return
     }
+    if (answerFeedback) return // prevent double submission during feedback
 
     const elapsedMs = Date.now() - questionStart
     const timeSec = elapsedMs / 1000
     const timeTaken = Math.floor(timeSec)
     const currentQ = questions[currentIndex]
     
-    // XP Calculation
-    const xpGained = calculateXp(timeSec)
-    setLastXpGained(xpGained)
-    setTotalXp(prev => prev + xpGained)
+    // Evaluate answer
+    let isCorrect = true
+    if (currentQ.computedAnswer !== null) {
+      isCorrect = parseFloat(currentAnswer.trim()) === parseFloat(currentQ.computedAnswer)
+    }
+
+    setAnswerFeedback(isCorrect ? 'correct' : 'incorrect')
     
-    // Trigger XP animation
-    setShowXpAnim(true)
-    setTimeout(() => setShowXpAnim(false), 800)
+    // XP Calculation
+    let xpGained = 0
+    if (isCorrect) {
+      xpGained = calculateXp(timeSec)
+      setLastXpGained(xpGained)
+      setTotalXp(prev => prev + xpGained)
+      setShowXpAnim(true)
+      setTimeout(() => setShowXpAnim(false), 800)
+    }
 
     const newAnswers = [...answers, {
       questionId: currentQ.id,
       entryId: currentQ.entryId,
-      value: currentAnswer.trim()
+      value: currentAnswer.trim(),
+      isCorrect,
+      isMath: currentQ.computedAnswer !== null,
+      computedAnswer: currentQ.computedAnswer,
+      title: currentQ.title
     }]
     
     const newTimes = [...questionTimes, {
@@ -186,14 +201,42 @@ export default function DayModal() {
     setAnswers(newAnswers)
     setQuestionTimes(newTimes)
 
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-      setCurrentAnswer('')
-      setQuestionStart(Date.now())
-      setMsElapsed(0)
-      setMsElapsed(0)
-    } else {
-      submitTest(newAnswers, newTimes)
+    setTimeout(() => {
+      setAnswerFeedback(null)
+      if (currentIndex < questions.length - 1) {
+        setCurrentIndex(currentIndex + 1)
+        setCurrentAnswer('')
+        setQuestionStart(Date.now())
+        setMsElapsed(0)
+      } else {
+        submitTest(newAnswers, newTimes, totalXp + xpGained)
+      }
+    }, 600)
+  }
+
+  const submitTest = async (finalAnswers, finalTimes, finalXp) => {
+    setPhase('submitting')
+    setLoadingMsg('Evaluating your speed & syncing...')
+    const totalTimeSeconds = finalTimes.reduce((acc, curr) => acc + curr.timeTaken, 0)
+    setTotalTime(totalTimeSeconds)
+
+    const mathAnswers = finalAnswers.filter(a => a.isMath)
+    const correctAnswers = mathAnswers.filter(a => a.isCorrect)
+    const accuracy = mathAnswers.length > 0 ? Math.round((correctAnswers.length / mathAnswers.length) * 100) : 0
+
+    try {
+      await api.post(`/students/${student.id}/progress/${dayNum}/submit`, {
+        submitUrl,
+        answers: finalAnswers,
+        questionTimes: finalTimes,
+        totalTimeSeconds,
+        xpEarned: finalXp,
+        accuracy
+      })
+      setPhase('summary')
+    } catch (err) {
+      toast.error('Could not submit test. Please try again.')
+      setPhase('error')
     }
   }
 
@@ -291,8 +334,9 @@ export default function DayModal() {
             </div>
             <input
               type="text"
-              className="test-input"
+              className={`test-input ${answerFeedback ? 'feedback-' + answerFeedback : ''}`}
               autoFocus
+              disabled={!!answerFeedback}
               placeholder="Your answer..."
               value={currentAnswer}
               onChange={e => setCurrentAnswer(e.target.value)}
@@ -301,7 +345,7 @@ export default function DayModal() {
           </div>
 
           <div className="test-footer">
-            <button className="btn btn-primary btn-block" onClick={handleNext}>
+            <button className="btn btn-primary btn-block" onClick={handleNext} disabled={!!answerFeedback}>
               {currentIndex === questions.length - 1 ? 'Submit Test' : 'Next Question →'}
             </button>
           </div>
@@ -312,46 +356,123 @@ export default function DayModal() {
 
 
   if (phase === 'summary') {
+    const mathAnswers = answers.filter(a => a.isMath);
+    const correctCount = mathAnswers.filter(a => a.isCorrect).length;
+    const incorrectCount = mathAnswers.length - correctCount;
+    const accuracy = mathAnswers.length > 0 ? Math.round((correctCount / mathAnswers.length) * 100) : 0;
+    
+    // Calculate Streak
+    let longestStreak = 0;
+    let currentStreak = 0;
+    mathAnswers.forEach(a => {
+      if (a.isCorrect) {
+        currentStreak++;
+        if (currentStreak > longestStreak) longestStreak = currentStreak;
+      } else {
+        currentStreak = 0;
+      }
+    });
+
+    const avgTime = mathAnswers.length > 0 ? Math.round(totalTime / mathAnswers.length) : 0;
+
     return (
-      <div className="day-modal-overlay day-modal-overlay--form">
-        <div className="day-modal-test-card animate-pop" style={{ height: 'auto', maxHeight: '90vh' }}>
+      <div className="day-modal-overlay day-modal-overlay--form quiz-summary-overlay">
+        <div className="quiz-summary-container animate-pop">
           
-          <div className="summary-header">
-            <div className="summary-icon">🏆</div>
-            <h2 className="summary-title">Challenge Complete!</h2>
-            <div className="summary-xp-total">{totalXp} XP Earned</div>
-          </div>
-          
-          <div className="test-body summary-body">
-            <div className="summary-stats-grid">
-              <div className="summary-stat-card">
-                <div className="stat-card-label">Total Time</div>
-                <div className="stat-card-value">{formatTime(totalTime)}</div>
+          {/* Header Card */}
+          <div className="quiz-header-card">
+            <div className="quiz-header-content">
+              <h1 className="quiz-header-title">{student.name}'s Mastery</h1>
+              <p className="quiz-header-subtitle">🎉 Your Progress Matters!</p>
+              
+              <div className="quiz-header-stats">
+                <div className="quiz-header-rank">
+                  <span className="quiz-rank-value">15</span><span className="quiz-rank-total">/19</span>
+                  <div className="quiz-rank-label">Rank ⟳</div>
+                </div>
+                <div className="quiz-header-score">
+                  <span className="quiz-score-value">{totalXp}</span>
+                  <div className="quiz-score-label">Score</div>
+                </div>
               </div>
-              <div className="summary-stat-card">
-                <div className="stat-card-label">Avg Speed</div>
-                <div className="stat-card-value">{formatTime(Math.round(totalTime / questions.length))} /q</div>
+
+              <div className="quiz-header-actions">
+                <button className="btn-quiz btn-quiz-outline" onClick={() => window.location.reload()}>Play Again</button>
+                <button className="btn-quiz btn-quiz-primary" onClick={handleClose}>Return to Dashboard</button>
               </div>
             </div>
             
-            <h4 className="summary-subtitle">Speed Breakdown</h4>
-            <div className="summary-list">
-              {questionTimes.map((qt, i) => (
-                <div key={i} className="summary-list-item">
-                  <span>Question {i + 1}</span>
-                  <span style={{ color: qt.timeTaken > SECONDS_PER_QUESTION ? '#ef4444' : '#10b981' }}>
-                    {formatTime(qt.timeTaken)}
-                  </span>
+            <div className="quiz-avatar-section">
+              <img src={'https://api.dicebear.com/7.x/bottts/svg?seed=' + student.name} alt="Avatar" className="quiz-avatar-img" />
+              <button className="btn-quiz btn-quiz-white">Shop</button>
+            </div>
+          </div>
+
+          {/* Accuracy & Performance */}
+          <div className="quiz-metrics-grid">
+            
+            <div className="quiz-accuracy-card">
+              <h3 className="quiz-card-title">Accuracy ℹ</h3>
+              <div className="quiz-accuracy-timeline">
+                <div className="quiz-accuracy-scale">
+                  <span>100%</span><span>80%</span><span>60%</span><span>40%</span><span>20%</span><span>0%</span>
+                </div>
+                <div className="quiz-accuracy-plot">
+                  <div className="quiz-accuracy-point" style={{ bottom: `${accuracy}%` }}>
+                    <div className="quiz-accuracy-tooltip">{accuracy}%</div>
+                  </div>
+                  <div className="quiz-accuracy-label">This attempt</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="quiz-performance-card">
+              <div className="quiz-perf-header">
+                <h3 className="quiz-card-title">Performance Stats</h3>
+                <span className="quiz-perf-total">{mathAnswers.length} questions</span>
+              </div>
+              <div className="quiz-perf-pills">
+                <div className="quiz-pill pill-correct">✓ {correctCount} Correct</div>
+                <div className="quiz-pill pill-incorrect">✕ {incorrectCount} Incorrect</div>
+                <div className="quiz-pill pill-time">⏱ {avgTime} s time/question</div>
+                <div className="quiz-pill pill-streak">🔥 {longestStreak} Streak</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Review Questions */}
+          <div className="quiz-review-section">
+            <div className="quiz-review-header">
+              <div>
+                <h3 className="quiz-card-title">Review Questions</h3>
+                <p className="quiz-review-subtitle">Click on the questions to see answers</p>
+              </div>
+              <button className="btn-quiz btn-quiz-white">Study Flashcards</button>
+            </div>
+            
+            <div className="quiz-review-list">
+              {mathAnswers.map((ans, i) => (
+                <div key={i} className={`quiz-review-item ${ans.isCorrect ? 'item-correct' : 'item-incorrect'}`}>
+                  <div className="review-item-number">{i + 1}.</div>
+                  <div className="review-item-content">
+                    <div className="review-item-title">{ans.title.split('\n').map((l, j) => <div key={j}>{l}</div>)}</div>
+                    <div className="review-item-answers">
+                      <div className={`review-answer user-answer ${ans.isCorrect ? 'text-correct' : 'text-incorrect'}`}>
+                        Your answer: {ans.value}
+                      </div>
+                      {!ans.isCorrect && (
+                        <div className="review-answer correct-answer text-correct">
+                          Correct answer: {ans.computedAnswer}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="test-footer">
-            <button className="btn btn-primary btn-block" onClick={handleClose}>
-              Return to Dashboard
-            </button>
-          </div>
         </div>
       </div>
     )
