@@ -165,6 +165,16 @@ export default function LoginPage() {
               </a>{' '}
               and ask your teacher to activate your account.
             </p>
+            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+              <button 
+                type="button" 
+                onClick={() => navigate('/admin')}
+                className="btn btn-ghost" 
+                style={{ fontSize: '13px', color: '#666', border: '1px solid #ddd' }}
+              >
+                Teacher / Admin Login
+              </button>
+            </div>
           </div>
         </div>
       </div>
