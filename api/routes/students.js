@@ -176,9 +176,12 @@ router.post('/:id/progress/:dayNumber/open', async (req, res) => {
 
 // ── Migration Check ────────────────────────────────────────────────────────
 // Add question_times column if it doesn't exist (runs once on startup)
-pool.query('ALTER TABLE day_records ADD COLUMN IF NOT EXISTS question_times JSONB;').catch(err => {
-  console.log('[db] Could not add question_times (already exists or DB error):', err.message)
-})
+// Guard against null pool during Vercel build (no DATABASE_URL at build time)
+if (pool) {
+  pool.query('ALTER TABLE day_records ADD COLUMN IF NOT EXISTS question_times JSONB;').catch(err => {
+    console.log('[db] Could not add question_times (already exists or DB error):', err.message)
+  })
+}
 
 // ── Form Proxy ───────────────────────────────────────────────────────────
 router.get('/:id/progress/:dayNumber/questions', async (req, res) => {
