@@ -1,15 +1,12 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import pool from './db.js'
 import studentsRouter    from './routes/students.js'
 import leaderboardRouter from './routes/leaderboard.js'
 import cronRouter        from './routes/cron.js'
 import webhooksRouter    from './routes/webhooks.js'
-import { startStreakCron } from './jobs/streakCron.js'
 
-const app  = express()
-const PORT = process.env.PORT || 5000
+const app = express()
 
 // ── CORS ────────────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
@@ -19,13 +16,8 @@ app.use(cors({ origin: allowedOrigins, credentials: true }))
 app.use(express.json())
 
 // ── Health check ─────────────────────────────────────────────────────────────
-app.get('/api/health', async (req, res) => {
-  try {
-    await pool.query('SELECT 1')
-    res.json({ status: 'ok', db: 'connected', time: new Date().toISOString() })
-  } catch {
-    res.status(503).json({ status: 'error', db: 'unreachable' })
-  }
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() })
 })
 
 // ── Routes ───────────────────────────────────────────────────────────────────
@@ -40,34 +32,19 @@ app.use('/api', (req, res) => {
 })
 
 // ── Global error handler ─────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, _next) => {
   console.error('[server] Unhandled error:', err)
   res.status(500).json({ message: 'Internal server error.' })
 })
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-async function start() {
-  try {
-    await pool.query('SELECT 1')     // verify DB connection before accepting traffic
-    console.log('[server] PostgreSQL connected')
-    
-    // Only run the background node-cron if we are not on Vercel (e.g. local or Render deployment)
-    if (!process.env.VERCEL) {
-      startStreakCron()
-    }
-    
-    app.listen(PORT, () => {
-      console.log(`[server] 100 Days of Abacus API listening on port ${PORT}`)
-    })
-  } catch (err) {
-    console.error('[server] Could not connect to PostgreSQL:', err.message)
-    console.error('         Check DATABASE_URL in api/.env')
-    process.exit(1)
-  }
-}
-
+// ── Local dev only ─────────────────────────────────────────────────────────
+// On Vercel, the file is imported as a serverless function — no .listen() needed.
 if (!process.env.VERCEL) {
-  start()
+  const PORT = process.env.PORT || 5000
+  app.listen(PORT, () => {
+    console.log(`[server] 100 Days of Abacus API listening on port ${PORT}`)
+  })
 }
 
 export default app
