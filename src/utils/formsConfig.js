@@ -21,8 +21,6 @@
  *   'https://docs.google.com/forms/d/e/1FAIpQLSc.../viewform?embedded=true'
  */
 
-// Helper: build a placeholder array of 100 nulls for levels not yet configured.
-const todo = () => Array(100).fill(null)
 
 export const LEVELS = [
   { id: '1',     label: '1',     description: 'Level 1' },
