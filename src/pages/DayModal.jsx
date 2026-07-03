@@ -5,8 +5,7 @@ import { isDayToday } from '../utils/dateUtils'
 import { isFormConfigured } from '../utils/formsConfig'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
-import Confetti from 'react-confetti'
-import { useWindowSize } from 'react-use'
+import confetti from 'canvas-confetti'
 import './DayModal.css'
 
 const SECONDS_PER_QUESTION = 15;
@@ -17,7 +16,6 @@ export default function DayModal() {
   const dayNum = parseInt(dayNumber, 10)
   const { student } = useAuth()
   const navigate = useNavigate()
-  const { width, height } = useWindowSize()
 
   const [phase, setPhase] = useState('checking') 
   const [blockReason, setBlockReason] = useState('')
@@ -304,10 +302,20 @@ export default function DayModal() {
     )
   }
 
+  // Trigger confetti when entering summary phase
+  useEffect(() => {
+    if (phase === 'summary') {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  }, [phase]);
+
   if (phase === 'summary') {
     return (
       <div className="day-modal-overlay day-modal-overlay--form">
-        <Confetti width={width} height={height} recycle={false} numberOfPieces={400} />
         <div className="day-modal-test-card animate-pop" style={{ height: 'auto', maxHeight: '90vh' }}>
           
           <div className="summary-header">
