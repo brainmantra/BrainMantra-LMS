@@ -12,6 +12,9 @@ export function AuthProvider({ children }) {
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
+        if (parsed._id && !parsed.id) {
+          parsed.id = parsed._id
+        }
         setStudent(parsed)
         // Re-verify with backend (handles stale sessions)
         api.get(`/students/${parsed.id}`).then(res => {

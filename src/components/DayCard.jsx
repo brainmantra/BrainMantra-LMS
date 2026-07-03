@@ -65,34 +65,15 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord }) {
 
       <div className="day-card-date-label">{formatDate(dayDate)}</div>
 
-      <div className="day-card-question-box">
-        <div className="day-card-question-header">
-          <span className="question-title">Daily Questionnaire</span>
-          <span className="question-badge">REQUIRED</span>
-        </div>
-        
-        {status === 'future' ? (
-          <div className="question-timer-overlay">
-            <span className="timer-icon">⏱</span>
-            <span className="timer-text">Unlocks in {formatTimer(timeLeft)}</span>
-          </div>
-        ) : (
-          <div className="question-actions">
-            <button 
-              className="btn-solve-problem" 
-              onClick={handleClick}
-              disabled={!clickable}
-            >
-              Solve Problem →
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className={`day-card-footer ${cfg.btnClass}`}>
+      <button 
+        className={`day-card-footer ${cfg.btnClass}`}
+        onClick={handleClick}
+        disabled={!clickable}
+        style={{ cursor: clickable ? 'pointer' : 'default', border: 'none' }}
+      >
         {cfg.icon && <span className="footer-icon">{cfg.icon}</span>}
         {cfg.btn}
-      </div>
+      </button>
     </div>
   )
 }
