@@ -7,7 +7,7 @@
 import 'dotenv/config'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import * as XLSX from 'xlsx'
+import XLSX from 'xlsx'
 import pool from './db.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -19,8 +19,8 @@ const LEVEL_CONFIG = {
   l1: { addSheet: '1 ADD', abacusRange: [1, 40], visualRange: null,    mulSheet: null,   divSheet: null },
   l2: { addSheet: '2 ADD', abacusRange: [1, 40], visualRange: [41, 83], mulSheet: null,   divSheet: null },
   l3: { addSheet: '3 ADD', abacusRange: [1, 40], visualRange: [41, 83], mulSheet: null,   divSheet: null },
-  l4: { addSheet: '4 ADD', abacusRange: [1, 40], visualRange: [41, 80], mulSheet: '4 MUL', divSheet: '5 MUL' },
-  l5: { addSheet: '5 ADD', abacusRange: [1, 47], visualRange: [48, 94], mulSheet: '5 MUL', divSheet: '5 MUL' },
+  l4: { addSheet: '4 ADD ', abacusRange: [1, 40], visualRange: [41, 80], mulSheet: '4 MUL', divSheet: '5 DIV' },
+  l5: { addSheet: '5 ADD', abacusRange: [1, 47], visualRange: [48, 94], mulSheet: ' 5 MUL ', divSheet: '5 DIV' },
   l6: { addSheet: '6 ADD', abacusRange: [1, 46], visualRange: [47, 93], mulSheet: '6MUL',  divSheet: '6MUL' },
   l7: { addSheet: '7 ADD', abacusRange: [1, 45], visualRange: [46, 90], mulSheet: '7MUL',  divSheet: '7MUL' },
   l8: { addSheet: '8ADD',  abacusRange: [1, 30], visualRange: [31, 60], mulSheet: '8 MUL', divSheet: '8 MUL' },
