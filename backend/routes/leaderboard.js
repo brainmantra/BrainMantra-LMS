@@ -6,8 +6,8 @@ import pool from '../db.js'
 
 const router = Router()
 
-// ── GET /api/leaderboard?level=l3 ────────────────────────────────────────────
-router.get('/', async (req, res) => {
+// ── GET /api/leaderboard/weekly?level=l3 ────────────────────────────────────────────
+router.get('/weekly', async (req, res) => {
   try {
     const { level } = req.query
 
