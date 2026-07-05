@@ -198,7 +198,8 @@ router.get('/students', requireTeacher, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT s.id, s.name, s.mobile, s.level, s.streak, s.xp_total,
               COUNT(CASE WHEN dr.completed THEN 1 END) AS days_completed,
-              MAX(dr.completed_at) AS last_active
+              MAX(dr.completed_at) AS last_active,
+              ARRAY_REMOVE(ARRAY_AGG(CASE WHEN dr.completed THEN dr.day_number END), NULL) AS completed_days
        FROM students s
        LEFT JOIN day_records dr ON dr.student_id = s.id
        WHERE s.level = ANY($1)
@@ -208,6 +209,37 @@ router.get('/students', requireTeacher, async (req, res) => {
     )
     res.json(rows)
   } catch (err) {
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── GET /api/teachers/students/:id — get student detailed days ────────────────
+router.get('/students/:id', requireTeacher, async (req, res) => {
+  try {
+    const studentId = req.params.id
+    const levels = req.teacher.levels || []
+    if (!levels.length) return res.status(403).json({ message: 'No levels assigned.' })
+
+    // Check if student exists and belongs to teacher's levels
+    const { rows: stRows } = await pool.query(
+      `SELECT id FROM students WHERE id = $1 AND level = ANY($2)`,
+      [studentId, levels]
+    )
+    if (!stRows.length) return res.status(404).json({ message: 'Student not found or access denied.' })
+
+    // Fetch all day records for the student
+    const { rows } = await pool.query(
+      `SELECT day_number, opened, opened_at, completed, completed_at,
+              total_marks, accuracy, time_taken_seconds, xp_earned
+       FROM day_records
+       WHERE student_id = $1
+       ORDER BY day_number`,
+      [studentId]
+    )
+
+    res.json({ days: rows })
+  } catch (err) {
+    console.error('[teachers/student-details]', err)
     res.status(500).json({ message: 'Server error.' })
   }
 })
