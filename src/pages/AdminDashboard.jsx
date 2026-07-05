@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { adminApi } from '../utils/api'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import * as XLSX from 'xlsx'
 
 const LEVELS = ['l1','l2','l3','l4','l5','l6','l7','l8']
 const LEVEL_LABELS = { l1:'Level 1',l2:'Level 2',l3:'Level 3',l4:'Level 4',l5:'Level 5',l6:'Level 6',l7:'Level 7',l8:'Level 8' }
@@ -430,6 +431,227 @@ function QuestionBankTab() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
+   QUESTION BUILDER TAB
+────────────────────────────────────────────────────────────────────────────── */
+function QuestionBuilderTab() {
+  const [level, setLevel] = useState('l1')
+  const [day, setDay] = useState(1)
+  const [questions, setQuestions] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+
+  const fetchQuestions = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await adminApi.get(`/admin/questions/${level}/${day}`)
+      setQuestions(res.data)
+    } catch (err) {
+      toast.error('Failed to load questions')
+    } finally {
+      setLoading(false)
+    }
+  }, [level, day])
+
+  useEffect(() => {
+    fetchQuestions()
+  }, [fetchQuestions])
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result
+        const wb = XLSX.read(bstr, { type: 'binary' })
+        const wsname = wb.SheetNames[0]
+        const ws = wb.Sheets[wsname]
+        const data = XLSX.utils.sheet_to_json(ws)
+        
+        // Map columns to questions
+        const newQs = data.map((row, idx) => ({
+          id: 'temp_' + Date.now() + idx,
+          question_text: row.Question || row.question || '',
+          expected_answer: row.Answer || row.answer || '',
+          format_example: row['Format Example'] || row.format_example || '',
+          question_type: row.Type || row.type || 'math',
+        })).filter(q => q.question_text)
+
+        setQuestions(prev => [...prev, ...newQs])
+        toast.success(`Imported ${newQs.length} questions! Click Save to apply.`)
+      } catch (err) {
+        toast.error('Failed to parse Excel file')
+      }
+    }
+    reader.readAsBinaryString(file)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await adminApi.put(`/admin/questions/${level}/${day}`, { questions })
+      toast.success('Questions saved successfully!')
+      fetchQuestions()
+    } catch (err) {
+      toast.error('Failed to save questions')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateQuestion = (id, field, value) => {
+    setQuestions(prev => prev.map(q => q.id === id ? { ...q, [field]: value } : q))
+  }
+
+  const deleteQuestion = (id) => {
+    setQuestions(prev => prev.filter(q => q.id !== id))
+  }
+
+  const addQuestion = () => {
+    const newQ = { id: 'temp_' + Date.now(), question_text: '', expected_answer: '', format_example: '', question_type: 'math' }
+    setQuestions([...questions, newQ])
+    setEditingId(newQ.id)
+  }
+
+  return (
+    <div className="animate-slide-up" style={{ maxWidth: 800, margin: '0 auto', paddingBottom: '3rem' }}>
+      <h1 style={{ fontSize: '1.6rem', marginBottom: '1.5rem' }}>Question Builder</h1>
+      
+      <div className="card" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10 }}>
+        <div>
+          <label className="form-label" style={{ marginBottom: '0.3rem', display: 'block' }}>Level</label>
+          <select value={level} onChange={e => setLevel(e.target.value)} style={{ width: 150 }}>
+            {LEVELS.map(l => <option key={l} value={l}>{LEVEL_LABELS[l]}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="form-label" style={{ marginBottom: '0.3rem', display: 'block' }}>Day</label>
+          <input type="number" min="1" max="100" value={day} onChange={e => setDay(e.target.value)} style={{ width: 100 }} />
+        </div>
+        
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+          <label className="btn btn-ghost" style={{ cursor: 'pointer', margin: 0, marginTop: 'auto' }}>
+            <span>📁 Import Excel</span>
+            <input type="file" accept=".xlsx,.csv" style={{ display: 'none' }} onChange={handleFileUpload} />
+          </label>
+          <button className="btn btn-admin" style={{ marginTop: 'auto' }} onClick={handleSave} disabled={saving}>
+            {saving ? <div className="spinner spinner-sm" /> : '💾 Save Changes'}
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><div className="spinner" /></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {questions.map((q, idx) => {
+            const isEditing = editingId === q.id
+            return (
+              <div 
+                key={q.id} 
+                className="card" 
+                style={{ 
+                  padding: '1.5rem', 
+                  borderLeft: isEditing ? '4px solid var(--primary)' : '4px solid transparent',
+                  cursor: isEditing ? 'default' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: isEditing ? 'var(--bg-elevated)' : 'var(--bg-card)',
+                  boxShadow: isEditing ? '0 8px 24px rgba(0,0,0,0.1)' : 'none'
+                }}
+                onClick={() => !isEditing && setEditingId(q.id)}
+              >
+                {isEditing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <textarea 
+                          placeholder="Question Title" 
+                          style={{ fontSize: '1.1rem', fontWeight: 500, width: '100%', padding: '0.8rem', borderBottom: '1px solid var(--border)', borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'transparent', color: 'var(--text-main)', outline: 'none', minHeight: '60px', resize: 'vertical' }}
+                          value={q.question_text}
+                          onChange={e => updateQuestion(q.id, 'question_text', e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <select value={q.question_type} onChange={e => updateQuestion(q.id, 'question_type', e.target.value)} style={{ padding: '0.6rem', borderRadius: '4px' }}>
+                          <option value="math">Short Answer (Math)</option>
+                          <option value="steps">Steps (String Matching)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <input 
+                        type="text" 
+                        placeholder="Expected Answer" 
+                        style={{ width: '100%', padding: '0.6rem', borderBottom: '1px solid var(--border)', borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'transparent', color: 'var(--text-main)', outline: 'none' }}
+                        value={q.expected_answer}
+                        onChange={e => updateQuestion(q.id, 'expected_answer', e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <input 
+                        type="text" 
+                        placeholder="Format Example (Optional - e.g. '1st row = 2')" 
+                        style={{ width: '100%', padding: '0.6rem', borderBottom: '1px dotted var(--border)', borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'transparent', color: 'var(--text-muted)', outline: 'none', fontSize: '0.9rem' }}
+                        value={q.format_example || ''}
+                        onChange={e => updateQuestion(q.id, 'format_example', e.target.value)}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); deleteQuestion(q.id) }} style={{ color: 'var(--error)' }}>
+                        🗑️ Delete
+                      </button>
+                      <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); setEditingId(null) }}>
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ fontWeight: 500, fontSize: '1.1rem', marginBottom: '0.5rem', whiteSpace: 'pre-wrap' }}>
+                        {idx + 1}. {q.question_text || 'Untitled Question'}
+                      </div>
+                      <span className="badge badge-muted">{q.question_type}</span>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>
+                      Answer: <span style={{ color: 'var(--success)', fontWeight: 600 }}>{q.expected_answer}</span>
+                    </div>
+                    {q.format_example && (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.3rem' }}>
+                        Format: {q.format_example}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          
+          <button 
+            className="btn btn-ghost" 
+            style={{ width: '100%', padding: '1rem', border: '2px dashed var(--border)', borderRadius: 'var(--radius-md)' }}
+            onClick={addQuestion}
+          >
+            + Add Question
+          </button>
+          
+          {questions.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+              No questions found for Level {level} Day {day}. Add one or import an Excel file.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
    PERFORMANCE TAB
 ────────────────────────────────────────────────────────────────────────────── */
 function PerformanceTab() {
@@ -562,7 +784,8 @@ export default function AdminDashboard() {
     { id: 'overview',  icon: '📊', label: 'Dashboard' },
     { id: 'students',  icon: '👥', label: 'Students' },
     { id: 'teachers',  icon: '👨‍🏫', label: 'Teachers' },
-    { id: 'qbank',     icon: '📚', label: 'Question Bank' },
+    { id: 'builder',   icon: '📝', label: 'Question Builder' },
+    { id: 'qbank',     icon: '📚', label: 'Question Bank (Legacy)' },
     { id: 'perf',      icon: '📈', label: 'Performance' },
     { id: 'actlog',    icon: '📋', label: 'Activity Log' },
   ]
@@ -590,12 +813,13 @@ export default function AdminDashboard() {
 
       {/* Main content */}
       <main className="admin-main">
-        {tab === 'overview'  && <OverviewTab />}
-        {tab === 'students'  && <StudentsTab />}
-        {tab === 'teachers'  && <TeachersTab />}
-        {tab === 'qbank'     && <QuestionBankTab />}
-        {tab === 'perf'      && <PerformanceTab />}
-        {tab === 'actlog'    && <ActivityLogTab />}
+        { tab === 'overview'  && <OverviewTab /> }
+        { tab === 'students'  && <StudentsTab /> }
+        { tab === 'teachers'  && <TeachersTab /> }
+        { tab === 'builder'   && <QuestionBuilderTab /> }
+        { tab === 'qbank'     && <QuestionBankTab /> }
+        { tab === 'perf'      && <PerformanceTab /> }
+        { tab === 'actlog'    && <ActivityLogTab /> }
       </main>
     </div>
   )

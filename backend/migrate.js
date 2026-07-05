@@ -29,6 +29,11 @@ CREATE INDEX IF NOT EXISTS idx_students_mobile ON students(mobile);
 CREATE INDEX IF NOT EXISTS idx_students_level  ON students(level);
 
 ALTER TABLE students ADD COLUMN IF NOT EXISTS xp_total INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE students ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE students ADD COLUMN IF NOT EXISTS streak INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS longest_streak INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS last_streak_check TIMESTAMPTZ;
 
 -- ── Day records ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS day_records (

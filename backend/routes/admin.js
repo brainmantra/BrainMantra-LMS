@@ -418,4 +418,57 @@ router.get('/activity-log', requireAdmin, async (req, res) => {
   }
 })
 
+// ── GET /api/admin/questions/:level/:day ──────────────────────────────────────
+router.get('/questions/:level/:day', requireAdmin, async (req, res) => {
+  try {
+    const { level, day } = req.params
+    const { rows } = await pool.query(
+      `SELECT id, question_text, expected_answer, format_example, question_type 
+       FROM questions WHERE level = $1 AND day_number = $2 ORDER BY id ASC`,
+      [level, parseInt(day, 10)]
+    )
+    res.json(rows)
+  } catch (err) {
+    console.error('[admin/questions GET]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── PUT /api/admin/questions/:level/:day ──────────────────────────────────────
+router.put('/questions/:level/:day', requireAdmin, async (req, res) => {
+  const client = await pool.connect()
+  try {
+    const { level, day } = req.params
+    const { questions } = req.body // Array of questions
+
+    await client.query('BEGIN')
+
+    // Delete existing questions for this day
+    await client.query(
+      `DELETE FROM questions WHERE level = $1 AND day_number = $2`,
+      [level, parseInt(day, 10)]
+    )
+
+    // Insert new questions
+    if (questions && questions.length > 0) {
+      for (const q of questions) {
+        await client.query(
+          `INSERT INTO questions (level, day_number, question_text, expected_answer, format_example, question_type)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [level, parseInt(day, 10), q.question_text, q.expected_answer, q.format_example || null, q.question_type || 'math']
+        )
+      }
+    }
+
+    await client.query('COMMIT')
+    res.json({ success: true, count: questions ? questions.length : 0 })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    console.error('[admin/questions PUT]', err)
+    res.status(500).json({ message: 'Server error.' })
+  } finally {
+    client.release()
+  }
+})
+
 export default router

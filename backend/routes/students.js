@@ -73,7 +73,7 @@ router.post('/login', async (req, res) => {
     return res.status(201).json({ student: created[0] })
   } catch (err) {
     console.error('[login]', err)
-    return res.status(500).json({ message: 'Server error during login.' })
+    return res.status(500).json({ message: 'Server error during login: ' + (err.message || String(err)) })
   }
 })
 
