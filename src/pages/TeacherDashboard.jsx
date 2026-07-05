@@ -32,7 +32,7 @@ export default function TeacherDashboard() {
   const [qLevel, setQLevel] = useState('')
   const [qDay, setQDay] = useState('')
   const [qSection, setQSection] = useState('teacher_day')
-  const [qBlocks, setQBlocks] = useState([])
+  const [qBlocks, setQBlocks] = useState([{ type: 'text', content: '' }, { type: 'box', answer: '' }])
   const [editQId, setEditQId] = useState(null)
   const [qSaving, setQSaving] = useState(false)
   const [savedQuestions, setSavedQuestions] = useState([])
@@ -268,11 +268,11 @@ export default function TeacherDashboard() {
                 e.preventDefault()
                 // Convert blocks to legacy fields before submit
                 const questionStr = JSON.stringify(qBlocks)
-                const answers = qBlocks.filter(b => b.type === 'box').map(b => b.answer || '')
+                const answers = qBlocks.filter(b => b.type === 'box' || b.type === 'step').map(b => b.answer || '')
                 const answerStr = JSON.stringify(answers)
                 
                 if (!qLevel || !qDay || !qBlocks.length) return toast.error('All fields required.')
-                if (answers.length === 0 && qSection === 'teacher') return toast.error('Teacher questions require at least one Answer Box.')
+                if (answers.length === 0 && qSection === 'teacher') return toast.error('Teacher questions require at least one Answer Box or Step Box.')
                 
                 setQSaving(true)
                 teacherApi.post('/teachers/questions', {
@@ -281,7 +281,7 @@ export default function TeacherDashboard() {
                 })
                   .then(() => {
                     toast.success('Question saved!')
-                    setQBlocks([])
+                    setQBlocks([{ type: 'text', content: '' }, { type: 'box', answer: '' }])
                     setEditQId(null)
                     loadQuestions()
                   })
@@ -312,7 +312,7 @@ export default function TeacherDashboard() {
                       
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>{block.type}</div>
-                        {block.type === 'box' ? (
+                        {block.type === 'box' || block.type === 'step' ? (
                           <input 
                             type="text" placeholder="Correct Answer..." 
                             value={block.answer || ''} 
@@ -343,6 +343,7 @@ export default function TeacherDashboard() {
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'text', content: '' }])}>+ Text</button>
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'example', content: '' }])}>+ Example</button>
                     <button type="button" className="btn btn-primary btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'box', answer: '' }])}>+ Answer Box</button>
+                    <button type="button" className="btn btn-primary btn-sm" style={{ background: 'var(--accent)' }} onClick={() => setQBlocks([...qBlocks, { type: 'step', answer: '' }])}>+ Step Box</button>
                   </div>
                 </div>
 
@@ -351,7 +352,7 @@ export default function TeacherDashboard() {
                 </button>
                 {editQId && (
                   <button type="button" className="btn btn-ghost" style={{ marginLeft: '0.5rem' }} onClick={() => {
-                    setEditQId(null); setQBlocks([]);
+                    setEditQId(null); setQBlocks([{ type: 'text', content: '' }, { type: 'box', answer: '' }]);
                   }}>Cancel Edit</button>
                 )}
               </form>

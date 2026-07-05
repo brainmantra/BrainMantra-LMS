@@ -425,59 +425,72 @@ export default function SectionAttemptPage() {
 
           return (
             <div className="card animate-pop" style={{ maxWidth: 600, width: '100%', padding: '2rem' }}>
-              <div style={{
-                fontSize: '1.2rem', fontFamily: 'var(--font-display)', fontWeight: 500,
+              <div style={{ 
+                background: 'var(--bg-elevated)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem',
                 lineHeight: 1.6, color: 'var(--text-primary)',
               }}>
-                {blocks.map((block, idx) => {
-                  if (block.type === 'box') {
-                    const currentBoxIdx = boxIndex++;
-                    return (
-                      <input
-                        key={idx}
-                        type="text"
-                        className={feedback ? `feedback-${feedback}` : ''}
-                        style={{
-                          width: '100px', textAlign: 'center', display: 'inline-block', margin: '0 0.5rem',
-                          padding: '0.3rem', fontSize: '1.1rem', borderRadius: '4px', border: '1px solid var(--border)'
-                        }}
-                        value={parsedAns[currentBoxIdx] || ''}
-                        onChange={e => {
-                          const newAns = [...parsedAns];
-                          newAns[currentBoxIdx] = e.target.value;
-                          setAnswer(JSON.stringify(newAns));
-                        }}
-                        onKeyDown={e => e.key === 'Enter' && handleNext()}
-                        disabled={!!feedback}
-                        autoFocus={currentBoxIdx === 0}
-                      />
-                    );
-                  } else if (block.type === 'instruction') {
-                    return (
-                      <div key={idx} style={{ 
-                        background: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '8px', 
-                        fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontStyle: 'italic'
-                      }}>
-                        ℹ️ {block.content}
-                      </div>
-                    );
-                  } else if (block.type === 'example') {
-                    return (
-                      <div key={idx} style={{ 
-                        background: 'var(--bg-elevated)', padding: '0.75rem', borderRadius: '8px', 
-                        fontSize: '1rem', color: 'var(--success)', marginBottom: '1rem', borderLeft: '3px solid var(--success)'
-                      }}>
-                        💡 Example: {block.content}
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <span key={idx} style={{ display: 'inline-block', marginBottom: '1rem', width: '100%' }}>
-                        {block.content}
-                      </span>
-                    );
-                  }
-                })}
+                {(() => {
+                  let stepIndex = 1;
+                  return blocks.map((block, idx) => {
+                    if (block.type === 'box' || block.type === 'step') {
+                      const currentBoxIdx = boxIndex++;
+                      const inputElem = (
+                        <input
+                          key={idx}
+                          type="text"
+                          className={feedback ? `feedback-${feedback}` : ''}
+                          style={{
+                            width: '100px', textAlign: 'center', display: 'inline-block', margin: '0 0.5rem',
+                            padding: '0.3rem', fontSize: '1.1rem', borderRadius: '4px', border: '1px solid var(--border)'
+                          }}
+                          value={parsedAns[currentBoxIdx] || ''}
+                          onChange={e => {
+                            const newAns = [...parsedAns];
+                            newAns[currentBoxIdx] = e.target.value;
+                            setAnswer(JSON.stringify(newAns));
+                          }}
+                          onKeyDown={e => e.key === 'Enter' && handleNext()}
+                          disabled={!!feedback}
+                          autoFocus={currentBoxIdx === 0}
+                        />
+                      );
+                      
+                      if (block.type === 'step') {
+                        return (
+                          <div key={idx} style={{ display: 'block', margin: '0.75rem 0', fontWeight: '600' }}>
+                            Step {stepIndex++}: {inputElem}
+                          </div>
+                        );
+                      }
+                      
+                      return inputElem;
+                    } else if (block.type === 'instruction') {
+                      return (
+                        <div key={idx} style={{ 
+                          background: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '8px', 
+                          fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontStyle: 'italic'
+                        }}>
+                          ℹ️ {block.content}
+                        </div>
+                      );
+                    } else if (block.type === 'example') {
+                      return (
+                        <div key={idx} style={{ 
+                          background: 'var(--bg-elevated)', padding: '0.75rem', borderRadius: '8px', 
+                          fontSize: '1rem', color: 'var(--success)', marginBottom: '1rem', borderLeft: '3px solid var(--success)'
+                        }}>
+                          💡 Example: {block.content}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <span key={idx} style={{ display: 'inline-block', marginBottom: '1rem', width: '100%' }}>
+                          {block.content}
+                        </span>
+                      );
+                    }
+                  });
+                })()}
               </div>
             </div>
           );
