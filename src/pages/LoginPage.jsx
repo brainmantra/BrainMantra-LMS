@@ -168,7 +168,7 @@ export default function LoginPage() {
             <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
               <button 
                 type="button" 
-                onClick={() => navigate('/admin')}
+                onClick={() => navigate('/teacher')}
                 className="btn btn-ghost" 
                 style={{ fontSize: '13px', color: '#666', border: '1px solid #ddd' }}
               >
