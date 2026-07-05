@@ -155,7 +155,6 @@ export default function SectionAttemptPage() {
     if (feedback) return  // prevent double submit during animation
 
     const timeTaken = (Date.now() - questionStartRef.current) / 1000
-    const qType = getQuestionType(currentQ)
     const correctAns = currentQ.answer ?? currentQ.computedAnswer ?? currentQ.correct_answer
     const isCorrect = checkAnswer(answer, correctAns, qType)
 

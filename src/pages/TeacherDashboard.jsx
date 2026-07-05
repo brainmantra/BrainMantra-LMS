@@ -275,7 +275,7 @@ export default function TeacherDashboard() {
                 if (answers.length === 0 && qSection === 'teacher') return toast.error('Teacher questions require at least one Answer Box.')
                 
                 setQSaving(true)
-                axios.post('/api/teacher-questions', {
+                teacherApi.post('/teachers/questions', {
                   id: editQId, level: qLevel, day_number: parseInt(qDay), section: qSection,
                   question: questionStr, answer: answerStr,
                 })
@@ -283,7 +283,7 @@ export default function TeacherDashboard() {
                     toast.success('Question saved!')
                     setQBlocks([])
                     setEditQId(null)
-                    fetchQuestions()
+                    loadQuestions()
                   })
                   .catch(() => toast.error('Failed to save.'))
                   .finally(() => setQSaving(false))
@@ -357,11 +357,11 @@ export default function TeacherDashboard() {
               </form>
             
             {/* List */}
-            <div className="card animate-fade-in" style={{ padding: '1.5rem' }}>
+            <div className="card animate-fade-in" style={{ padding: '1.5rem', marginTop: '1.5rem' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Existing Questions</h3>
-              {loadingQs ? <div className="spinner" /> : (
+              {loadingQ ? <div className="spinner" /> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {questions.map(q => (
+                  {savedQuestions.map(q => (
                     <div key={q.id} style={{
                       padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
