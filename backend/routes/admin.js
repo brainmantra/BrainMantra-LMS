@@ -2,7 +2,7 @@
  * routes/admin.js — Full admin API (JWT-protected)
  */
 import { Router } from 'express'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import pool from '../db.js'
 import { signAdminToken, requireAdmin } from '../middleware/auth.js'
 

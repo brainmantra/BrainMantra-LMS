@@ -2,7 +2,7 @@
  * routes/teachers.js — Teacher portal API
  */
 import { Router } from 'express'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import pool from '../db.js'
 import { signTeacherToken, requireTeacher } from '../middleware/auth.js'
 

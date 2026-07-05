@@ -7,7 +7,7 @@
  */
 import 'dotenv/config'
 import pool from './db.js'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
 const SQL = `
 -- ── Students ──────────────────────────────────────────────────────────────────
