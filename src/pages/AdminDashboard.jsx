@@ -764,6 +764,82 @@ function ActivityLogTab() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
+   LOGIN LOGS TAB
+────────────────────────────────────────────────────────────────────────────── */
+function LoginLogsTab() {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [userType, setUserType] = useState('all')
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await adminApi.get(`/admin/login-logs?userType=${userType}`)
+      setLogs(res.data.logs || [])
+    } catch {
+      toast.error('Could not load login logs.')
+    } finally {
+      setLoading(false)
+    }
+  }, [userType])
+
+  useEffect(() => {
+    fetchLogs()
+    const interval = setInterval(fetchLogs, 30000) // Auto-refresh every 30s
+    return () => clearInterval(interval)
+  }, [fetchLogs])
+
+  return (
+    <div className="animate-slide-up">
+      <h1 style={{ fontSize: '1.6rem', marginBottom: '1.5rem' }}>Login & Activity Logs</h1>
+      
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        <select value={userType} onChange={e => setUserType(e.target.value)} style={{ width: 160 }}>
+          <option value="all">All Users</option>
+          <option value="student">Students</option>
+          <option value="teacher">Teachers</option>
+          <option value="admin">Admins</option>
+        </select>
+        <button className="btn btn-ghost btn-sm" onClick={fetchLogs}>🔄 Refresh</button>
+      </div>
+
+      {loading && logs.length === 0 ? <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}><div className="spinner" /></div> : (
+        <div style={{ overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+          <table className="data-table">
+            <thead><tr><th>Time</th><th>User Type</th><th>User</th><th>Action</th><th>IP Address</th><th>Details</th></tr></thead>
+            <tbody>
+              {logs.map(l => (
+                <tr key={l.id}>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{new Date(l.created_at).toLocaleString()}</td>
+                  <td>
+                    <span className={`badge ${
+                      l.user_type === 'admin' ? 'badge-warning' : 
+                      l.user_type === 'teacher' ? 'badge-primary' : 'badge-info'
+                    }`}>{l.user_type}</span>
+                  </td>
+                  <td style={{ fontWeight: 500 }}>{l.user_label || 'Unknown'}</td>
+                  <td>
+                    <span className={`badge ${
+                      l.action.includes('success') ? 'badge-success' : 
+                      l.action.includes('fail') ? 'badge-error' : 'badge-muted'
+                    }`}>{l.action.replace(/_/g, ' ')}</span>
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{l.ip_address || '—'}</td>
+                  <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={JSON.stringify(l.metadata)}>
+                    {l.metadata ? JSON.stringify(l.metadata) : '—'}
+                  </td>
+                </tr>
+              ))}
+              {logs.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No logs found.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
    MAIN ADMIN DASHBOARD
 ────────────────────────────────────────────────────────────────────────────── */
 export default function AdminDashboard() {
@@ -787,7 +863,8 @@ export default function AdminDashboard() {
     { id: 'builder',   icon: '📝', label: 'Question Builder' },
     { id: 'qbank',     icon: '📚', label: 'Question Bank (Legacy)' },
     { id: 'perf',      icon: '📈', label: 'Performance' },
-    { id: 'actlog',    icon: '📋', label: 'Activity Log' },
+    { id: 'actlog',    icon: '📝', label: 'Teacher Edits' },
+    { id: 'loginlog',  icon: '📋', label: 'Global Logs' },
   ]
 
   return (
@@ -820,6 +897,7 @@ export default function AdminDashboard() {
         { tab === 'qbank'     && <QuestionBankTab /> }
         { tab === 'perf'      && <PerformanceTab /> }
         { tab === 'actlog'    && <ActivityLogTab /> }
+        { tab === 'loginlog'  && <LoginLogsTab /> }
       </main>
     </div>
   )

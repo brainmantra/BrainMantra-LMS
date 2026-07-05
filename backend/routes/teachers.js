@@ -4,6 +4,7 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import pool from '../db.js'
+import { logActivity } from '../utils/logger.js'
 import { signTeacherToken, requireTeacher } from '../middleware/auth.js'
 
 const router = Router()
@@ -19,12 +20,19 @@ router.post('/login', async (req, res) => {
       [email]
     )
     const teacher = rows[0]
-    if (!teacher) return res.status(401).json({ message: 'Invalid credentials.' })
+    if (!teacher || !teacher.is_active) {
+      await logActivity({ userType: 'teacher', userLabel: email, action: 'login_fail', req, metadata: { reason: !teacher ? 'not_found' : 'inactive' } })
+      return res.status(401).json({ message: 'Invalid credentials or inactive account.' })
+    }
 
     const valid = await bcrypt.compare(password, teacher.password_hash)
-    if (!valid) return res.status(401).json({ message: 'Invalid credentials.' })
+    if (!valid) {
+      await logActivity({ userType: 'teacher', userLabel: email, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
+      return res.status(401).json({ message: 'Invalid credentials.' })
+    }
 
     const token = signTeacherToken(teacher)
+    await logActivity({ userType: 'teacher', userId: teacher.id, userLabel: email, action: 'login_success', req })
     res.json({
       token,
       teacher: {

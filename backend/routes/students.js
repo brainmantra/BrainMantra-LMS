@@ -14,6 +14,7 @@ import {
   SECTION_LABELS,
   TEACHER_INPUT_SECTIONS,
 } from '../utils/questionSelector.js'
+import { logActivity } from '../utils/logger.js'
 
 const router = Router()
 
@@ -42,7 +43,10 @@ router.post('/login', async (req, res) => {
 
     // Fast path — already in DB
     const { rows: existing } = await pool.query('SELECT * FROM students WHERE mobile = $1', [mobile])
-    if (existing.length > 0) return res.json({ student: existing[0] })
+    if (existing.length > 0) {
+      await logActivity({ userType: 'student', userId: existing[0].id, userLabel: existing[0].name, action: 'login_success', req })
+      return res.json({ student: existing[0] })
+    }
 
     // Check Google Sheet for enrollment
     let sheetRow
@@ -54,12 +58,14 @@ router.post('/login', async (req, res) => {
     }
 
     if (!sheetRow) {
+      await logActivity({ userType: 'student', userLabel: mobile, action: 'login_fail', req, metadata: { reason: 'not_in_sheet' } })
       return res.status(404).json({ message: 'This mobile number is not in our enrollment records. Please register first.' })
     }
 
     const rawLevel = normaliseLevel(sheetRow.level)
     const level = normalizeStudentLevel(rawLevel || sheetRow.level)
     if (!level) {
+      await logActivity({ userType: 'student', userLabel: mobile, action: 'login_fail', req, metadata: { reason: 'invalid_level', level: sheetRow.level } })
       return res.status(422).json({ message: `Unrecognised level "${sheetRow.level}". Please contact your teacher.` })
     }
 
@@ -70,6 +76,8 @@ router.post('/login', async (req, res) => {
        RETURNING *`,
       [sheetRow.name || 'Student', mobile, level]
     )
+    
+    await logActivity({ userType: 'student', userId: created[0].id, userLabel: created[0].name, action: 'login_success', req, metadata: { first_login: true } })
     return res.status(201).json({ student: created[0] })
   } catch (err) {
     console.error('[login]', err)
@@ -159,6 +167,8 @@ router.post('/:id/progress/:dayNumber/open', async (req, res) => {
        RETURNING *`,
       [studentId, dayNumber]
     )
+    
+    await logActivity({ userType: 'student', userId: studentId, userLabel: student.name, action: 'day_open', req, metadata: { day: dayNumber } })
     res.json(rows[0])
   } catch (err) {
     console.error('[open]', err)
@@ -430,6 +440,8 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
        WHERE id = $4`,
       [totalXp, streakResult.streak, streakResult.longestStreak, studentId]
     )
+
+    await logActivity({ userType: 'student', userId: studentId, userLabel: student.name, action: 'day_complete', req, metadata: { day: dayNumber, accuracy, totalMarks, totalXp } })
 
     res.json({
       success: true,

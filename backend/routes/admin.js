@@ -4,6 +4,7 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import pool from '../db.js'
+import { logActivity } from '../utils/logger.js'
 import { signAdminToken, requireAdmin } from '../middleware/auth.js'
 
 const router = Router()
@@ -18,12 +19,19 @@ router.post('/login', async (req, res) => {
 
     const { rows } = await pool.query('SELECT * FROM admin WHERE email = $1', [email])
     const admin = rows[0]
-    if (!admin) return res.status(401).json({ message: 'Invalid credentials.' })
+    if (!admin) {
+      await logActivity({ userType: 'admin', userLabel: email, action: 'login_fail', req, metadata: { reason: 'not_found' } })
+      return res.status(401).json({ message: 'Invalid credentials.' })
+    }
 
     const valid = await bcrypt.compare(password, admin.password_hash)
-    if (!valid) return res.status(401).json({ message: 'Invalid credentials.' })
+    if (!valid) {
+      await logActivity({ userType: 'admin', userLabel: email, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
+      return res.status(401).json({ message: 'Invalid credentials.' })
+    }
 
     const token = signAdminToken(admin)
+    await logActivity({ userType: 'admin', userId: admin.id, userLabel: email, action: 'login_success', req })
     res.json({ token, admin: { id: admin.id, email: admin.email } })
   } catch (err) {
     console.error('[admin/login]', err)
@@ -468,6 +476,33 @@ router.put('/questions/:level/:day', requireAdmin, async (req, res) => {
     res.status(500).json({ message: 'Server error.' })
   } finally {
     client.release()
+  }
+})
+
+// ── GET /api/admin/login-logs ──────────────────────────────────────────────────
+router.get('/login-logs', requireAdmin, async (req, res) => {
+  try {
+    const { userType, limit = 100 } = req.query
+
+    let query = `
+      SELECT id, user_type, user_id, user_label, action, ip_address, metadata, created_at
+      FROM activity_logs
+    `
+    const params = []
+
+    if (userType && userType !== 'all') {
+      params.push(userType)
+      query += ` WHERE user_type = $1 `
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`
+    params.push(parseInt(limit, 10))
+
+    const { rows } = await pool.query(query, params)
+    res.json({ logs: rows })
+  } catch (err) {
+    console.error('[admin/login-logs]', err)
+    res.status(500).json({ message: 'Server error' })
   }
 })
 
