@@ -311,7 +311,9 @@ export default function TeacherDashboard() {
                       </div>
                       
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>{block.type}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                          {block.type === 'text' ? 'QUESTION' : block.type}
+                        </div>
                         {block.type === 'box' || block.type === 'step' ? (
                           <input 
                             type="text" placeholder="Correct Answer..." 
@@ -320,9 +322,18 @@ export default function TeacherDashboard() {
                               const newB = [...qBlocks]; newB[idx].answer = e.target.value; setQBlocks(newB);
                             }} 
                           />
+                        ) : block.type === 'options' ? (
+                          <textarea 
+                            rows={2} placeholder="Enter options separated by commas (e.g. Apple, Banana, Orange)"
+                            style={{ resize: 'vertical', minHeight: '60px' }}
+                            value={block.content || ''} 
+                            onChange={e => {
+                              const newB = [...qBlocks]; newB[idx].content = e.target.value; setQBlocks(newB);
+                            }} 
+                          />
                         ) : (
                           <textarea 
-                            rows={2} placeholder={`Enter ${block.type} text...`}
+                            rows={2} placeholder={`Enter ${block.type === 'text' ? 'question' : block.type} text...`}
                             style={{ resize: 'vertical', minHeight: '60px' }}
                             value={block.content || ''} 
                             onChange={e => {
@@ -340,10 +351,11 @@ export default function TeacherDashboard() {
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'instruction', content: '' }])}>+ Instruction</button>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'text', content: '' }])}>+ Text</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'text', content: '' }])}>+ Question</button>
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'example', content: '' }])}>+ Example</button>
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'box', answer: '' }])}>+ Answer Box</button>
-                    <button type="button" className="btn btn-primary btn-sm" style={{ background: 'var(--accent)' }} onClick={() => setQBlocks([...qBlocks, { type: 'step', answer: '' }])}>+ Step Box</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'box', answer: '' }])}>+ Answer Box</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'step', answer: '' }])}>+ Step Box</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'options', content: '' }])}>+ Options</button>
                   </div>
                 </div>
 

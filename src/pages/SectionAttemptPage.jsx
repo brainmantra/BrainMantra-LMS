@@ -473,6 +473,26 @@ export default function SectionAttemptPage() {
                           ℹ️ {block.content}
                         </div>
                       );
+                    } else if (block.type === 'options') {
+                      const options = (block.content || '').split(',').map(s => s.trim()).filter(Boolean);
+                      return (
+                        <div key={idx} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', margin: '1.5rem 0' }}>
+                          {options.map((opt, oIdx) => (
+                            <button
+                              key={oIdx}
+                              className={`btn btn-sm ${parsedAns[0] === opt ? 'btn-primary' : 'btn-ghost'}`}
+                              onClick={() => {
+                                if (feedback) return;
+                                const newAns = [...parsedAns];
+                                newAns[0] = opt;
+                                setAnswer(JSON.stringify(newAns));
+                              }}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      );
                     } else if (block.type === 'example') {
                       return (
                         <div key={idx} style={{ 
