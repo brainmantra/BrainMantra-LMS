@@ -115,21 +115,41 @@ export default function SectionAttemptPage() {
   }
 
   const getQuestionText = (q) => q?.question_text || q?.display_text || ''
-  const isMultiBox = (getQuestionText(currentQ).match(/\[BOX\]/g) || []).length > 0
+  
+  const getParsedBlocks = (q) => {
+    if (!q) return [];
+    const raw = getQuestionText(q);
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+      throw new Error();
+    } catch {
+      const parts = raw.split(/\[BOX\]/g);
+      if (parts.length === 1) return [{ type: 'text', content: raw }];
+      const blocks = [];
+      parts.forEach((p, idx) => {
+        if (p) blocks.push({ type: 'text', content: p });
+        if (idx < parts.length - 1) blocks.push({ type: 'box' });
+      });
+      return blocks;
+    }
+  };
 
   const handleNext = () => {
-    if (isMultiBox) {
-      let parsed = []
-      try { parsed = JSON.parse(answer) } catch {}
-      const boxesCount = (getQuestionText(currentQ).match(/\[BOX\]/g) || []).length
-      if (!Array.isArray(parsed) || parsed.length < boxesCount || parsed.some(v => !v || !String(v).trim())) {
-        toast.error('Please fill in all boxes.')
-        return
+    const qType = getQuestionType(currentQ);
+    if (qType === 'teacher') {
+      const blocks = getParsedBlocks(currentQ);
+      const boxesCount = blocks.filter(b => b.type === 'box').length;
+      let parsed = [];
+      try { parsed = JSON.parse(answer); if (!Array.isArray(parsed)) parsed = [answer]; } catch { parsed = [answer]; }
+      if (parsed.length < boxesCount || parsed.some(v => !v || !String(v).trim())) {
+        toast.error('Please fill in all boxes.');
+        return;
       }
     } else {
       if (!String(answer).trim()) {
-        toast.error('Please enter an answer.')
-        return
+        toast.error('Please enter an answer.');
+        return;
       }
     }
     if (feedback) return  // prevent double submit during animation
@@ -398,69 +418,71 @@ export default function SectionAttemptPage() {
         )}
 
         {/* Teacher / free-text */}
-        {isTeacher && (
-          <div className="card animate-pop" style={{ maxWidth: 520, width: '100%', padding: '2rem' }}>
-            {isMultiBox ? (
+        {isTeacher && (() => {
+          const blocks = getParsedBlocks(currentQ);
+          let parsedAns = [];
+          try { parsedAns = JSON.parse(answer); if(!Array.isArray(parsedAns)) parsedAns = [answer]; } catch { parsedAns = [answer]; }
+          let boxIndex = 0;
+
+          return (
+            <div className="card animate-pop" style={{ maxWidth: 600, width: '100%', padding: '2rem' }}>
               <div style={{
-                fontSize: '1.3rem', fontFamily: 'var(--font-display)', fontWeight: 600,
-                textAlign: 'center', lineHeight: 2,
-                color: 'var(--text-primary)',
+                fontSize: '1.2rem', fontFamily: 'var(--font-display)', fontWeight: 500,
+                lineHeight: 1.6, color: 'var(--text-primary)',
               }}>
-                {(() => {
-                  const qText = getQuestionText(currentQ);
-                  const parts = qText.split(/\[BOX\]/g);
-                  let parsed = [];
-                  try { parsed = JSON.parse(answer); if(!Array.isArray(parsed)) parsed = []; } catch { parsed = []; }
-                  
-                  return parts.map((part, idx) => (
-                    <span key={idx}>
-                      {part}
-                      {idx < parts.length - 1 && (
-                        <input
-                          type="text"
-                          className={feedback ? `feedback-${feedback}` : ''}
-                          style={{
-                            width: '80px', textAlign: 'center', display: 'inline-block', margin: '0 0.5rem',
-                            padding: '0.2rem', fontSize: '1.1rem'
-                          }}
-                          value={parsed[idx] || ''}
-                          onChange={e => {
-                            const newAns = [...parsed];
-                            newAns[idx] = e.target.value;
-                            setAnswer(JSON.stringify(newAns));
-                          }}
-                          onKeyDown={e => e.key === 'Enter' && handleNext()}
-                          disabled={!!feedback}
-                          autoFocus={idx === 0}
-                        />
-                      )}
-                    </span>
-                  ));
-                })()}
+                {blocks.map((block, idx) => {
+                  if (block.type === 'box') {
+                    const currentBoxIdx = boxIndex++;
+                    return (
+                      <input
+                        key={idx}
+                        type="text"
+                        className={feedback ? `feedback-${feedback}` : ''}
+                        style={{
+                          width: '100px', textAlign: 'center', display: 'inline-block', margin: '0 0.5rem',
+                          padding: '0.3rem', fontSize: '1.1rem', borderRadius: '4px', border: '1px solid var(--border)'
+                        }}
+                        value={parsedAns[currentBoxIdx] || ''}
+                        onChange={e => {
+                          const newAns = [...parsedAns];
+                          newAns[currentBoxIdx] = e.target.value;
+                          setAnswer(JSON.stringify(newAns));
+                        }}
+                        onKeyDown={e => e.key === 'Enter' && handleNext()}
+                        disabled={!!feedback}
+                        autoFocus={currentBoxIdx === 0}
+                      />
+                    );
+                  } else if (block.type === 'instruction') {
+                    return (
+                      <div key={idx} style={{ 
+                        background: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '8px', 
+                        fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontStyle: 'italic'
+                      }}>
+                        ℹ️ {block.content}
+                      </div>
+                    );
+                  } else if (block.type === 'example') {
+                    return (
+                      <div key={idx} style={{ 
+                        background: 'var(--bg-elevated)', padding: '0.75rem', borderRadius: '8px', 
+                        fontSize: '1rem', color: 'var(--success)', marginBottom: '1rem', borderLeft: '3px solid var(--success)'
+                      }}>
+                        💡 Example: {block.content}
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <span key={idx} style={{ display: 'inline-block', marginBottom: '1rem', width: '100%' }}>
+                        {block.content}
+                      </span>
+                    );
+                  }
+                })}
               </div>
-            ) : (
-              <>
-                <div style={{
-                  fontSize: '1.3rem', fontFamily: 'var(--font-display)', fontWeight: 600,
-                  textAlign: 'center', marginBottom: '1.5rem', lineHeight: 1.5,
-                  color: 'var(--text-primary)',
-                }}>
-                  {getQuestionText(currentQ)}
-                </div>
-                <input
-                  type="text"
-                  placeholder="Your answer..."
-                  value={answer}
-                  onChange={e => setAnswer(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleNext()}
-                  disabled={!!feedback}
-                  className={feedback ? `feedback-${feedback}` : ''}
-                  autoFocus
-                />
-              </>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {/* Feedback overlay on card */}
         {feedback && (

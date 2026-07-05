@@ -32,8 +32,8 @@ export default function TeacherDashboard() {
   const [qLevel, setQLevel] = useState('')
   const [qDay, setQDay] = useState('')
   const [qSection, setQSection] = useState('teacher_day')
-  const [qText, setQText] = useState('')
-  const [qAnswer, setQAnswer] = useState('')
+  const [qBlocks, setQBlocks] = useState([])
+  const [editQId, setEditQId] = useState(null)
   const [qSaving, setQSaving] = useState(false)
   const [savedQuestions, setSavedQuestions] = useState([])
   const [loadingQ, setLoadingQ] = useState(false)
@@ -91,24 +91,7 @@ export default function TeacherDashboard() {
     if (tab === 'editor') loadQuestions()
   }, [tab, qLevel, qDay])
 
-  const handleSaveQuestion = async (e) => {
-    e.preventDefault()
-    if (!qLevel || !qDay || !qText || !qAnswer) return toast.error('All fields required.')
-    setQSaving(true)
-    try {
-      await teacherApi.post('/teachers/questions', {
-        level: qLevel, day_number: parseInt(qDay), section: qSection,
-        question: qText, answer: qAnswer,
-      })
-      toast.success('Question saved!')
-      setQText(''); setQAnswer('')
-      loadQuestions()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not save.')
-    } finally {
-      setQSaving(false)
-    }
-  }
+
 
   const handleLogout = () => {
     localStorage.removeItem('abacus_teacher_token')
@@ -280,69 +263,153 @@ export default function TeacherDashboard() {
             )}
 
             {/* Question form */}
-            <div className="card" style={{ marginBottom: '1.5rem' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Add / Update Question</h3>
-              <form onSubmit={handleSaveQuestion}>
-                <div className="form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <label className="form-label" style={{ marginBottom: 0 }}>Question Text</label>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => setQText(prev => prev + ' [BOX]')}
-                      style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem' }}
-                    >
-                      + Insert Box `[BOX]`
-                    </button>
-                  </div>
-                  <textarea
-                    rows={3} placeholder="e.g. What is 7 × 8? Step 1: [BOX]"
-                    value={qText} onChange={e => setQText(e.target.value)}
-                    style={{ resize: 'vertical', minHeight: 80 }}
-                  />
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    Tip: Use `[BOX]` to create input fields for students to fill.
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                // Convert blocks to legacy fields before submit
+                const questionStr = JSON.stringify(qBlocks)
+                const answers = qBlocks.filter(b => b.type === 'box').map(b => b.answer || '')
+                const answerStr = JSON.stringify(answers)
+                
+                if (!qLevel || !qDay || !qBlocks.length) return toast.error('All fields required.')
+                if (answers.length === 0 && qSection === 'teacher') return toast.error('Teacher questions require at least one Answer Box.')
+                
+                setQSaving(true)
+                axios.post('/api/teacher-questions', {
+                  id: editQId, level: qLevel, day_number: parseInt(qDay), section: qSection,
+                  question: questionStr, answer: answerStr,
+                })
+                  .then(() => {
+                    toast.success('Question saved!')
+                    setQBlocks([])
+                    setEditQId(null)
+                    fetchQuestions()
+                  })
+                  .catch(() => toast.error('Failed to save.'))
+                  .finally(() => setQSaving(false))
+              }}>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label" style={{ marginBottom: '0.5rem' }}>Question Builder</label>
+                  
+                  {qBlocks.map((block, idx) => (
+                    <div key={idx} style={{ 
+                      display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem',
+                      padding: '0.75rem', background: 'var(--surface-color)', borderRadius: '6px',
+                      border: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '0 4px' }} disabled={idx === 0} onClick={() => {
+                          const newBlocks = [...qBlocks];
+                          [newBlocks[idx - 1], newBlocks[idx]] = [newBlocks[idx], newBlocks[idx - 1]];
+                          setQBlocks(newBlocks);
+                        }}>▲</button>
+                        <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '0 4px' }} disabled={idx === qBlocks.length - 1} onClick={() => {
+                          const newBlocks = [...qBlocks];
+                          [newBlocks[idx + 1], newBlocks[idx]] = [newBlocks[idx], newBlocks[idx + 1]];
+                          setQBlocks(newBlocks);
+                        }}>▼</button>
+                      </div>
+                      
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>{block.type}</div>
+                        {block.type === 'box' ? (
+                          <input 
+                            type="text" placeholder="Correct Answer..." 
+                            value={block.answer || ''} 
+                            onChange={e => {
+                              const newB = [...qBlocks]; newB[idx].answer = e.target.value; setQBlocks(newB);
+                            }} 
+                          />
+                        ) : (
+                          <textarea 
+                            rows={2} placeholder={`Enter ${block.type} text...`}
+                            style={{ resize: 'vertical', minHeight: '60px' }}
+                            value={block.content || ''} 
+                            onChange={e => {
+                              const newB = [...qBlocks]; newB[idx].content = e.target.value; setQBlocks(newB);
+                            }} 
+                          />
+                        )}
+                      </div>
+                      
+                      <button type="button" className="btn btn-ghost" style={{ color: '#ef4444', padding: '0.5rem' }} onClick={() => {
+                        setQBlocks(qBlocks.filter((_, i) => i !== idx));
+                      }}>✕</button>
+                    </div>
+                  ))}
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'instruction', content: '' }])}>+ Instruction</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'text', content: '' }])}>+ Text</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'example', content: '' }])}>+ Example</button>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => setQBlocks([...qBlocks, { type: 'box', answer: '' }])}>+ Answer Box</button>
                   </div>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Correct Answer(s)</label>
-                  {(() => {
-                    const boxCount = (qText.match(/\[BOX\]/g) || []).length;
-                    if (boxCount > 0) {
-                      let parsed = [];
-                      try { parsed = JSON.parse(qAnswer); if (!Array.isArray(parsed)) parsed = []; } catch { parsed = []; }
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {Array.from({ length: boxCount }).map((_, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', width: '60px' }}>Box {i + 1}</span>
-                              <input
-                                type="text" placeholder={`e.g. Answer for box ${i + 1}`}
-                                value={parsed[i] || ''}
-                                onChange={e => {
-                                  const newAns = [...parsed];
-                                  newAns[i] = e.target.value;
-                                  setQAnswer(JSON.stringify(newAns));
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <input
-                          type="text" placeholder="e.g. 56"
-                          value={qAnswer} onChange={e => setQAnswer(e.target.value)}
-                        />
-                      );
-                    }
-                  })()}
-                </div>
+
                 <button type="submit" className="btn btn-teacher" disabled={qSaving}>
                   {qSaving ? <><div className="spinner spinner-sm" /> Saving...</> : '💾 Save Question'}
                 </button>
+                {editQId && (
+                  <button type="button" className="btn btn-ghost" style={{ marginLeft: '0.5rem' }} onClick={() => {
+                    setEditQId(null); setQBlocks([]);
+                  }}>Cancel Edit</button>
+                )}
               </form>
+            
+            {/* List */}
+            <div className="card animate-fade-in" style={{ padding: '1.5rem' }}>
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Existing Questions</h3>
+              {loadingQs ? <div className="spinner" /> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {questions.map(q => (
+                    <div key={q.id} style={{
+                      padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                          Level {q.level} - Day {q.day_number} ({q.section})
+                        </div>
+                        <div style={{ fontWeight: 500 }}>
+                          {(() => {
+                            try {
+                              const parsed = JSON.parse(q.question);
+                              return Array.isArray(parsed) ? parsed.map(b => b.type === 'box' ? '[BOX]' : b.content).join(' ') : q.question;
+                            } catch {
+                              return q.question;
+                            }
+                          })()}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => {
+                          setEditQId(q.id); setQLevel(q.level); setQDay(String(q.day_number)); setQSection(q.section);
+                          try {
+                            const parsed = JSON.parse(q.question);
+                            if (Array.isArray(parsed)) {
+                              setQBlocks(parsed);
+                            } else throw new Error();
+                          } catch {
+                            // Legacy parsing
+                            let b = [{ type: 'text', content: q.question }];
+                            if (q.answer) {
+                              try {
+                                const parsedAns = JSON.parse(q.answer);
+                                if (Array.isArray(parsedAns)) {
+                                  parsedAns.forEach(a => b.push({ type: 'box', answer: a }));
+                                } else throw new Error();
+                              } catch {
+                                b.push({ type: 'box', answer: q.answer });
+                              }
+                            }
+                            setQBlocks(b);
+                          }
+                        }}>Edit</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Saved questions */}
@@ -367,12 +434,52 @@ export default function TeacherDashboard() {
                           <span className="badge badge-info">Day {q.day_number}</span>
                           <span className="badge badge-muted">{q.section}</span>
                         </div>
-                        <p style={{ fontWeight: 500, marginBottom: '0.25rem' }}>{q.question}</p>
-                        <p style={{ color: 'var(--success)', fontSize: '0.85rem' }}>Answer: {q.answer}</p>
+                        <p style={{ fontWeight: 500, marginBottom: '0.25rem' }}>
+                          {(() => {
+                            try {
+                              const parsed = JSON.parse(q.question);
+                              return Array.isArray(parsed) ? parsed.map(b => b.type === 'box' ? '[BOX]' : b.content).join(' ') : q.question;
+                            } catch {
+                              return q.question;
+                            }
+                          })()}
+                        </p>
+                        <p style={{ color: 'var(--success)', fontSize: '0.85rem' }}>
+                          Answer: {(() => {
+                            try {
+                              const parsed = JSON.parse(q.answer);
+                              return Array.isArray(parsed) ? parsed.join(', ') : q.answer;
+                            } catch {
+                              return q.answer;
+                            }
+                          })()}
+                        </p>
                       </div>
                       <button
                         className="btn btn-ghost btn-sm"
-                        onClick={() => { setQLevel(q.level); setQDay(String(q.day_number)); setQSection(q.section); setQText(q.question); setQAnswer(q.answer) }}
+                        onClick={() => {
+                          setEditQId(q.id); setQLevel(q.level); setQDay(String(q.day_number)); setQSection(q.section);
+                          try {
+                            const parsed = JSON.parse(q.question);
+                            if (Array.isArray(parsed)) {
+                              setQBlocks(parsed);
+                            } else throw new Error();
+                          } catch {
+                            // Legacy parsing
+                            let b = [{ type: 'text', content: q.question }];
+                            if (q.answer) {
+                              try {
+                                const parsedAns = JSON.parse(q.answer);
+                                if (Array.isArray(parsedAns)) {
+                                  parsedAns.forEach(a => b.push({ type: 'box', answer: a }));
+                                } else throw new Error();
+                              } catch {
+                                b.push({ type: 'box', answer: q.answer });
+                              }
+                            }
+                            setQBlocks(b);
+                          }
+                        }}
                       >
                         Edit
                       </button>
