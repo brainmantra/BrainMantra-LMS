@@ -43,8 +43,15 @@
 }
 
 .day-card-container.missed, .day-card-container.opened-past {
-  border-color: var(--error);
-  background: rgba(239, 68, 68, 0.05);
+  border-color: #ef4444;
+  border-width: 2px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.1));
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.day-card-container.missed:hover, .day-card-container.opened-past:hover {
+  border-color: #f87171;
+  box-shadow: 0 4px 25px rgba(239, 68, 68, 0.5);
 }
 
 .day-card-header {
@@ -76,7 +83,7 @@
 .badge-today { color: var(--primary-light); border-color: var(--primary); background: var(--primary-glow); }
 .badge-opened { color: var(--warning); border-color: var(--warning); background: var(--warning-bg); }
 .badge-completed { color: var(--success); border-color: var(--success); background: var(--success-bg); }
-.badge-missed, .badge-opened-past { color: var(--error); border-color: var(--error); background: var(--error-bg); }
+.badge-missed, .badge-opened-past { color: #ffffff; border-color: #ef4444; background: #ef4444; font-weight: 800; }
 
 .day-card-date-label {
   font-size: 0.75rem;
@@ -260,8 +267,10 @@
 }
 
 .btn-missed {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--error);
-  border: 1.5px solid var(--error);
+  background: #ef4444;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+  font-weight: 800;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2);
   cursor: not-allowed;
 }
