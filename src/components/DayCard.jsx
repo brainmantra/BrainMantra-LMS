@@ -51,10 +51,25 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   const today = isDayToday(registrationDate, dayNumber)
   const past = isDayPast(registrationDate, dayNumber)
 
+  // Check if all expected sections are marked 'done' in section_data
+  const normalizeLevel0 = (raw) => {
+    if (!raw) return 'l1'
+    const low = raw.toLowerCase()
+    if (/^l[1-8]$/.test(low)) return low
+    if (/^[1-8]$/.test(low)) return `l${low}`
+    const map = { beginner: 'l1', elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
+    return map[low] || 'l1'
+  }
+  const _level = normalizeLevel0(student?.level)
+  const _expectedSecs = (LEVEL_SECTIONS[_level] || ['abacus']).filter(s => s !== 'teacher_input')
+  const _sectionData = dayRecord?.section_data || {}
+  const allSectionsDone = !isDemo && _expectedSecs.length > 0 &&
+    _expectedSecs.every(s => _sectionData[s]?.status === 'done')
+
   let status = 'future'
   if (isDemo) {
     status = 'today'
-  } else if (dayRecord?.completed) {
+  } else if (dayRecord?.completed || allSectionsDone) {
     status = 'completed'
   } else if (dayRecord?.opened && today) {
     status = 'opened'
