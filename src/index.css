@@ -11,7 +11,7 @@ html { font-size: 16px; scroll-behavior: smooth; }
 
 /* ── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
-  /* Colors */
+  /* Colors - Dark Theme (Default) */
   --bg-base:       #0a0d14;
   --bg-surface:    #111827;
   --bg-elevated:   #1a2235;
@@ -21,10 +21,11 @@ html { font-size: 16px; scroll-behavior: smooth; }
   --navy:          #111827;
   --navy-light:    #1e2d45;
 
-  --primary:       #6c63ff;
-  --primary-light: #8b85ff;
-  --primary-dark:  #4d46cc;
-  --primary-glow:  rgba(108, 99, 255, 0.35);
+  /* Orange primary theme */
+  --primary:       #ff7a00;
+  --primary-light: #ffa352;
+  --primary-dark:  #cc6200;
+  --primary-glow:  rgba(255, 122, 0, 0.35);
 
   --accent-gold:   #f5c842;
   --accent-teal:   #00d4aa;
@@ -82,6 +83,51 @@ html { font-size: 16px; scroll-behavior: smooth; }
   --admin-primary:   #f5c842;
   --admin-glow:      rgba(245, 200, 66, 0.3);
 }
+
+/* ── Light Theme Overrides ─────────────────────────────────────────────────── */
+.light-theme {
+  --bg-base:       #f9fafb;
+  --bg-surface:    #ffffff;
+  --bg-elevated:   #f3f4f6;
+  --bg-card:       rgba(255, 255, 255, 0.9);
+  --bg-card-hover: rgba(243, 244, 246, 0.95);
+
+  --navy:          #ffffff;
+  --navy-light:    #f3f4f6;
+
+  /* Orange Accents for Light Theme - with higher contrast */
+  --primary:       #ea580c;
+  --primary-light: #f97316;
+  --primary-dark:  #c2410c;
+  --primary-glow:  rgba(234, 88, 12, 0.15);
+
+  --accent-gold:   #d97706;
+  --accent-teal:   #0d9488;
+  --accent-coral:  #dc2626;
+  --accent-sky:    #0284c7;
+
+  --success:       #059669;
+  --success-bg:    rgba(5, 150, 105, 0.1);
+  --warning:       #d97706;
+  --warning-bg:    rgba(217, 119, 6, 0.1);
+  --error:         #dc2626;
+  --error-bg:      rgba(220, 38, 38, 0.1);
+  --info:          #0284c7;
+  --info-bg:       rgba(2, 132, 199, 0.1);
+
+  --ivory:         #1f2937;
+  --text-primary:  #111827;
+  --text-secondary:#4b5563;
+  --text-muted:    #9ca3af;
+  --border:        rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+
+  --shadow-sm:     0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md:     0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-lg:     0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-primary: 0 4px 24px var(--primary-glow);
+}
+
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
 body {
