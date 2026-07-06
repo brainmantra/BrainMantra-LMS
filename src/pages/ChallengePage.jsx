@@ -8,9 +8,7 @@ import DayCard from '../components/DayCard'
 import StreakCorner from '../components/StreakCorner'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import * as ReactJoyride from 'react-joyride'
-const Joyride = ReactJoyride.default || ReactJoyride
-const { STATUS } = ReactJoyride
+import { Joyride, STATUS } from 'react-joyride'
 import './ChallengePage.css'
 
 export default function ChallengePage() {
@@ -99,7 +97,7 @@ export default function ChallengePage() {
     return days
       .filter(d => d.completed)
       .map(d => ({
-        day: `Day ${d.dayNumber}`,
+        day: `Day ${d.day_number}`,
         Accuracy: parseFloat(d.accuracy || 0),
         Time: Math.round((d.time_taken_seconds || 0) / 60 * 10) / 10, // in minutes
       }))
@@ -126,7 +124,7 @@ export default function ChallengePage() {
 
   const dayMap = useMemo(() => {
     const m = {}
-    days.forEach(d => { m[d.dayNumber] = d })
+    days.forEach(d => { m[d.day_number] = d })
     return m
   }, [days])
 
@@ -342,8 +340,8 @@ export default function ChallengePage() {
                     </thead>
                     <tbody>
                       {days.filter(d => d.completed).map(d => (
-                        <tr key={d.dayNumber} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ fontWeight: 'bold', padding: '0.75rem 1rem' }}>Day {d.dayNumber}</td>
+                        <tr key={d.day_number} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ fontWeight: 'bold', padding: '0.75rem 1rem' }}>Day {d.day_number}</td>
                           <td style={{ padding: '0.75rem 1rem' }}>
                             <span style={{ 
                               color: d.accuracy >= 90 ? 'var(--success)' : d.accuracy >= 70 ? 'var(--accent-gold)' : 'var(--error)',
