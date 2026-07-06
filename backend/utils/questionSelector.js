@@ -8,18 +8,18 @@ import pool from '../db.js'
 // ── Section definitions per level ─────────────────────────────────────────────
 export const LEVEL_SECTIONS = {
   l1: ['abacus', 'teacher_input'],
-  l2: ['abacus', 'visual', 'teacher_input'],
-  l3: ['abacus', 'visual', 'tables'],
+  l2: ['abacus', 'visual', 'tables'],
+  l3: ['abacus', 'visual', 'multiplication', 'two_steps'],
   l4: ['abacus', 'visual', 'multiplication', 'division', 'form_the_question'],
-  l5: ['abacus', 'visual', 'multiplication', 'division'],
-  l6: ['abacus', 'visual', 'multiplication', 'division'],
-  l7: ['abacus', 'visual', 'multiplication', 'division'],
-  l8: ['abacus', 'visual', 'multiplication', 'division'],
+  l5: ['abacus', 'visual', 'multiplication', 'division', 'cracking'],
+  l6: ['abacus', 'visual', 'multiplication', 'division', 'bodmas'],
+  l7: ['abacus', 'visual', 'multiplication', 'division', 'two_steps'],
+  l8: ['abacus', 'visual', 'multiplication', 'division', 'cracking'],
 }
 
 // Teacher-input sections that come from teacher_questions table, not question_bank
 export const TEACHER_INPUT_SECTIONS = new Set([
-  'teacher_input', 'tables', 'form_the_question'
+  'teacher_input', 'form_the_question', 'cracking', 'bodmas'
 ])
 
 // ── Every-5th-day check ────────────────────────────────────────────────────────
@@ -64,16 +64,10 @@ export async function getTeacherQuestion(level, dayNumber, section = 'teacher_da
 
 // ── Get section list for a level on a specific day ─────────────────────────────
 export function getSectionsForLevel(level, dayNumber) {
-  if (isTeacherDay(dayNumber)) {
-    return ['teacher_day']
-  }
   return LEVEL_SECTIONS[level] || ['abacus']
 }
 
 export async function getSectionsForLevelAsync(level, dayNumber) {
-  if (isTeacherDay(dayNumber)) {
-    return ['teacher_day']
-  }
   const defaultSections = LEVEL_SECTIONS[level] || ['abacus']
   try {
     const { rows } = await pool.query(
@@ -105,4 +99,7 @@ export const SECTION_LABELS = {
   form_the_question: '✏ Form The Question',
   teacher_input:     '👨‍🏫 Teacher Section',
   teacher_day:       '🌟 Special Day Question',
+  two_steps:         '📋 2 Steps',
+  cracking:          '✏ Cracking',
+  bodmas:            '🧮 Bodmas',
 }

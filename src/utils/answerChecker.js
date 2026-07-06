@@ -31,6 +31,18 @@ export function checkAnswer(studentInput, correctAnswer, questionType) {
     return normalize(studentInput) === normalize(correctAnswer)
   }
 
+  // Handle two_steps comparison (normalise spaces)
+  if (questionType === 'two_steps') {
+    const cleanStr = s => String(s).toLowerCase().replace(/\s+/g, '')
+    return cleanStr(studentInput) === cleanStr(correctAnswer)
+  }
+
+  // Handle remainder answers string check (e.g. "91..1" or "91 r 1")
+  if (String(correctAnswer).includes('..')) {
+    const cleanStr = s => String(s).toLowerCase().replace(/\s+/g, '').replace('r', '..').replace('rem', '..')
+    return cleanStr(studentInput) === cleanStr(correctAnswer)
+  }
+
   // Numeric: strip whitespace, normalise decimal separator
   const cleaned = String(studentInput).replace(/\s/g, '').replace(',', '.')
   const studentNum = parseFloat(cleaned)

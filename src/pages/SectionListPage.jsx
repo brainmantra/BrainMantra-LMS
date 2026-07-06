@@ -14,6 +14,9 @@ const SECTION_ICONS = {
   form_the_question: '✏',
   teacher_input:     '👨‍🏫',
   teacher_day:       '🌟',
+  two_steps:         '📋',
+  cracking:          '✏',
+  bodmas:            '🧮',
 }
 
 const STATUS_CONFIG = {
@@ -188,16 +191,17 @@ export default function SectionListPage() {
         {/* Section list */}
         <div className="section-list" style={{ marginBottom: '2rem' }}>
           {data.sections?.map((sec) => {
-            const statusCfg = STATUS_CONFIG[sec.status] || STATUS_CONFIG.not_started
+            const isReady = sec.ready !== false
+            const statusCfg = isReady ? (STATUS_CONFIG[sec.status] || STATUS_CONFIG.not_started) : { label: 'Teacher preparing...', badge: 'badge-warning', icon: '⏳' }
             const icon = SECTION_ICONS[sec.section] || '📖'
             const isDone = sec.status === 'done'
-            const canPlay = isToday && !(data.isTeacherDay && !data.teacherDayReady)
+            const canPlay = isToday && isReady
 
             return (
               <div
                 key={sec.section}
                 className={`section-item${isDone ? ' section-item--done' : ''}`}
-                style={{ cursor: canPlay ? 'pointer' : 'default' }}
+                style={{ cursor: canPlay ? 'pointer' : 'default', opacity: isReady ? 1 : 0.6 }}
                 onClick={() => canPlay && handlePlaySection(sec)}
               >
                 <div className="section-item__left">

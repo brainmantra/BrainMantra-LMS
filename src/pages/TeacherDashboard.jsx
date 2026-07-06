@@ -20,6 +20,26 @@ function StatCard({ icon, label, value, color }) {
   )
 }
 
+const getTeacherSectionsForLevel = (level) => {
+  if (level === 'l1') return [
+    { value: 'abacus', label: '🧮 Abacus' },
+    { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
+  ]
+  if (level === 'l4') return [
+    { value: 'form_the_question', label: '✏ Form The Question' }
+  ]
+  if (level === 'l5') return [
+    { value: 'cracking', label: '✏ Cracking' }
+  ]
+  if (level === 'l6') return [
+    { value: 'bodmas', label: '🧮 Bodmas' }
+  ]
+  if (level === 'l8') return [
+    { value: 'cracking', label: '✏ Cracking' }
+  ]
+  return []
+}
+
 export default function TeacherDashboard() {
   const navigate = useNavigate()
   const [teacher, setTeacher] = useState(null)
@@ -40,15 +60,15 @@ export default function TeacherDashboard() {
   const [qSaving, setQSaving] = useState(false)
 
   useEffect(() => {
-    if (qDay) {
-      const is5th = parseInt(qDay, 10) % 5 === 0
-      if (is5th) {
-        setQSection('teacher_day')
-      } else if (qSection === 'teacher_day') {
-        setQSection('teacher_input')
+    const secs = getTeacherSectionsForLevel(qLevel)
+    if (secs.length > 0) {
+      if (!secs.some(s => s.value === qSection)) {
+        setQSection(secs[0].value)
       }
+    } else {
+      setQSection('')
     }
-  }, [qDay, qSection])
+  }, [qLevel, qSection])
   const [savedQuestions, setSavedQuestions] = useState([])
   const [loadingQ, setLoadingQ] = useState(false)
 
@@ -248,14 +268,11 @@ export default function TeacherDashboard() {
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Section</label>
                   <select value={qSection} onChange={e => setQSection(e.target.value)}>
-                    {qDay && parseInt(qDay, 10) % 5 === 0 ? (
-                      <option value="teacher_day">🌟 Teacher Day (5th-day)</option>
-                    ) : (
-                      <>
-                        <option value="teacher_input">👨‍🏫 Teacher Input</option>
-                        <option value="tables">📋 Tables</option>
-                        <option value="form_the_question">✏ Form The Question</option>
-                      </>
+                    {getTeacherSectionsForLevel(qLevel).map(sec => (
+                      <option key={sec.value} value={sec.value}>{sec.label}</option>
+                    ))}
+                    {getTeacherSectionsForLevel(qLevel).length === 0 && (
+                      <option value="">No teacher sections (Auto-generated)</option>
                     )}
                   </select>
                 </div>

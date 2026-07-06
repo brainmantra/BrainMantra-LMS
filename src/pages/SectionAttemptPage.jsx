@@ -108,7 +108,7 @@ export default function SectionAttemptPage() {
       const addends = Array.isArray(q.addends) ? q.addends : JSON.parse(q.addends || '[]')
       return addends.map((n, i) => `${i === 0 ? '' : n < 0 ? '− ' : '+ '}${Math.abs(n)}`).join(' ')
     }
-    if (type === 'mul_x' || type === 'mul_div') {
+    if (type === 'mul_x' || type === 'mul_div' || type === 'two_steps') {
       return `${q.operand1} ${q.operator} ${q.operand2}`
     }
     return q.question_text || q.display_text || ''
@@ -310,7 +310,7 @@ export default function SectionAttemptPage() {
 
   const qType = getQuestionType(currentQ)
   const isAddType = qType === 'add' || qType === 'visual'
-  const isMulDiv = qType === 'mul_x' || qType === 'mul_div'
+  const isMulDiv = qType === 'mul_x' || qType === 'mul_div' || qType === 'two_steps'
   const isTeacher = qType === 'teacher'
 
   const addends = isAddType
@@ -396,23 +396,39 @@ export default function SectionAttemptPage() {
 
         {/* Multiplication / Division */}
         {isMulDiv && (
-          <div className="mul-card animate-pop">
-            <span className="mul-card__operand">{currentQ.operand1}</span>
-            <span className="mul-card__operator">{currentQ.operator}</span>
-            <span className="mul-card__operand">{currentQ.operand2}</span>
-            <span className="mul-card__eq">=</span>
-            <input
-              className={`mul-card__input${feedback ? ` ${feedback}` : ''}`}
-              type="text"
-              inputMode="numeric"
-              placeholder="?"
-              value={answer}
-              onChange={e => setAnswer(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleNext()}
-              disabled={!!feedback}
-              autoFocus
-              autoComplete="off"
-            />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 500 }}>
+            {qType === 'two_steps' && (
+              <div style={{ 
+                background: 'rgba(108, 99, 255, 0.15)', border: '1px solid rgba(108, 99, 255, 0.3)',
+                color: 'var(--primary-light)', padding: '0.85rem 1.25rem', borderRadius: '12px', 
+                fontSize: '0.9rem', marginBottom: '1.5rem', textAlign: 'center', width: '100%'
+              }}>
+                <strong>EXAMPLE Answer Format:</strong>
+                <br />
+                {currentQ.operand2 > 9 ? (
+                  <>Question: 13 x 44 = <br /> Answer: 0520 + 052</>
+                ) : (
+                  <>Question: 13 x 4 = <br /> Answer: 040 + 12</>
+                )}
+              </div>
+            )}
+            <div className="mul-card animate-pop" style={{ width: '100%' }}>
+              <span className="mul-card__operand">{currentQ.operand1}</span>
+              <span className="mul-card__operator">{currentQ.operator}</span>
+              <span className="mul-card__operand">{currentQ.operand2}</span>
+              <span className="mul-card__eq">=</span>
+              <input
+                className={`mul-card__input${feedback ? ` ${feedback}` : ''}`}
+                type="text"
+                placeholder={qType === 'two_steps' ? 'e.g. 040 + 12' : '?'}
+                value={answer}
+                onChange={e => setAnswer(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleNext()}
+                disabled={!!feedback}
+                autoFocus
+                autoComplete="off"
+              />
+            </div>
           </div>
         )}
 

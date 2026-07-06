@@ -197,27 +197,30 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
     const sectionData = dayRows[0]?.section_data || {}
     const paperCompleted = dayRows[0]?.completed || false
 
-    // For every-5th-day, check if teacher submitted
-    let teacherDayReady = true
-    if (isTeacherDay(dayNumber)) {
-      const tq = await getTeacherQuestion(level, dayNumber)
-      teacherDayReady = !!tq
+    // Map each section and check if teacher questions are ready for teacher-input sections
+    const result = []
+    for (const sec of sections) {
+      let ready = true
+      if (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1') {
+        const tq = await getTeacherQuestion(level, dayNumber, sec)
+        ready = !!tq
+      }
+      result.push({
+        section: sec,
+        label: SECTION_LABELS[sec] || sec,
+        status: sectionData[sec]?.status || 'not_started',
+        questionCount: sectionData[sec]?.questionCount || (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' ? 1 : 5),
+        timeTaken: sectionData[sec]?.timeTaken || 0,
+        marks: sectionData[sec]?.marks || 0,
+        ready,
+      })
     }
-
-    const result = sections.map(sec => ({
-      section: sec,
-      label: SECTION_LABELS[sec] || sec,
-      status: sectionData[sec]?.status || 'not_started',
-      questionCount: sectionData[sec]?.questionCount || 5,
-      timeTaken: sectionData[sec]?.timeTaken || 0,
-      marks: sectionData[sec]?.marks || 0,
-    }))
 
     res.json({
       sections: result,
       paperCompleted,
       isTeacherDay: isTeacherDay(dayNumber),
-      teacherDayReady,
+      teacherDayReady: true,
       level,
       dayNumber,
     })
@@ -228,40 +231,36 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
 })
 
 // ── POST /api/students/:id/progress/:dayNumber/sections/:section/open ─────────
+// Marks a section as started (in_progress) in section_data
 router.post('/:id/progress/:dayNumber/sections/:section/open', async (req, res) => {
   try {
     const studentId = parseInt(req.params.id, 10)
     const dayNumber = parseInt(req.params.dayNumber, 10)
     const section = req.params.section
+
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
-    const currentDay = getChallengeDay(student.registration_date)
-    if (dayNumber !== currentDay) {
-      return res.status(403).json({ message: 'This day is not currently active.' })
-    }
+    const level = normalizeStudentLevel(student.level) || student.level
 
-    // Fetch existing section_data
+    // Update section_data in day_records
     const { rows } = await pool.query(
       `SELECT section_data FROM day_records WHERE student_id = $1 AND day_number = $2`,
       [studentId, dayNumber]
     )
     const sectionData = rows[0]?.section_data || {}
 
-    if (sectionData[section]?.status === 'done') {
-      return res.status(409).json({ message: 'This section has already been completed.' })
+    if (!sectionData[section]) {
+      sectionData[section] = { status: 'in_progress', startedAt: new Date().toISOString() }
+      await pool.query(
+        `UPDATE day_records
+         SET section_data = $1, updated_at = NOW()
+         WHERE student_id = $2 AND day_number = $3`,
+        [sectionData, studentId, dayNumber]
+      )
     }
 
-    // Mark section as in_progress
-    sectionData[section] = { ...sectionData[section], status: 'in_progress' }
-
-    await pool.query(
-      `UPDATE day_records SET section_data = $1, updated_at = NOW()
-       WHERE student_id = $2 AND day_number = $3`,
-      [JSON.stringify(sectionData), studentId, dayNumber]
-    )
-
-    res.json({ ok: true })
+    res.json({ success: true, sectionData })
   } catch (err) {
     console.error('[section/open]', err)
     res.status(500).json({ message: 'Server error.' })
@@ -280,8 +279,8 @@ router.get('/:id/progress/:dayNumber/sections/:section/questions', async (req, r
 
     const level = normalizeStudentLevel(student.level) || student.level
 
-    // Every-5th-day or teacher section: fetch from teacher_questions
-    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section)) {
+    // Every-5th-day or teacher section or level 1: fetch from teacher_questions
+    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section) || level === 'l1') {
       const tq = await getTeacherQuestion(level, dayNumber, section === 'teacher_day' ? 'teacher_day' : section)
       if (!tq) {
         return res.status(404).json({
