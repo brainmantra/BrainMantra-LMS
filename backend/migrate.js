@@ -36,6 +36,7 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS longest_streak INTEGER NOT NULL DE
 ALTER TABLE students ADD COLUMN IF NOT EXISTS last_streak_check TIMESTAMPTZ;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS plain_password TEXT;
 
 -- ── Day records ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS day_records (

@@ -6,7 +6,6 @@ import bcrypt from 'bcryptjs'
 import pool from '../db.js'
 import { getChallengeDay } from '../utils/dateHelpers.js'
 import { recalculateStreak } from '../utils/streak.js'
-import { findInSheet, normaliseLevel } from '../utils/googleSheet.js'
 import {
   selectQuestionsForDay,
   getTeacherQuestion,
@@ -39,8 +38,8 @@ function normalizeStudentLevel(raw) {
 router.post('/login', async (req, res) => {
   try {
     const { loginId, password } = req.body
-    if (!loginId) {
-      return res.status(400).json({ message: 'Login ID is required.' })
+    if (!loginId || !password) {
+      return res.status(400).json({ message: 'Login ID and Password are required.' })
     }
 
     const cleanLoginId = String(loginId).trim().toLowerCase()
@@ -51,68 +50,31 @@ router.post('/login', async (req, res) => {
       [cleanLoginId, cleanLoginId]
     )
 
-    if (existing.length > 0) {
-      const student = existing[0]
-      // Verify password if a password_hash is set
-      if (student.password_hash) {
-        if (!password) {
-          return res.status(400).json({ message: 'Password is required for this account.' })
-        }
-        const match = await bcrypt.compare(password, student.password_hash)
-        if (!match) {
-          await logActivity({ userType: 'student', userId: student.id, userLabel: student.name, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
-          return res.status(401).json({ message: 'Incorrect password.' })
-        }
-      }
-      
-      await logActivity({ userType: 'student', userId: student.id, userLabel: student.name, action: 'login_success', req })
-      
-      // Clean student object before sending
-      const studentData = { ...student }
-      delete studentData.password_hash
-      return res.json({ student: studentData })
+    if (existing.length === 0) {
+      return res.status(401).json({ message: 'Invalid Login ID or Password.' })
     }
 
-    // 2. Fallback: If not in DB, check Google Sheet for enrollment by mobile number
-    // We only do this if loginId looks like a 10-digit mobile number
-    if (!/^\d{10}$/.test(cleanLoginId)) {
-      return res.status(404).json({ message: 'Login ID not found. If this is your first time, please log in with your registered 10-digit mobile number.' })
-    }
+    const student = existing[0]
 
-    const mobile = cleanLoginId
-    let sheetRow
-    try {
-      sheetRow = await findInSheet(mobile)
-    } catch (sheetErr) {
-      console.error('[login] Sheet lookup failed:', sheetErr.message)
-      return res.status(503).json({ message: 'Could not verify enrollment right now. Please try again.' })
+    // Verify password if a password_hash is set
+    if (!student.password_hash) {
+      return res.status(401).json({ message: 'Account not set up properly. Please contact your teacher.' })
     }
-
-    if (!sheetRow) {
-      await logActivity({ userType: 'student', userLabel: mobile, action: 'login_fail', req, metadata: { reason: 'not_in_sheet' } })
-      return res.status(404).json({ message: 'This mobile number is not in our enrollment records. Please register first.' })
-    }
-
-    const rawLevel = normaliseLevel(sheetRow.level)
-    const level = normalizeStudentLevel(rawLevel || sheetRow.level)
-    if (!level) {
-      await logActivity({ userType: 'student', userLabel: mobile, action: 'login_fail', req, metadata: { reason: 'invalid_level', level: sheetRow.level } })
-      return res.status(422).json({ message: `Unrecognised level "${sheetRow.level}". Please contact your teacher.` })
-    }
-
-    const { rows: created } = await pool.query(
-      `INSERT INTO students (name, mobile, level, registration_date)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (mobile) DO UPDATE SET updated_at = NOW()
-       RETURNING *`,
-      [sheetRow.name || 'Student', mobile, level]
-    )
     
-    await logActivity({ userType: 'student', userId: created[0].id, userLabel: created[0].name, action: 'login_success', req, metadata: { first_login: true } })
-    
-    const studentData = { ...created[0] }
+    const match = await bcrypt.compare(password, student.password_hash)
+    if (!match) {
+      await logActivity({ userType: 'student', userId: student.id, userLabel: student.name, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
+      return res.status(401).json({ message: 'Incorrect password.' })
+    }
+      
+    await logActivity({ userType: 'student', userId: student.id, userLabel: student.name, action: 'login_success', req })
+      
+    // Clean student object before sending
+    const studentData = { ...student }
     delete studentData.password_hash
-    return res.status(201).json({ student: studentData })
+    delete studentData.plain_password
+    return res.json({ student: studentData })
+
   } catch (err) {
     console.error('[login]', err)
     return res.status(500).json({ message: 'Server error during login: ' + (err.message || String(err)) })

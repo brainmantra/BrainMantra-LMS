@@ -110,7 +110,7 @@ export default function LoginPage() {
                 id="loginId"
                 className="form-input"
                 type="text"
-                placeholder="Username or registered mobile"
+                placeholder="Enter your Login ID"
                 value={loginId}
                 onChange={e => {
                   setLoginId(e.target.value)
@@ -126,7 +126,7 @@ export default function LoginPage() {
                 id="password"
                 className="form-input"
                 type="password"
-                placeholder="Enter your password (leave blank if not set)"
+                placeholder="Enter your password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
               />
@@ -136,10 +136,10 @@ export default function LoginPage() {
               <div className="login-not-found animate-fade">
                 <div className="login-not-found-icon">⚠</div>
                 <div>
-                  <p className="login-not-found-title">Mobile number not found</p>
+                  <p className="login-not-found-title">Login Failed</p>
                   <p className="login-not-found-text">
-                    This number isn't registered in our system. If you haven't enrolled yet,
-                    please fill in the registration form first — your teacher will share the link.
+                    Invalid Login ID or Password. If you haven't been assigned credentials yet,
+                    please contact your teacher or fill in the registration form.
                   </p>
                   <a
                     href={REGISTRATION_FORM_URL}
@@ -156,7 +156,7 @@ export default function LoginPage() {
             <button
               type="submit"
               className="btn btn-primary login-submit"
-              disabled={loading || !loginId.trim()}
+              disabled={loading || !loginId.trim() || !password.trim()}
             >
               {loading
                 ? <><span className="btn-spinner" /> Verifying…</>

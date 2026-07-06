@@ -109,6 +109,21 @@ function StudentsTab() {
   const [newUsername, setNewUsername] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newSaving, setNewSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+
+  const handleSyncSheet = async () => {
+    if (!window.confirm('This will pull students from the Google Sheet and generate passwords for new/missing students. Proceed?')) return
+    setSyncing(true)
+    try {
+      const res = await adminApi.post('/admin/students/sync')
+      toast.success(`Synced! ${res.data.addedCount} new added, ${res.data.credentialsGenerated} credentials assigned.`)
+      fetchStudents()
+    } catch (err) {
+      toast.error('Failed to sync students from sheet.')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const fetchStudents = useCallback(async () => {
     setLoading(true)
@@ -218,7 +233,9 @@ function StudentsTab() {
               🔥 {selected.streak} streak · ⚡ {selected.xp_total} XP
             </p>
             <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              <strong>Login ID:</strong> {selected.username || <em style={{ color: 'var(--text-muted)' }}>Not Set (uses mobile)</em>}
+              <strong>Login ID:</strong> {selected.username || <em style={{ color: 'var(--text-muted)' }}>Not Set</em>}
+              {' | '}
+              <strong>Password:</strong> {selected.plain_password || <em style={{ color: 'var(--text-muted)' }}>Not Set</em>}
             </p>
           </div>
           <div style={{ marginLeft: 'auto' }}>
@@ -327,6 +344,9 @@ function StudentsTab() {
     <div className="animate-slide-up">
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <h1 style={{ fontSize: '1.6rem', flex: 1 }}>Students</h1>
+        <button className="btn btn-secondary" onClick={handleSyncSheet} disabled={syncing}>
+          {syncing ? 'Syncing...' : '🔄 Sync from Sheet'}
+        </button>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
           ➕ Add Student
         </button>
@@ -347,13 +367,17 @@ function StudentsTab() {
       ) : (
         <div style={{ overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
           <table className="data-table">
-            <thead><tr><th>Name</th><th>Mobile</th><th>Level</th><th>Streak</th><th>XP</th><th>Days Done</th><th>Last Active</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Mobile</th><th>Level</th><th>Login / Pass</th><th>Streak</th><th>XP</th><th>Days Done</th><th>Last Active</th><th></th></tr></thead>
             <tbody>
               {students.map(s => (
                 <tr key={s.id}>
                   <td style={{ fontWeight: 600 }}>{s.name}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{s.mobile}</td>
                   <td><span className="badge badge-info">{LEVEL_LABELS[s.level] || s.level}</span></td>
+                  <td style={{ fontSize: '0.85rem' }}>
+                    <div style={{ color: 'var(--primary-light)' }}>{s.username || '—'}</div>
+                    <div style={{ color: 'var(--text-muted)' }}>{s.plain_password || '—'}</div>
+                  </td>
                   <td><span style={{ color: 'var(--warning)' }}>🔥 {s.streak}</span></td>
                   <td><span style={{ color: 'var(--accent-gold)' }}>⚡ {s.xp_total}</span></td>
                   <td>{s.days_completed ?? 0}</td>

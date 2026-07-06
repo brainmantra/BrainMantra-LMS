@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs'
 import pool from '../db.js'
 import { logActivity } from '../utils/logger.js'
 import { signAdminToken, requireAdmin } from '../middleware/auth.js'
+import { fetchRegistrationSheet, normaliseLevel } from '../utils/googleSheet.js'
 
 const router = Router()
 
@@ -117,7 +118,7 @@ router.get('/students', requireAdmin, async (req, res) => {
 
     const { rows } = await pool.query(
       `SELECT s.id, s.name, s.mobile, s.level, s.registration_date,
-              s.streak, s.longest_streak, s.xp_total, s.username,
+              s.streak, s.longest_streak, s.xp_total, s.username, s.plain_password,
               MAX(d.completed_at) AS last_active,
               COUNT(CASE WHEN d.completed THEN 1 END) AS days_completed
        FROM students s
@@ -139,6 +140,61 @@ router.get('/students', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('[admin/students]', err)
     res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── POST /api/admin/students/sync ───────────────────────────────────────────────
+router.post('/students/sync', requireAdmin, async (req, res) => {
+  try {
+    const sheetRows = await fetchRegistrationSheet()
+    const { rows: dbStudents } = await pool.query('SELECT mobile FROM students')
+    const dbMobiles = new Set(dbStudents.map(s => s.mobile))
+
+    const newStudents = sheetRows.filter(r => !dbMobiles.has(r.mobile))
+    
+    // Also find existing students who have no username
+    const { rows: missingCredentials } = await pool.query('SELECT id, mobile, name FROM students WHERE username IS NULL')
+    
+    let addedCount = 0
+    let credentialsGenerated = 0
+
+    // Helper to generate credentials
+    const generateCredentials = (name, mobile) => {
+      const username = `student_${mobile.slice(-4)}_${Math.floor(Math.random() * 1000)}`
+      const plain_password = Math.random().toString(36).slice(-6)
+      return { username, plain_password }
+    }
+
+    // 1. Insert new students
+    for (const st of newStudents) {
+      const levelId = normaliseLevel(st.level) || 'l1'
+      const { username, plain_password } = generateCredentials(st.name, st.mobile)
+      const hash = await bcrypt.hash(plain_password, 12)
+      
+      await pool.query(
+        `INSERT INTO students (name, mobile, level, username, password_hash, plain_password, registration_date)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+         ON CONFLICT (mobile) DO NOTHING`,
+        [st.name, st.mobile, levelId, username, hash, plain_password]
+      )
+      addedCount++
+    }
+
+    // 2. Assign credentials to existing students missing them
+    for (const st of missingCredentials) {
+      const { username, plain_password } = generateCredentials(st.name, st.mobile)
+      const hash = await bcrypt.hash(plain_password, 12)
+      await pool.query(
+        'UPDATE students SET username = $1, password_hash = $2, plain_password = $3 WHERE id = $4',
+        [username, hash, plain_password, st.id]
+      )
+      credentialsGenerated++
+    }
+
+    res.json({ success: true, addedCount, credentialsGenerated, totalSynced: addedCount + credentialsGenerated })
+  } catch (err) {
+    console.error('[admin/students/sync]', err)
+    res.status(500).json({ message: 'Server error during sync.' })
   }
 })
 
@@ -174,11 +230,11 @@ router.post('/students', requireAdmin, async (req, res) => {
 
     // Insert student
     const { rows: created } = await pool.query(
-      `INSERT INTO students (name, mobile, level, username, password_hash, registration_date)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO students (name, mobile, level, username, password_hash, plain_password, registration_date)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
        ON CONFLICT (mobile) DO UPDATE SET updated_at = NOW()
        RETURNING *`,
-      [name.trim(), mobile.trim(), level, cleanUsername, hash]
+      [name.trim(), mobile.trim(), level, cleanUsername, hash, password]
     )
 
     delete created[0].password_hash
@@ -215,8 +271,8 @@ router.post('/students/:id/credentials', requireAdmin, async (req, res) => {
     const hash = await bcrypt.hash(password, 12)
 
     await pool.query(
-      'UPDATE students SET username = $1, password_hash = $2, updated_at = NOW() WHERE id = $3',
-      [cleanUsername, hash, studentId]
+      'UPDATE students SET username = $1, password_hash = $2, plain_password = $3, updated_at = NOW() WHERE id = $4',
+      [cleanUsername, hash, password, studentId]
     )
 
     res.json({ success: true, message: 'Student credentials saved successfully.' })
