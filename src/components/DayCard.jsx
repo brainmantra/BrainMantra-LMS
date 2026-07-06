@@ -108,7 +108,15 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord }) {
   const cfg = statusConfig[status]
 
   // Determine sections list for this day
-  const studentLevel = student?.level || 'l1'
+  const normalizeLevel = (raw) => {
+    if (!raw) return 'l1'
+    const low = raw.toLowerCase()
+    if (/^l[1-8]$/.test(low)) return low
+    if (/^[1-8]$/.test(low)) return `l${low}`
+    const map = { beginner: 'l1', elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
+    return map[low] || 'l1'
+  }
+  const studentLevel = normalizeLevel(student?.level)
   const defaultSecs = LEVEL_SECTIONS[studentLevel] || ['abacus']
   const recordedSecs = dayRecord?.section_data ? Object.keys(dayRecord.section_data) : []
   const sections = [...defaultSecs]
