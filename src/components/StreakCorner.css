@@ -10,8 +10,8 @@
 }
 
 .streak-active {
-  background: linear-gradient(135deg, #3d2412, #5a2f0f);
-  box-shadow: 0 6px 24px rgba(245,166,35,0.25);
+  background: linear-gradient(135deg, #ff5722, #ff9800);
+  box-shadow: 0 6px 24px rgba(255, 87, 34, 0.45);
 }
 
 .streak-broken {

@@ -15,6 +15,14 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const adminToken = localStorage.getItem('abacus_admin_token')
+    if (!adminToken) {
+      toast.error('Access Denied. Admins only.')
+      navigate('/')
+    }
+  }, [navigate])
+
+  useEffect(() => {
     let mounted = true
     async function load() {
       setLoading(true)
@@ -43,8 +51,8 @@ export default function LeaderboardPage() {
     <div className="page-wrapper">
       <header className="lb-header">
         <div className="container lb-header-inner">
-          <button className="btn btn-ghost lb-back" onClick={() => navigate(student ? '/challenge' : '/')}>
-            ← {student ? 'Back to Challenge' : 'Home'}
+          <button className="btn btn-ghost lb-back" onClick={() => navigate('/admin/dashboard')}>
+            ← Back to Dashboard
           </button>
           <h1 className="lb-title">Weekly Leaderboard</h1>
           <p className="lb-subtitle">{weekLabel || 'This week'} · Ranked by accuracy, then speed</p>

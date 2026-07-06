@@ -24,6 +24,7 @@ function StatCard({ icon, label, value, color }) {
    OVERVIEW TAB
 ────────────────────────────────────────────────────────────────────────────── */
 function OverviewTab() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -38,7 +39,10 @@ function OverviewTab() {
 
   return (
     <div className="animate-slide-up">
-      <h1 style={{ fontSize: '1.6rem', marginBottom: '1.5rem' }}>Dashboard Overview</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <h1 style={{ fontSize: '1.6rem', margin: 0 }}>Dashboard Overview</h1>
+        <button className="btn btn-admin btn-sm" onClick={() => navigate('/leaderboard')}>🏆 View Weekly Leaderboard</button>
+      </div>
 
       <div className="stat-grid" style={{ marginBottom: '2rem' }}>
         <StatCard icon="👥" label="Total Students" value={totalStudents} />
