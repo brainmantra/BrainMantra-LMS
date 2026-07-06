@@ -160,8 +160,7 @@ router.get('/students/:id/day/:dayNum/responses', requireAdmin, async (req, res)
     if (!student[0]) return res.status(404).json({ message: 'Student not found.' })
 
     const level = student[0].level
-    const tableNum = level.replace('l', '')
-    const tableName = `responses_l${tableNum}`
+    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
 
     const { rows } = await pool.query(
       `SELECT * FROM ${tableName}

@@ -325,8 +325,7 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const level = normalizeStudentLevel(student.level) || student.level
-    const tableNum = level.replace('l', '')
-    const tableName = `responses_l${tableNum}`
+    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
 
     // Calculate section score
     const correct = responses.filter(r => r.is_correct).length
@@ -469,8 +468,7 @@ router.get('/:id/progress/:dayNumber/report', async (req, res) => {
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const level = normalizeStudentLevel(student.level) || student.level
-    const tableNum = level.replace('l', '')
-    const tableName = `responses_l${tableNum}`
+    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
 
     const [dayRecord, responses] = await Promise.all([
       pool.query(`SELECT * FROM day_records WHERE student_id = $1 AND day_number = $2`, [studentId, dayNumber]),

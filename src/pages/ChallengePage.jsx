@@ -17,7 +17,12 @@ export default function ChallengePage() {
   const [longestStreak, setLongestStreak] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  const levelInfo = LEVELS.find(l => l.id === student?.level)
+  const LEVEL_LABELS = {
+    l1: 'Level 1', l2: 'Level 2', l3: 'Level 3', l4: 'Level 4',
+    l5: 'Level 5', l6: 'Level 6', l7: 'Level 7', l8: 'Level 8',
+    alumni: 'Alumni'
+  }
+
   const currentDay = useMemo(() => getChallengeDay(student?.registration_date), [student])
   const clampedCurrentDay = Math.min(currentDay, 100)
   const maxRenderDay = Math.min(currentDay + 1, 100)
@@ -85,7 +90,7 @@ export default function ChallengePage() {
           <div>
             <h1 className="challenge-title">Hey {student.name.split(' ')[0]} 👋</h1>
             <p className="challenge-subtitle">
-              <span className="badge badge-amber">{levelInfo?.label || student.level}</span>
+              <span className="badge badge-amber">{LEVEL_LABELS[student?.level] || student?.level}</span>
               {' '}You're on Day <strong>{clampedCurrentDay}</strong> of 100.
             </p>
           </div>

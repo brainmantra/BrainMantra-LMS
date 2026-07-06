@@ -5,8 +5,8 @@ import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import * as XLSX from 'xlsx'
 
-const LEVELS = ['l1','l2','l3','l4','l5','l6','l7','l8']
-const LEVEL_LABELS = { l1:'Level 1',l2:'Level 2',l3:'Level 3',l4:'Level 4',l5:'Level 5',l6:'Level 6',l7:'Level 7',l8:'Level 8' }
+const LEVELS = ['l1','l2','l3','l4','l5','l6','l7','l8','alumni']
+const LEVEL_LABELS = { l1:'Level 1',l2:'Level 2',l3:'Level 3',l4:'Level 4',l5:'Level 5',l6:'Level 6',l7:'Level 7',l8:'Level 8', alumni:'Alumni' }
 
 function StatCard({ icon, label, value, color }) {
   return (

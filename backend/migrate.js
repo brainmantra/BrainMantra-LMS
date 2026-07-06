@@ -182,6 +182,7 @@ CREATE TABLE IF NOT EXISTS responses_l5 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l6 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l7 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l8 (LIKE responses_l1 INCLUDING ALL);
+CREATE TABLE IF NOT EXISTS responses_alumni (LIKE responses_l1 INCLUDING ALL);
 
 CREATE INDEX IF NOT EXISTS idx_resp_l1_student_day ON responses_l1(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_l2_student_day ON responses_l2(student_id, day_number);
@@ -191,6 +192,7 @@ CREATE INDEX IF NOT EXISTS idx_resp_l5_student_day ON responses_l5(student_id, d
 CREATE INDEX IF NOT EXISTS idx_resp_l6_student_day ON responses_l6(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_l7_student_day ON responses_l7(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_l8_student_day ON responses_l8(student_id, day_number);
+CREATE INDEX IF NOT EXISTS idx_resp_alumni_student_day ON responses_alumni(student_id, day_number);
 `
 
 async function migrate() {
