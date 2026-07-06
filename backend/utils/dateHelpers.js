@@ -14,10 +14,12 @@ function getISTMidnightUTC(d = new Date()) {
  * Uses IST (Asia/Kolkata) consistently.
  */
 export function getChallengeDay(registrationDate, now = new Date()) {
-  const regDay = getISTMidnightUTC(registrationDate)
+  const thresholdUTC = Date.UTC(2026, 6, 15) // July 15, 2026 (Month is 0-indexed: 6 = July)
+  const regDay = Math.max(getISTMidnightUTC(registrationDate), thresholdUTC)
   const today = getISTMidnightUTC(now)
   const diffDays = Math.round((today - regDay) / 86_400_000)
-  return Math.max(1, diffDays + 1)
+  if (diffDays < 0) return 0
+  return diffDays + 1
 }
 
 export function isSameCalendarDay(a, b) {

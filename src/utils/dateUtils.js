@@ -9,17 +9,17 @@ function getISTMidnightUTC(d = new Date()) {
 }
 
 export function getChallengeDay(registrationDate, now = new Date()) {
-  const regDay = getISTMidnightUTC(registrationDate)
+  const thresholdUTC = Date.UTC(2026, 6, 15) // July 15, 2026 (Month is 0-indexed: 6 = July)
+  const regDay = Math.max(getISTMidnightUTC(registrationDate), thresholdUTC)
   const today = getISTMidnightUTC(now)
-  return Math.max(1, Math.round((today - regDay) / 86_400_000) + 1)
+  const diffDays = Math.round((today - regDay) / 86_400_000)
+  if (diffDays < 0) return 0
+  return diffDays + 1
 }
 
 export function getDayDate(registrationDate, dayNumber) {
-  // Return a Date object representing the midnight (UTC) of that day in IST,
-  // adjusted so when displayed locally, it shows the correct day.
-  // Actually, we can just create a Date object in local time that has the 
-  // same year, month, day as the target IST day.
-  const regDayUTC = getISTMidnightUTC(registrationDate)
+  const thresholdUTC = Date.UTC(2026, 6, 15) // July 15, 2026 (Month is 0-indexed: 6 = July)
+  const regDayUTC = Math.max(getISTMidnightUTC(registrationDate), thresholdUTC)
   const targetDayUTC = regDayUTC + (dayNumber - 1) * 86_400_000
   return new Date(targetDayUTC) // This will be used by formatDate
 }
