@@ -132,38 +132,33 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord }) {
 
       {/* Questions/Sections List */}
       <div className="day-card-sections-list">
-        {status === 'future' ? (
-          <div className="question-timer-overlay">
-            <div className="timer-icon">⏱</div>
-            <div className="timer-text">Next challenge unlocks at midnight</div>
-          </div>
-        ) : (
-          sections.map((sec, idx) => {
-            const secStatus = sectionData[sec]?.status || 'not_started'
-            const isSecDone = secStatus === 'done' || dayRecord?.completed
-            
-            return (
-              <div key={sec} className="day-card-section-row">
-                <div className="day-card-section-meta">
-                  <span className="day-card-section-index">Part {idx + 1}</span>
-                  <span className={`day-card-section-badge ${isSecDone ? 'done' : 'practice'}`}>
-                    {isSecDone ? 'DONE' : 'PRACTICE'}
+        {sections.map((sec, idx) => {
+          const secStatus = sectionData[sec]?.status || 'not_started'
+          const isSecDone = secStatus === 'done' || dayRecord?.completed
+          
+          return (
+            <div key={sec} className="day-card-section-row">
+              <div className="day-card-section-meta">
+                <span className="day-card-section-index">Part {idx + 1}</span>
+                {isSecDone && (
+                  <span className="day-card-section-badge done">
+                    DONE
                   </span>
-                </div>
-                <div className="day-card-section-name">
-                  {SECTION_LABELS[sec] || sec}
-                </div>
-                <button 
-                  className="btn-solve-section"
-                  onClick={() => handleSolveSection(sec)}
-                  disabled={status === 'missed' || status === 'opened-past'}
-                >
-                  {isSecDone ? 'Review' : 'Solve Part →'}
-                </button>
+                )}
               </div>
-            )
-          })
-        )}
+              <div className="day-card-section-name">
+                {SECTION_LABELS[sec] || sec}
+              </div>
+              <button 
+                className="btn-solve-section"
+                onClick={() => handleSolveSection(sec)}
+                disabled={!clickable}
+              >
+                {isSecDone ? 'Review' : 'Solve Part →'}
+              </button>
+            </div>
+          )
+        })}
       </div>
 
       {/* Bottom Main Button */}
