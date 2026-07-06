@@ -250,13 +250,60 @@ function StudentsTab() {
         ) : (
           <div>
             <h3 style={{ marginBottom: '1rem', fontSize: '1rem', color: 'var(--text-secondary)' }}>100-Day Grid</h3>
-            <div className="day-grid" style={{ marginBottom: '1.5rem' }}>
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+              gap: '12px',
+              marginBottom: '1.5rem' 
+            }}>
               {Array.from({ length: 100 }, (_, i) => {
+                const dayNum = i + 1
+                const dayRecord = selectedDays.find(d => d.day_number === dayNum)
                 const { icon, cls, title } = getStatusIcon(selectedDays, i)
+                
+                const sectionData = dayRecord?.section_data || {}
+                const sections = Object.keys(sectionData)
+
+                const SECTION_LABELS = {
+                  p1: 'Abacus',
+                  p2: 'Visual',
+                  p3: 'Mul',
+                  p4: '2 Steps'
+                }
+
                 return (
-                  <div key={i} className={`day-card ${cls}`} title={title} style={{ cursor: 'default' }}>
-                    <span className="day-card__num">{i + 1}</span>
-                    <span className="day-card__emoji" style={{ fontSize: '0.75rem' }}>{icon}</span>
+                  <div key={i} className={`day-card ${cls}`} title={title} style={{ 
+                    cursor: 'default', 
+                    aspectRatio: 'auto', 
+                    padding: '0.75rem', 
+                    minHeight: '80px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '0.5rem',
+                    alignItems: 'stretch'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="day-card__num" style={{ fontSize: '0.9rem' }}>Day {dayNum}</span>
+                      <span className="day-card__emoji" style={{ fontSize: '1rem' }}>{icon}</span>
+                    </div>
+                    
+                    {sections.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {sections.map(sec => {
+                          const sd = sectionData[sec]
+                          const secAcc = sd.questionCount > 0 ? Math.round((sd.correct / sd.questionCount) * 100) : 0
+                          const color = secAcc >= 80 ? 'var(--success)' : secAcc >= 50 ? 'var(--warning)' : 'var(--error)'
+                          const label = SECTION_LABELS[sec] || sec.toUpperCase()
+                          
+                          return (
+                            <div key={sec} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                              <span style={{ color, fontWeight: 'bold' }}>{sd.correct ?? 0}/{sd.questionCount ?? 0}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })}
