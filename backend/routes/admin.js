@@ -505,4 +505,116 @@ router.get('/login-logs', requireAdmin, async (req, res) => {
   }
 })
 
+// ── GET /api/admin/responses ──────────────────────────────────────────────────
+router.get('/responses', requireAdmin, async (req, res) => {
+  try {
+    const { search = '', level = '', day_number = '', section_name = '', is_correct = '', sortBy = 'answered_at', sortOrder = 'DESC', limit = 100, page = 1, exportAll = 'false' } = req.query;
+
+    const tableQueries = [
+      "SELECT 'l1' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l1",
+      "SELECT 'l2' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l2",
+      "SELECT 'l3' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l3",
+      "SELECT 'l4' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l4",
+      "SELECT 'l5' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l5",
+      "SELECT 'l6' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l6",
+      "SELECT 'l7' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l7",
+      "SELECT 'l8' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l8",
+      "SELECT 'alumni' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_alumni"
+    ];
+
+    const unionSubquery = tableQueries.join('\nUNION ALL\n');
+
+    let countQuery = `
+      SELECT COUNT(*) 
+      FROM (${unionSubquery}) r
+      JOIN students s ON s.id = r.student_id
+      WHERE 1=1
+    `;
+
+    let dataQuery = `
+      SELECT r.id, r.level, r.student_id, s.name as student_name, s.mobile as student_mobile,
+             r.day_number, r.section_name, r.question_snapshot, r.correct_answer,
+             r.student_answer, r.is_correct, r.time_taken_seconds, r.answered_at
+      FROM (${unionSubquery}) r
+      JOIN students s ON s.id = r.student_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let filterIndex = 1;
+
+    // Filters
+    let filters = '';
+    if (search) {
+      params.push(`%${search}%`);
+      filters += ` AND (s.name ILIKE $${filterIndex} OR s.mobile ILIKE $${filterIndex})`;
+      filterIndex++;
+    }
+    if (level) {
+      params.push(level);
+      filters += ` AND r.level = $${filterIndex}`;
+      filterIndex++;
+    }
+    if (day_number) {
+      params.push(parseInt(day_number, 10));
+      filters += ` AND r.day_number = $${filterIndex}`;
+      filterIndex++;
+    }
+    if (section_name) {
+      params.push(section_name);
+      filters += ` AND r.section_name = $${filterIndex}`;
+      filterIndex++;
+    }
+    if (is_correct !== '') {
+      params.push(is_correct === 'true');
+      filters += ` AND r.is_correct = $${filterIndex}`;
+      filterIndex++;
+    }
+
+    countQuery += filters;
+    dataQuery += filters;
+
+    // Sorting
+    const allowedSortFields = ['answered_at', 'student_name', 'day_number', 'is_correct', 'time_taken_seconds'];
+    const orderField = allowedSortFields.includes(sortBy) ? sortBy : 'answered_at';
+    const orderDir = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+    if (orderField === 'student_name') {
+      dataQuery += ` ORDER BY s.name ${orderDir}`;
+    } else {
+      dataQuery += ` ORDER BY r.${orderField} ${orderDir}`;
+    }
+
+    let resultRows;
+    let totalCount = 0;
+
+    if (exportAll === 'true') {
+      const { rows } = await pool.query(dataQuery, params);
+      resultRows = rows;
+      totalCount = rows.length;
+    } else {
+      // Pagination
+      const countRes = await pool.query(countQuery, params);
+      totalCount = parseInt(countRes.rows[0].count, 10);
+
+      const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+      dataQuery += ` LIMIT $${filterIndex} OFFSET $${filterIndex + 1}`;
+      params.push(parseInt(limit, 10), offset);
+
+      const { rows } = await pool.query(dataQuery, params);
+      resultRows = rows;
+    }
+
+    res.json({
+      responses: resultRows,
+      totalCount,
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10)
+    });
+  } catch (err) {
+    console.error('[admin/responses]', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router

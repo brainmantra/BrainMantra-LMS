@@ -527,7 +527,7 @@ export default function SectionAttemptPage() {
             fontWeight: 700, fontSize: '0.95rem',
             animation: 'slideDown 0.2s ease',
           }}>
-            {feedback === 'correct' ? '✓ Correct!' : `✗ Correct: ${formatAnswer(currentQ.answer ?? currentQ.computedAnswer)}`}
+            {feedback === 'correct' ? '✓ Correct!' : '✗ Wrong!'}
           </div>
         )}
 
