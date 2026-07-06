@@ -110,6 +110,17 @@ function StudentsTab() {
   const [newPassword, setNewPassword] = useState('')
   const [newSaving, setNewSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [usernameAutoFilled, setUsernameAutoFilled] = useState(true)
+
+  // Auto-generate login ID from name whenever name changes (unless admin edited manually)
+  const generateUsernameFromName = (name) =>
+    name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+
+  useEffect(() => {
+    if (usernameAutoFilled) {
+      setNewUsername(generateUsernameFromName(newName))
+    }
+  }, [newName, usernameAutoFilled])
 
   const handleSyncSheet = async () => {
     if (!window.confirm('This will pull students from the Google Sheet and generate passwords for new/missing students. Proceed?')) return
@@ -201,6 +212,7 @@ function StudentsTab() {
       setNewLevel('l1')
       setNewUsername('')
       setNewPassword('')
+      setUsernameAutoFilled(true)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add student.')
     } finally {
@@ -460,8 +472,36 @@ function StudentsTab() {
                 </select>
               </div>
               <div className="form-group" style={{ marginTop: '0.75rem' }}>
-                <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Login ID (Username)</label>
-                <input className="form-input" type="text" required placeholder="e.g. rahul_abacus" value={newUsername} onChange={e => setNewUsername(e.target.value)} />
+                <label className="form-label" style={{ color: 'var(--text-secondary)' }}>
+                  Login ID (Username)
+                  {usernameAutoFilled && <span style={{ fontSize: '0.75rem', color: '#f5a623', marginLeft: '0.5rem' }}>● auto-filled from name</span>}
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    className="form-input"
+                    type="text"
+                    required
+                    placeholder="e.g. rahul_sharma"
+                    value={newUsername}
+                    onChange={e => {
+                      setNewUsername(e.target.value)
+                      setUsernameAutoFilled(false)
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', whiteSpace: 'nowrap' }}
+                    onClick={() => {
+                      setNewUsername(generateUsernameFromName(newName))
+                      setUsernameAutoFilled(true)
+                    }}
+                    title="Re-generate from name"
+                  >
+                    ↺ Reset
+                  </button>
+                </div>
               </div>
               <div className="form-group" style={{ marginTop: '0.75rem' }}>
                 <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Password</label>

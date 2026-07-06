@@ -73,7 +73,7 @@ export default function ChallengePage() {
     setTourState(prev => ({ ...prev, run: true }))
   }
 
-  const currentDay = useMemo(() => getChallengeDay(student?.registration_date), [student])
+  const currentDay = useMemo(() => getChallengeDay(student?.first_login_date || student?.registration_date), [student])
   const clampedCurrentDay = Math.min(currentDay, 100)
   const maxRenderDay = Math.min(currentDay, 100)
 
@@ -242,7 +242,7 @@ export default function ChallengePage() {
                   <div key={dayNum} className={dayNum === 0 ? 'tour-step-demo' : ''}>
                     <DayCard
                       dayNumber={dayNum}
-                      registrationDate={student.registration_date}
+                      registrationDate={student.first_login_date || student.registration_date}
                       dayRecord={dayNum === 0 ? null : dayMap[dayNum]}
                       isDemo={dayNum === 0}
                     />

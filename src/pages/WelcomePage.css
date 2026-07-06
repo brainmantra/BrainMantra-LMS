@@ -42,8 +42,12 @@
 .welcome-title {
   font-size: 1.7rem;
   font-weight: 800;
-  color: var(--navy);
+  color: var(--text-primary);
   margin-bottom: 10px;
+}
+
+.welcome-name-highlight {
+  color: #f5a623;
 }
 
 .welcome-subtitle {

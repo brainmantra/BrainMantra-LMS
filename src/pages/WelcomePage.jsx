@@ -41,7 +41,7 @@ export default function WelcomePage() {
         </div>
 
         <span className="badge badge-green" style={{ marginBottom: 12 }}>Registration Verified</span>
-        <h1 className="welcome-title">Welcome, {student.name.split(' ')[0]}! 👋</h1>
+        <h1 className="welcome-title">Welcome, <span className="welcome-name-highlight">{student.name.split(' ')[0]}</span>! 👋</h1>
         <p className="welcome-subtitle">
           You're all set for the <strong>{levelInfo?.label || student.level}</strong> level.
           Your 100-day journey begins today.

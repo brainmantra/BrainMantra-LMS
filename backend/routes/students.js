@@ -68,7 +68,16 @@ router.post('/login', async (req, res) => {
     }
       
     await logActivity({ userType: 'student', userId: student.id, userLabel: student.name, action: 'login_success', req })
-      
+
+    // Set first_login_date on first ever login (starts the 100-day challenge clock)
+    if (!student.first_login_date) {
+      await pool.query(
+        `UPDATE students SET first_login_date = NOW() WHERE id = $1`,
+        [student.id]
+      )
+      student.first_login_date = new Date().toISOString()
+    }
+
     // Clean student object before sending
     const studentData = { ...student }
     delete studentData.password_hash
@@ -106,14 +115,14 @@ router.get('/:id/progress', async (req, res) => {
          FROM day_records WHERE student_id = $1 ORDER BY day_number`,
         [studentId]
       ),
-      recalculateStreak(studentId, student.registration_date),
+      recalculateStreak(studentId, student.first_login_date || student.registration_date),
     ])
 
     res.json({
       days,
       streak: streakResult.streak,
       longestStreak: streakResult.longestStreak,
-      currentDay: getChallengeDay(student.registration_date),
+      currentDay: getChallengeDay(student.first_login_date || student.registration_date),
     })
   } catch (err) {
     console.error('[progress]', err)
@@ -142,7 +151,7 @@ router.post('/:id/progress/:dayNumber/open', async (req, res) => {
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
-    const currentDay = getChallengeDay(student.registration_date)
+    const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
     if (dayNumber !== currentDay && dayNumber !== 0) {
       return res.status(403).json({ message: 'This day is not currently active.' })
     }
@@ -444,7 +453,7 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
     const accuracy = totalQs > 0 ? Math.round((totalCorrect / totalQs) * 100) : 0
 
     // Streak bonus: +5 XP per active consecutive day
-    const streakResult = await recalculateStreak(studentId, student.registration_date)
+    const streakResult = await recalculateStreak(studentId, student.first_login_date || student.registration_date)
     const streakBonus = streakResult.streak * 5
     totalXp += streakBonus
 

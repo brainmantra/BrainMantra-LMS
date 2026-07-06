@@ -158,9 +158,17 @@ router.post('/students/sync', requireAdmin, async (req, res) => {
     let addedCount = 0
     let credentialsGenerated = 0
 
-    // Helper to generate credentials
-    const generateCredentials = (name, mobile) => {
-      const username = `student_${mobile.slice(-4)}_${Math.floor(Math.random() * 1000)}`
+    // Helper to generate credentials — login ID is derived from the student's name
+    const generateCredentials = async (name, mobile) => {
+      const base = name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || `student_${mobile.slice(-4)}`
+      // Check uniqueness; append suffix if needed
+      let username = base
+      let suffix = 1
+      while (true) {
+        const { rows: clash } = await pool.query('SELECT id FROM students WHERE username = $1', [username])
+        if (clash.length === 0) break
+        username = `${base}_${suffix++}`
+      }
       const plain_password = Math.random().toString(36).slice(-6)
       return { username, plain_password }
     }
@@ -168,7 +176,7 @@ router.post('/students/sync', requireAdmin, async (req, res) => {
     // 1. Insert new students
     for (const st of newStudents) {
       const levelId = normaliseLevel(st.level) || 'l1'
-      const { username, plain_password } = generateCredentials(st.name, st.mobile)
+      const { username, plain_password } = await generateCredentials(st.name, st.mobile)
       const hash = await bcrypt.hash(plain_password, 12)
       
       await pool.query(
@@ -181,7 +189,7 @@ router.post('/students/sync', requireAdmin, async (req, res) => {
 
     // 2. Assign credentials to existing students missing them
     for (const st of missingCredentials) {
-      const { username, plain_password } = generateCredentials(st.name, st.mobile)
+      const { username, plain_password } = await generateCredentials(st.name, st.mobile)
       const hash = await bcrypt.hash(plain_password, 12)
       await pool.query(
         'UPDATE students SET username = $1, password_hash = $2, plain_password = $3 WHERE id = $4',
