@@ -58,4 +58,4 @@ export function isFormConfigured(level, dayNumber) {
 // URL of the Google Form used for initial registration (linked on the login page).
 // Students fill this out once; it populates the Google Sheet used for verification.
 export const REGISTRATION_FORM_URL =
-  'https://docs.google.com/forms/d/e/YOUR_REGISTRATION_FORM_ID/viewform'
+  'https://forms.gle/GxKMuifjP6SHzvXi6'
