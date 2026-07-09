@@ -296,6 +296,7 @@ router.get('/responses', requireTeacher, async (req, res) => {
 
     // Construct UNION query only for levels assigned
     const tableMapping = {
+      beginner: "SELECT 'beginner' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_beginner",
       l1: "SELECT 'l1' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l1",
       l2: "SELECT 'l2' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l2",
       l3: "SELECT 'l3' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l3",
@@ -304,7 +305,8 @@ router.get('/responses', requireTeacher, async (req, res) => {
       l6: "SELECT 'l6' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l6",
       l7: "SELECT 'l7' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l7",
       l8: "SELECT 'l8' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l8",
-      alumni: "SELECT 'alumni' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_alumni"
+      alumni: "SELECT 'alumni' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_alumni",
+      gm: "SELECT 'gm' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_gm"
     };
 
     const tableQueries = finalLevels.map(l => tableMapping[l]).filter(Boolean);
@@ -413,7 +415,10 @@ router.post('/responses/:id/grade', requireTeacher, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized for this student level.' })
     }
 
-    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
+    let tableName = `responses_l${level.replace('l', '')}`
+    if (level === 'alumni') tableName = 'responses_alumni'
+    else if (level === 'beginner') tableName = 'responses_beginner'
+    else if (level === 'gm') tableName = 'responses_gm'
 
     // 1. Fetch current response
     const { rows: respRows } = await pool.query(

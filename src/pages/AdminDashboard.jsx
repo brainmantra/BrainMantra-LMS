@@ -7,8 +7,20 @@ import * as XLSX from 'xlsx'
 import StudentAnswersTab from '../components/StudentAnswersTab'
 
 
-const LEVELS = ['l1','l2','l3','l4','l5','l6','l7','l8','alumni']
-const LEVEL_LABELS = { l1:'Level 1',l2:'Level 2',l3:'Level 3',l4:'Level 4',l5:'Level 5',l6:'Level 6',l7:'Level 7',l8:'Level 8', alumni:'Alumni' }
+const LEVELS = ['beginner','l1','l2','l3','l4','l5','l6','l7','l8','alumni','gm']
+const LEVEL_LABELS = {
+  beginner: 'Beginner',
+  l1: 'Level 1',
+  l2: 'Level 2',
+  l3: 'Level 3',
+  l4: 'Level 4',
+  l5: 'Level 5',
+  l6: 'Level 6',
+  l7: 'Level 7',
+  l8: 'Level 8',
+  alumni: 'Alumni',
+  gm: 'GM Level'
+}
 
 function StatCard({ icon, label, value, color }) {
   return (
@@ -1085,6 +1097,17 @@ function CustomFormsTab() {
   }, [qLevel, qDay])
 
   useEffect(() => {
+    const secs = getTeacherSectionsForLevel(qLevel, qDay)
+    if (secs.length > 0) {
+      if (!secs.some(s => s.value === qSection)) {
+        setQSection(secs[0].value)
+      }
+    } else {
+      setQSection('')
+    }
+  }, [qLevel, qDay, qSection])
+
+  useEffect(() => {
     if (!qLevel || !qDay || !qSection) return
     const match = savedQuestions.find(q => 
       q.level === qLevel && 
@@ -1183,8 +1206,20 @@ function CustomFormsTab() {
     setFormItems(newItems)
   }
 
-  const getTeacherSectionsForLevel = (level) => {
-    if (level === 'l1') return [
+  const getTeacherSectionsForLevel = (level, dayStr) => {
+    const day = parseInt(dayStr, 10)
+    if (day === 0) {
+      if (level === 'l1' || level === 'beginner') {
+        return [
+          { value: 'abacus', label: '🧮 Abacus' },
+          { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
+        ]
+      }
+      return [
+        { value: 'power_exercise', label: '⚡ Power Exercise' }
+      ]
+    }
+    if (level === 'l1' || level === 'beginner') return [
       { value: 'abacus', label: '🧮 Abacus' },
       { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
     ]
@@ -1219,15 +1254,15 @@ function CustomFormsTab() {
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="form-label">Day Number</label>
-          <input type="number" min="1" max="100" value={qDay} onChange={e => setQDay(e.target.value)} placeholder="e.g. 5" style={{ width: 100 }} />
+          <input type="number" min="0" max="100" value={qDay} onChange={e => setQDay(e.target.value)} placeholder="e.g. 5" style={{ width: 100 }} />
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="form-label">Section</label>
           <select value={qSection} onChange={e => setQSection(e.target.value)} style={{ width: 220 }}>
-            {getTeacherSectionsForLevel(qLevel).map(sec => (
+            {getTeacherSectionsForLevel(qLevel, qDay).map(sec => (
               <option key={sec.value} value={sec.value}>{sec.label}</option>
             ))}
-            {getTeacherSectionsForLevel(qLevel).length === 0 && (
+            {getTeacherSectionsForLevel(qLevel, qDay).length === 0 && (
               <option value="">No custom sections (Auto-generated)</option>
             )}
           </select>

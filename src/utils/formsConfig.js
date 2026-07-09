@@ -1,8 +1,15 @@
 export const LEVELS = [
-  { id: '1',     label: '1',     description: 'Level 1' },
-  { id: '2',     label: '2',     description: 'Level 2' },
-  { id: '3',     label: '3',     description: 'Level 3' },
-  { id: '4',     label: '4',     description: 'Level 4' },
+  { id: 'beginner', label: 'Beginner', description: 'Beginner Level' },
+  { id: 'l1',     label: '1',     description: 'Level 1' },
+  { id: 'l2',     label: '2',     description: 'Level 2' },
+  { id: 'l3',     label: '3',     description: 'Level 3' },
+  { id: 'l4',     label: '4',     description: 'Level 4' },
+  { id: 'l5',     label: '5',     description: 'Level 5' },
+  { id: 'l6',     label: '6',     description: 'Level 6' },
+  { id: 'l7',     label: '7',     description: 'Level 7' },
+  { id: 'l8',     label: '8',     description: 'Level 8' },
+  { id: 'alumni', label: 'Alumni', description: 'Alumni Level' },
+  { id: 'gm',     label: 'GM Level', description: 'GM Level' },
 ]
 
 const FoundationLevel1_FORMS = [

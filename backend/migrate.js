@@ -45,7 +45,7 @@ ALTER TABLE students DROP CONSTRAINT IF EXISTS students_mobile_key;
 CREATE TABLE IF NOT EXISTS day_records (
   id                   SERIAL PRIMARY KEY,
   student_id           INTEGER     NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  day_number           INTEGER     NOT NULL CHECK (day_number BETWEEN 1 AND 100),
+  day_number           INTEGER     NOT NULL CHECK (day_number BETWEEN 0 AND 100),
   opened               BOOLEAN     NOT NULL DEFAULT FALSE,
   opened_at            TIMESTAMPTZ,
   completed            BOOLEAN     NOT NULL DEFAULT FALSE,
@@ -153,7 +153,7 @@ CREATE INDEX IF NOT EXISTS idx_qb_teacher_input ON question_bank(is_teacher_inpu
 CREATE TABLE IF NOT EXISTS teacher_questions (
   id          SERIAL PRIMARY KEY,
   level       VARCHAR(20) NOT NULL,
-  day_number  INTEGER     NOT NULL CHECK (day_number BETWEEN 1 AND 100),
+  day_number  INTEGER     NOT NULL CHECK (day_number BETWEEN 0 AND 100),
   section     VARCHAR(50) NOT NULL DEFAULT 'teacher_day',
   question    TEXT        NOT NULL,
   answer      TEXT        NOT NULL,
@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS responses_l1 (
   answered_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS responses_beginner (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l2 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l3 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l4 (LIKE responses_l1 INCLUDING ALL);
@@ -191,7 +192,9 @@ CREATE TABLE IF NOT EXISTS responses_l6 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l7 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_l8 (LIKE responses_l1 INCLUDING ALL);
 CREATE TABLE IF NOT EXISTS responses_alumni (LIKE responses_l1 INCLUDING ALL);
+CREATE TABLE IF NOT EXISTS responses_gm (LIKE responses_l1 INCLUDING ALL);
 
+CREATE INDEX IF NOT EXISTS idx_resp_beginner_student_day ON responses_beginner(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_l1_student_day ON responses_l1(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_l2_student_day ON responses_l2(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_l3_student_day ON responses_l3(student_id, day_number);
@@ -201,6 +204,7 @@ CREATE INDEX IF NOT EXISTS idx_resp_l6_student_day ON responses_l6(student_id, d
 CREATE INDEX IF NOT EXISTS idx_resp_l7_student_day ON responses_l7(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_l8_student_day ON responses_l8(student_id, day_number);
 CREATE INDEX IF NOT EXISTS idx_resp_alumni_student_day ON responses_alumni(student_id, day_number);
+CREATE INDEX IF NOT EXISTS idx_resp_gm_student_day ON responses_gm(student_id, day_number);
 `
 
 async function migrate() {
@@ -213,7 +217,32 @@ async function migrate() {
       console.log('[migrate] Could not drop old level constraint:', e.message)
     }
 
+    // Drop old day_number constraints if they exist to apply the 0-100 check
+    try {
+      await client.query(`ALTER TABLE teacher_questions DROP CONSTRAINT IF EXISTS teacher_questions_day_number_check;`)
+    } catch (e) {
+      console.log('[migrate] Note on teacher_questions check constraint:', e.message)
+    }
+    try {
+      await client.query(`ALTER TABLE day_records DROP CONSTRAINT IF EXISTS day_records_day_number_check;`)
+    } catch (e) {
+      console.log('[migrate] Note on day_records check constraint:', e.message)
+    }
+
     await client.query(SQL)
+
+    // Add updated day_number constraints
+    try {
+      await client.query(`ALTER TABLE teacher_questions ADD CONSTRAINT teacher_questions_day_number_check CHECK (day_number BETWEEN 0 AND 100);`)
+    } catch (e) {
+      console.log('[migrate] Note adding teacher_questions check constraint:', e.message)
+    }
+    try {
+      await client.query(`ALTER TABLE day_records ADD CONSTRAINT day_records_day_number_check CHECK (day_number BETWEEN 0 AND 100);`)
+    } catch (e) {
+      console.log('[migrate] Note adding day_records check constraint:', e.message)
+    }
+
     console.log('[migrate] ✓ All tables created / verified.')
 
     // ── Seed admin account ────────────────────────────────────────────────────

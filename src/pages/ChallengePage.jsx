@@ -21,9 +21,10 @@ export default function ChallengePage() {
   const [activeTab, setActiveTab] = useState('map') // 'map' or 'dashboard'
 
   const LEVEL_LABELS = {
+    beginner: 'Beginner',
     l1: 'Level 1', l2: 'Level 2', l3: 'Level 3', l4: 'Level 4',
     l5: 'Level 5', l6: 'Level 6', l7: 'Level 7', l8: 'Level 8',
-    alumni: 'Alumni'
+    alumni: 'Alumni', gm: 'GM Level'
   }
 
   const [{ run, steps }, setTourState] = useState({

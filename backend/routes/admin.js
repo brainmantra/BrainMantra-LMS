@@ -323,7 +323,10 @@ router.get('/students/:id/day/:dayNum/responses', requireAdmin, async (req, res)
     if (!student[0]) return res.status(404).json({ message: 'Student not found.' })
 
     const level = student[0].level
-    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
+    let tableName = `responses_l${level.replace('l', '')}`
+    if (level === 'alumni') tableName = 'responses_alumni'
+    else if (level === 'beginner') tableName = 'responses_beginner'
+    else if (level === 'gm') tableName = 'responses_gm'
 
     const { rows } = await pool.query(
       `SELECT * FROM ${tableName}
@@ -698,6 +701,7 @@ router.get('/responses', requireAdmin, async (req, res) => {
     const { search = '', level = '', day_number = '', section_name = '', is_correct = '', sortBy = 'answered_at', sortOrder = 'DESC', limit = 100, page = 1, exportAll = 'false' } = req.query;
 
     const tableQueries = [
+      "SELECT 'beginner' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_beginner",
       "SELECT 'l1' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l1",
       "SELECT 'l2' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l2",
       "SELECT 'l3' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l3",
@@ -706,7 +710,8 @@ router.get('/responses', requireAdmin, async (req, res) => {
       "SELECT 'l6' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l6",
       "SELECT 'l7' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l7",
       "SELECT 'l8' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_l8",
-      "SELECT 'alumni' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_alumni"
+      "SELECT 'alumni' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_alumni",
+      "SELECT 'gm' as level, id, student_id, day_number, section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, answered_at FROM responses_gm"
     ];
 
     const unionSubquery = tableQueries.join('\nUNION ALL\n');
@@ -810,7 +815,10 @@ router.post('/responses/:id/grade', requireAdmin, async (req, res) => {
     const responseId = parseInt(req.params.id, 10)
     const { is_correct, level } = req.body
 
-    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
+    let tableName = `responses_l${level.replace('l', '')}`
+    if (level === 'alumni') tableName = 'responses_alumni'
+    else if (level === 'beginner') tableName = 'responses_beginner'
+    else if (level === 'gm') tableName = 'responses_gm'
 
     // 1. Fetch current response
     const { rows: respRows } = await pool.query(

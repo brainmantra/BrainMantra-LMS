@@ -29,26 +29,35 @@ export async function findInSheet(mobile) {
   return rows.find(r => r.mobile === mobile) ?? null
 }
 
-const VALID_LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'beginner', 'elementary', 'intermediate', 'advanced', 'expert']
+const VALID_LEVELS = [
+  'beginner', 'l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'alumni', 'gm',
+  '1', '2', '3', '4', '5', '6', '7', '8', 'elementary', 'intermediate', 'advanced', 'expert'
+]
 
 export function normaliseLevel(raw = '') {
-  const s = raw.toLowerCase()
+  const s = raw.toLowerCase().trim()
   
-  // Extract number if it exists (e.g. "foundation level 3" -> "3")
+  if (s.includes('grandmaster') || s.includes('gm')) return 'gm'
+  if (s.includes('alumni')) return 'alumni'
+  if (s.includes('beginner')) return 'beginner'
+
+  // Extract number if it exists (e.g. "foundation level 3" -> "3" -> "l3")
   const match = s.match(/\d+/)
   if (match) {
     const num = match[0]
-    if (VALID_LEVELS.includes(num)) return num
+    if (['1', '2', '3', '4', '5', '6', '7', '8'].includes(num)) return `l${num}`
   }
 
-  // Fallback for named levels
-  if (s.includes('expert'))       return 'expert'
-  if (s.includes('advanced'))     return 'advanced'
-  if (s.includes('intermediate')) return 'intermediate'
-  if (s.includes('elementary'))   return 'elementary'
-  if (s.includes('beginner'))     return 'beginner'
+  // Fallback for legacy named levels
+  if (s.includes('expert'))       return 'l5'
+  if (s.includes('advanced'))     return 'l4'
+  if (s.includes('intermediate')) return 'l3'
+  if (s.includes('elementary'))   return 'l2'
   
   // Also accept exact IDs
-  if (VALID_LEVELS.includes(s))   return s
+  if (VALID_LEVELS.includes(s)) {
+    if (/^[1-8]$/.test(s)) return `l${s}`
+    return s
+  }
   return null
 }

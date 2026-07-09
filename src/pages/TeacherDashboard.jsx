@@ -6,8 +6,20 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import StudentAnswersTab from '../components/StudentAnswersTab'
 
 
-const LEVELS = ['l1','l2','l3','l4','l5','l6','l7','l8','alumni']
-const LEVEL_LABELS = { l1:'Level 1',l2:'Level 2',l3:'Level 3',l4:'Level 4',l5:'Level 5',l6:'Level 6',l7:'Level 7',l8:'Level 8', alumni:'Alumni' }
+const LEVELS = ['beginner','l1','l2','l3','l4','l5','l6','l7','l8','alumni','gm']
+const LEVEL_LABELS = {
+  beginner: 'Beginner',
+  l1: 'Level 1',
+  l2: 'Level 2',
+  l3: 'Level 3',
+  l4: 'Level 4',
+  l5: 'Level 5',
+  l6: 'Level 6',
+  l7: 'Level 7',
+  l8: 'Level 8',
+  alumni: 'Alumni',
+  gm: 'GM Level'
+}
 const FIFTH_DAYS = Array.from({length: 20}, (_, i) => (i+1)*5)
 
 function StatCard({ icon, label, value, color }) {
@@ -20,8 +32,20 @@ function StatCard({ icon, label, value, color }) {
   )
 }
 
-const getTeacherSectionsForLevel = (level) => {
-  if (level === 'l1') return [
+const getTeacherSectionsForLevel = (level, dayStr) => {
+  const day = parseInt(dayStr, 10)
+  if (day === 0) {
+    if (level === 'l1' || level === 'beginner') {
+      return [
+        { value: 'abacus', label: '🧮 Abacus' },
+        { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
+      ]
+    }
+    return [
+      { value: 'power_exercise', label: '⚡ Power Exercise' }
+    ]
+  }
+  if (level === 'l1' || level === 'beginner') return [
     { value: 'abacus', label: '🧮 Abacus' },
     { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
   ]
@@ -171,7 +195,7 @@ export default function TeacherDashboard() {
   const [formItems, setFormItems] = useState([])
 
   useEffect(() => {
-    const secs = getTeacherSectionsForLevel(qLevel)
+    const secs = getTeacherSectionsForLevel(qLevel, qDay)
     if (secs.length > 0) {
       if (!secs.some(s => s.value === qSection)) {
         setQSection(secs[0].value)
@@ -179,7 +203,7 @@ export default function TeacherDashboard() {
     } else {
       setQSection('')
     }
-  }, [qLevel, qSection])
+  }, [qLevel, qDay, qSection])
   const [savedQuestions, setSavedQuestions] = useState([])
   const [loadingQ, setLoadingQ] = useState(false)
 
@@ -473,15 +497,15 @@ export default function TeacherDashboard() {
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Day Number</label>
-                  <input type="number" min="1" max="100" value={qDay} onChange={e => setQDay(e.target.value)} placeholder="e.g. 5" />
+                  <input type="number" min="0" max="100" value={qDay} onChange={e => setQDay(e.target.value)} placeholder="e.g. 5" />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Section</label>
                   <select value={qSection} onChange={e => setQSection(e.target.value)}>
-                    {getTeacherSectionsForLevel(qLevel).map(sec => (
+                    {getTeacherSectionsForLevel(qLevel, qDay).map(sec => (
                       <option key={sec.value} value={sec.value}>{sec.label}</option>
                     ))}
-                    {getTeacherSectionsForLevel(qLevel).length === 0 && (
+                    {getTeacherSectionsForLevel(qLevel, qDay).length === 0 && (
                       <option value="">No teacher sections (Auto-generated)</option>
                     )}
                   </select>

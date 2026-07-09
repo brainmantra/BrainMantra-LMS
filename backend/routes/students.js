@@ -26,12 +26,16 @@ async function getStudentById(id) {
 }
 
 function normalizeStudentLevel(raw) {
-  // Accepts 'l1'..'l8', '1'..'8', 'beginner' etc.
   if (!raw) return null
-  if (/^l[1-8]$/i.test(raw)) return raw.toLowerCase()
-  if (/^[1-8]$/.test(raw)) return `l${raw}`
-  const map = { beginner: 'l1', elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
-  return map[raw.toLowerCase()] || null
+  const s = raw.toLowerCase().trim()
+  if (s === 'beginner') return 'beginner'
+  if (s === 'gm') return 'gm'
+  if (s === 'alumni') return 'alumni'
+  if (/^l[1-8]$/i.test(s)) return s
+  if (/^[1-8]$/.test(s)) return `l${s}`
+  
+  const map = { elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
+  return map[s] || s
 }
 
 // ── POST /api/students/login ──────────────────────────────────────────────────
@@ -200,18 +204,30 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
 
     // Demo Day (day 0) — return sections with no DB state; never mark as completed
     if (dayNumber === 0) {
-      const demoSections = sections.map(sec => ({
-        section: sec,
-        label: SECTION_LABELS[sec] || sec,
-        status: 'not_started',
-        questionCount: sec === 'power_exercise' ? 10 : (TEACHER_INPUT_SECTIONS.has(sec) ? 1 : 5),
-        timeTaken: 0,
-        marks: 0,
-        ready: sec === 'power_exercise' || (!TEACHER_INPUT_SECTIONS.has(sec) && level !== 'l1'),
-        isDemo: true,
-      }))
+      const result = []
+      for (const sec of sections) {
+        let ready = false
+        if (sec === 'power_exercise') {
+          ready = true
+        } else if (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner') {
+          const tq = await getTeacherQuestion(level, 0, sec)
+          ready = !!tq
+        } else {
+          ready = true
+        }
+        result.push({
+          section: sec,
+          label: SECTION_LABELS[sec] || sec,
+          status: 'not_started',
+          questionCount: sec === 'power_exercise' ? 10 : (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' ? 1 : 5),
+          timeTaken: 0,
+          marks: 0,
+          ready,
+          isDemo: true,
+        })
+      }
       return res.json({
-        sections: demoSections.filter(s => s.ready),
+        sections: result.filter(s => s.ready),
         paperCompleted: false,
         isTeacherDay: false,
         teacherDayReady: false,
@@ -233,7 +249,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
     const result = []
     for (const sec of sections) {
       let ready = true
-      if (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1') {
+      if (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner') {
         const tq = await getTeacherQuestion(level, dayNumber, sec)
         ready = !!tq
       }
@@ -241,7 +257,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
         section: sec,
         label: SECTION_LABELS[sec] || sec,
         status: sectionData[sec]?.status || 'not_started',
-        questionCount: sectionData[sec]?.questionCount || (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' ? 1 : 5),
+        questionCount: sectionData[sec]?.questionCount || (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' ? 1 : 5),
         timeTaken: sectionData[sec]?.timeTaken || 0,
         marks: sectionData[sec]?.marks || 0,
         ready,
@@ -311,9 +327,23 @@ router.get('/:id/progress/:dayNumber/sections/:section/questions', async (req, r
 
     const level = normalizeStudentLevel(student.level) || student.level
 
-    // Every-5th-day or teacher section or level 1: fetch from teacher_questions
-    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section) || level === 'l1') {
+    // Every-5th-day or teacher section or level 1/beginner: fetch from teacher_questions
+    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section) || level === 'l1' || level === 'beginner') {
       if (dayNumber === 0 && section === 'power_exercise') {
+        const tq = await getTeacherQuestion(level, 0, 'power_exercise')
+        if (tq) {
+          return res.json({
+            questions: [{
+              id: tq.id,
+              section,
+              question_type: 'teacher',
+              question_text: tq.question,
+              answer: tq.answer,
+              display_text: tq.question,
+              format_example: tq.format_example,
+            }],
+          })
+        }
         const demoQuestion = {
           id: 9999,
           section: 'power_exercise',
@@ -383,7 +413,10 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const level = normalizeStudentLevel(student.level) || student.level
-    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
+    let tableName = `responses_l${level.replace('l', '')}`
+    if (level === 'alumni') tableName = 'responses_alumni'
+    else if (level === 'beginner') tableName = 'responses_beginner'
+    else if (level === 'gm') tableName = 'responses_gm'
 
     // Calculate section score
     let correct = responses.filter(r => r.is_correct).length
@@ -494,7 +527,7 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
           if (sectionData[sec]?.status !== 'done') {
             sectionData[sec] = {
               status: 'done',
-              questionCount: sec === 'power_exercise' ? 10 : 5,
+              questionCount: sec === 'power_exercise' ? 10 : (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' ? 1 : 5),
               correct: 0,
               marks: 0,
               xpEarned: 0,
@@ -528,7 +561,10 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
     totalXp += streakBonus
 
     // Query all student responses from the per-level table
-    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
+    let tableName = `responses_l${level.replace('l', '')}`
+    if (level === 'alumni') tableName = 'responses_alumni'
+    else if (level === 'beginner') tableName = 'responses_beginner'
+    else if (level === 'gm') tableName = 'responses_gm'
     const { rows: studentResponses } = await pool.query(
       `SELECT section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, xp_earned, answered_at 
        FROM ${tableName} 
@@ -581,7 +617,10 @@ router.get('/:id/progress/:dayNumber/report', async (req, res) => {
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const level = normalizeStudentLevel(student.level) || student.level
-    const tableName = level === 'alumni' ? 'responses_alumni' : `responses_l${level.replace('l', '')}`
+    let tableName = `responses_l${level.replace('l', '')}`
+    if (level === 'alumni') tableName = 'responses_alumni'
+    else if (level === 'beginner') tableName = 'responses_beginner'
+    else if (level === 'gm') tableName = 'responses_gm'
 
     const [dayRecord, responses] = await Promise.all([
       pool.query(`SELECT * FROM day_records WHERE student_id = $1 AND day_number = $2`, [studentId, dayNumber]),
