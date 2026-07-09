@@ -320,11 +320,11 @@ export default function StudentAnswersTab({ apiInstance, isTeacherPortal = false
                     <td><span className="badge badge-info">{LEVEL_LABELS[r.level] || r.level}</span></td>
                     <td><span className="badge badge-muted">Day {r.day_number}</span></td>
                     <td style={{ fontSize: '0.85rem' }}>{SECTION_LABELS[r.section_name] || r.section_name}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{r.question_snapshot}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: r.is_correct === true ? 'var(--success)' : r.is_correct === false ? 'var(--error)' : 'var(--warning)' }}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>{r.question_snapshot}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: r.is_correct === true ? 'var(--success)' : r.is_correct === false ? 'var(--error)' : 'var(--warning)', whiteSpace: 'pre-wrap' }}>
                       {renderAnswerString(r.student_answer)}
                     </td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--success)' }}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--success)', whiteSpace: 'pre-wrap' }}>
                       {renderAnswerString(r.correct_answer)}
                     </td>
                     <td>

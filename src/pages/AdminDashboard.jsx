@@ -22,6 +22,14 @@ const LEVEL_LABELS = {
   gm: 'GM Level'
 }
 
+const isMultiLineRequired = (level, day) => {
+  const normLevel = String(level).toLowerCase().trim();
+  const dNum = parseInt(day, 10);
+  if (normLevel === 'l1' || normLevel === 'beginner') return true;
+  if (dNum === 5) return true;
+  return false;
+};
+
 function StatCard({ icon, label, value, color }) {
   return (
     <div className="stat-card">
@@ -1270,54 +1278,7 @@ function CustomFormsTab() {
       </div>
 
       {/* Designer UI */}
-      {/* Form title/header card */}
-      <div className="card animate-fade-in" style={{
-        padding: '1.5rem',
-        marginBottom: '1.5rem',
-        borderTop: '10px solid #673ab7',
-        borderRadius: '8px',
-        background: 'var(--bg-card)',
-        boxShadow: 'var(--shadow-md)',
-      }}>
-        <div className="form-group" style={{ marginBottom: '1rem' }}>
-          <input
-            type="text"
-            placeholder="Form Title"
-            value={formTitle}
-            onChange={e => setFormTitle(e.target.value)}
-            style={{
-              width: '100%',
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              border: 'none',
-              borderBottom: '1px solid var(--border)',
-              padding: '0.5rem 0',
-              background: 'transparent',
-              color: 'var(--text-primary)',
-              outline: 'none',
-            }}
-          />
-        </div>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <textarea
-            rows={2}
-            placeholder="Form Description"
-            value={formDescription}
-            onChange={e => setFormDescription(e.target.value)}
-            style={{
-              width: '100%',
-              fontSize: '1rem',
-              border: 'none',
-              borderBottom: '1px solid var(--border)',
-              padding: '0.5rem 0',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              outline: 'none',
-              resize: 'none',
-            }}
-          />
-        </div>
-      </div>
+      {/* Designer UI */}
 
       {/* Format instruction (legacy support) */}
       <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem', background: 'var(--bg-card)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -1506,17 +1467,31 @@ function CustomFormsTab() {
               
               {/* Question input + Question Type Selector */}
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <input
-                  type="text"
-                  placeholder="Question Title (e.g. What is 2 + 2?)"
-                  value={item.questionText || ''}
-                  onChange={e => {
-                    const newItems = [...formItems]
-                    newItems[idx].questionText = e.target.value
-                    setFormItems(newItems)
-                  }}
-                  style={{ flex: 1, minWidth: '200px', fontSize: '1.1rem', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
-                />
+                {isMultiLineRequired(qLevel, qDay) ? (
+                  <textarea
+                    rows={2}
+                    placeholder="Question Title (e.g. What is 2 + 2?)"
+                    value={item.questionText || ''}
+                    onChange={e => {
+                      const newItems = [...formItems]
+                      newItems[idx].questionText = e.target.value
+                      setFormItems(newItems)
+                    }}
+                    style={{ flex: 1, minWidth: '200px', fontSize: '1.1rem', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-elevated)', color: 'var(--text-primary)', resize: 'vertical' }}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Question Title (e.g. What is 2 + 2?)"
+                    value={item.questionText || ''}
+                    onChange={e => {
+                      const newItems = [...formItems]
+                      newItems[idx].questionText = e.target.value
+                      setFormItems(newItems)
+                    }}
+                    style={{ flex: 1, minWidth: '200px', fontSize: '1.1rem', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
+                  />
+                )}
                 <select
                   value={item.questionType}
                   onChange={e => {
@@ -1715,6 +1690,18 @@ function CustomFormsTab() {
                     <textarea
                       rows={2}
                       placeholder="Correct answer text..."
+                      value={item.correctAnswer || ''}
+                      onChange={e => {
+                        const newItems = [...formItems]
+                        newItems[idx].correctAnswer = e.target.value
+                        setFormItems(newItems)
+                      }}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text-primary)', resize: 'vertical' }}
+                    />
+                  ) : isMultiLineRequired(qLevel, qDay) ? (
+                    <textarea
+                      rows={2}
+                      placeholder="Correct answer value..."
                       value={item.correctAnswer || ''}
                       onChange={e => {
                         const newItems = [...formItems]

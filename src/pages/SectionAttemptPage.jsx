@@ -19,6 +19,14 @@ const SECTION_LABELS = {
   teacher_day:       '🌟 Special Day',
 }
 
+const isMultiLineRequired = (level, day) => {
+  const normLevel = String(level).toLowerCase().trim();
+  const dNum = parseInt(day, 10);
+  if (normLevel === 'l1' || normLevel === 'beginner') return true;
+  if (dNum === 5) return true;
+  return false;
+};
+
 export default function SectionAttemptPage() {
   const { dayNumber, section } = useParams()
   const dayNum = parseInt(dayNumber, 10)
@@ -664,16 +672,6 @@ export default function SectionAttemptPage() {
 
             return (
               <div className="card animate-pop" style={{ maxWidth: 680, width: '100%', padding: '2rem', background: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}>
-                {currentPageIdx === 0 && (
-                  <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--primary-light)' }}>{parsedForm.title}</h2>
-                    {parsedForm.description && (
-                      <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.95rem', lineHeight: 1.5 }}>
-                        {parsedForm.description}
-                      </p>
-                    )}
-                  </div>
-                )}
 
                 {currentPage.header && (
                   <div style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid #673ab7', padding: '1rem', borderRadius: '4px', marginBottom: '1.5rem' }}>
@@ -712,7 +710,7 @@ export default function SectionAttemptPage() {
                       return (
                         <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
-                            <span style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{item.questionText}</span>
+                            <span style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{item.questionText}</span>
                             {!hasCorrectAnswer && (
                               <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>⚠️ To be checked by teacher</span>
                             )}
@@ -725,13 +723,23 @@ export default function SectionAttemptPage() {
                           )}
 
                           {item.questionType === 'short_answer' && (
-                            <input
-                              type="text"
-                              placeholder="Your answer"
-                              value={formAnswers[item.id] || ''}
-                              onChange={(e) => setFormAnswers({ ...formAnswers, [item.id]: e.target.value })}
-                              style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-primary)' }}
-                            />
+                            isMultiLineRequired(student?.level, dayNum) ? (
+                              <textarea
+                                rows={2}
+                                placeholder="Your answer"
+                                value={formAnswers[item.id] || ''}
+                                onChange={(e) => setFormAnswers({ ...formAnswers, [item.id]: e.target.value })}
+                                style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-primary)', resize: 'vertical' }}
+                              />
+                            ) : (
+                              <input
+                                type="text"
+                                placeholder="Your answer"
+                                value={formAnswers[item.id] || ''}
+                                onChange={(e) => setFormAnswers({ ...formAnswers, [item.id]: e.target.value })}
+                                style={{ width: '100%', padding: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text-primary)' }}
+                              />
+                            )
                           )}
 
                           {item.questionType === 'paragraph' && (
