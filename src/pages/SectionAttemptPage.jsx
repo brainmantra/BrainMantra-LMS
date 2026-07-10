@@ -49,6 +49,7 @@ export default function SectionAttemptPage() {
   const [currentPageIdx, setCurrentPageIdx] = useState(0)
   const [formAnswers, setFormAnswers] = useState({})
   const [zoomedImage, setZoomedImage] = useState(null)
+  const [customSectionTitle, setCustomSectionTitle] = useState('')
 
   const responsesRef = useRef(responses)
   const sectionSecondsRef = useRef(sectionSeconds)
@@ -142,31 +143,36 @@ export default function SectionAttemptPage() {
           if (q.question) {
             try {
               const parsed = typeof q.question === 'string' ? JSON.parse(q.question) : q.question
-              if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
-                parsed.items.forEach(item => {
-                  if (item.type === 'question') {
-                    flatQs.push({
-                      id: item.id,
-                      dbQuestionId: q.id,
-                      virtualType: 'teacher_custom',
-                      questionType: item.questionType,
-                      questionText: item.questionText,
-                      image: item.image,
-                      options: item.options || [],
-                      correctAnswer: item.correctAnswer,
-                    })
-                  } else if (item.type === 'image_only') {
-                    flatQs.push({
-                      id: item.id,
-                      dbQuestionId: q.id,
-                      virtualType: 'image_only',
-                      questionText: item.description || '',
-                      image: item.image,
-                      options: [],
-                      correctAnswer: null,
-                    })
-                  }
-                })
+              if (parsed && typeof parsed === 'object') {
+                if (parsed.title) {
+                  setCustomSectionTitle(parsed.title)
+                }
+                if (Array.isArray(parsed.items)) {
+                  parsed.items.forEach(item => {
+                    if (item.type === 'question') {
+                      flatQs.push({
+                        id: item.id,
+                        dbQuestionId: q.id,
+                        virtualType: 'teacher_custom',
+                        questionType: item.questionType,
+                        questionText: item.questionText,
+                        image: item.image,
+                        options: item.options || [],
+                        correctAnswer: item.correctAnswer,
+                      })
+                    } else if (item.type === 'image_only') {
+                      flatQs.push({
+                        id: item.id,
+                        dbQuestionId: q.id,
+                        virtualType: 'image_only',
+                        questionText: item.description || '',
+                        image: item.image,
+                        options: [],
+                        correctAnswer: null,
+                      })
+                    }
+                  })
+                }
                 return
               }
             } catch (e) {}
@@ -569,7 +575,7 @@ export default function SectionAttemptPage() {
             {countdown}
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginTop: '1rem' }}>
-            {SECTION_LABELS[section] || section}
+            {customSectionTitle || SECTION_LABELS[section] || section}
           </p>
         </div>
       </div>
@@ -597,7 +603,7 @@ export default function SectionAttemptPage() {
             {isDemo ? 'Practice Complete!' : 'Section Complete!'}
           </h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-            {SECTION_LABELS[section]}
+            {customSectionTitle || SECTION_LABELS[section] || section}
             {isDemo && <><br /><span style={{ color: 'var(--warning)', fontSize: '0.85rem' }}>Demo mode — results not saved</span></>}
           </p>
 
@@ -677,7 +683,7 @@ export default function SectionAttemptPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            {SECTION_LABELS[section] || section}
+            {customSectionTitle || SECTION_LABELS[section] || section}
           </span>
           <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
             Q{currentIndex + 1} / {questions.length}
