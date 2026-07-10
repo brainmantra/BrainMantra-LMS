@@ -4,6 +4,7 @@ import { teacherApi } from '../utils/api'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import StudentAnswersTab from '../components/StudentAnswersTab'
+import * as XLSX from 'xlsx'
 
 
 const LEVELS = ['beginner','l1','l2','l3','l4','l5','l6','l7','l8','alumni','gm']
@@ -201,6 +202,64 @@ export default function TeacherDashboard() {
   const [formTitle, setFormTitle] = useState('Abacus Daily Challenge')
   const [formDescription, setFormDescription] = useState('Solve all questions step by step.')
   const [formItems, setFormItems] = useState([])
+
+  const handleExcelImport = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result
+        const wb = XLSX.read(bstr, { type: 'binary' })
+        const wsname = wb.SheetNames[0]
+        const ws = wb.Sheets[wsname]
+        const data = XLSX.utils.sheet_to_json(ws)
+        
+        const importedItems = data.map((row, idx) => {
+          const qText = row.Question || row.question || ''
+          const ans = row.Answer || row.answer || ''
+          const qTypeRaw = String(row.Type || row.type || 'short_answer').toLowerCase()
+          
+          let questionType = 'short_answer'
+          if (qTypeRaw.includes('paragraph') || qTypeRaw.includes('text')) {
+            questionType = 'paragraph'
+          } else if (qTypeRaw.includes('choice') || qTypeRaw.includes('radio') || qTypeRaw.includes('multiple')) {
+            questionType = 'multiple_choice'
+          } else if (qTypeRaw.includes('checkbox')) {
+            questionType = 'checkbox'
+          }
+
+          let optionsList = []
+          const optsRaw = row.Options || row.options
+          if (optsRaw) {
+            optionsList = String(optsRaw).split(',').map((optText, oIdx) => ({
+              id: `opt_${Date.now()}_${idx}_${oIdx}`,
+              text: optText.trim(),
+              image: ''
+            }))
+          } else if (questionType === 'multiple_choice' || questionType === 'checkbox') {
+            optionsList = [{ id: `opt_${Date.now()}_${idx}_0`, text: 'Option 1', image: '' }]
+          }
+
+          return {
+            id: `q_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`,
+            type: 'question',
+            questionType,
+            questionText: qText,
+            correctAnswer: ans,
+            image: '',
+            options: optionsList
+          }
+        }).filter(item => item.questionText)
+
+        setFormItems(prev => [...prev, ...importedItems])
+        toast.success(`Imported ${importedItems.length} questions into the form!`)
+      } catch (err) {
+        toast.error('Failed to parse Excel file')
+      }
+    }
+    reader.readAsBinaryString(file)
+  }
 
   useEffect(() => {
     const secs = getTeacherSectionsForLevel(qLevel, qDay)
@@ -1012,6 +1071,10 @@ export default function TeacherDashboard() {
                 <button type="button" className="btn btn-primary btn-sm" style={{ background: '#512da8' }} onClick={() => addFormItem('question', 'multiple_choice')}>➕ Add Choice Question</button>
                 <button type="button" className="btn btn-primary btn-sm" style={{ background: '#00b4d8' }} onClick={() => addFormItem('image_only')}>➕ Add Image Block</button>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => addFormItem('section_header')}>🔖 Add Section Break</button>
+                <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer', margin: 0, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <span>📁 Import Excel</span>
+                  <input type="file" accept=".xlsx,.csv" style={{ display: 'none' }} onChange={handleExcelImport} />
+                </label>
               </div>
 
               {/* Action Save button */}
