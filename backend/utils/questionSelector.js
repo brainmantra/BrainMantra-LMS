@@ -7,8 +7,8 @@ import pool from '../db.js'
 
 // ── Section definitions per level ─────────────────────────────────────────────
 export const LEVEL_SECTIONS = {
-  beginner: ['abacus', 'teacher_input'],
-  l1: ['abacus', 'teacher_input'],
+  beginner: ['abacus'],
+  l1: ['abacus'],
   l2: ['abacus', 'visual', 'tables'],
   l3: ['abacus', 'visual', 'multiplication', 'two_steps'],
   l4: ['abacus', 'visual', 'multiplication', 'division', 'form_the_question'],
@@ -22,7 +22,7 @@ export const LEVEL_SECTIONS = {
 
 // Teacher-input sections that come from teacher_questions table, not question_bank
 export const TEACHER_INPUT_SECTIONS = new Set([
-  'teacher_input', 'form_the_question', 'cracking', 'bodmas', 'power_exercise'
+  'form_the_question', 'cracking', 'bodmas', 'power_exercise'
 ])
 
 // ── Every-5th-day check ────────────────────────────────────────────────────────

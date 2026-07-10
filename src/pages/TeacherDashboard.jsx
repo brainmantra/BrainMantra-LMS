@@ -164,8 +164,7 @@ const getTeacherSectionsForLevel = (level, dayStr) => {
   if (day === 0) {
     if (level === 'l1' || level === 'beginner') {
       return [
-        { value: 'abacus', label: '🧮 Abacus' },
-        { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
+        { value: 'abacus', label: '🧮 Abacus' }
       ]
     }
     return [
@@ -173,8 +172,7 @@ const getTeacherSectionsForLevel = (level, dayStr) => {
     ]
   }
   if (level === 'l1' || level === 'beginner') return [
-    { value: 'abacus', label: '🧮 Abacus' },
-    { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
+    { value: 'abacus', label: '🧮 Abacus' }
   ]
   if (level === 'l4') return [
     { value: 'form_the_question', label: '✏ Form The Question' }
@@ -380,15 +378,22 @@ export default function TeacherDashboard() {
   }
 
   useEffect(() => {
-    const secs = getTeacherSectionsForLevel(qLevel, qDay)
+    setLocalCustomSections([])
+  }, [qLevel, qDay])
+
+  useEffect(() => {
+    const secs = getActiveSections()
     if (secs.length > 0) {
-      if (!secs.some(s => s.value === qSection)) {
+      if (qSection && !secs.some(s => s.value === qSection)) {
+        setQSection(secs[0].value)
+      } else if (!qSection) {
         setQSection(secs[0].value)
       }
     } else {
       setQSection('')
     }
-  }, [qLevel, qDay, qSection])
+  }, [qLevel, qDay, savedQuestions, localCustomSections])
+
   const [savedQuestions, setSavedQuestions] = useState([])
   const [loadingQ, setLoadingQ] = useState(false)
 
@@ -691,13 +696,25 @@ export default function TeacherDashboard() {
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Section</label>
-                  <select value={qSection} onChange={e => setQSection(e.target.value)}>
-                    {getTeacherSectionsForLevel(qLevel, qDay).map(sec => (
+                  <select value={qSection} onChange={e => {
+                    if (e.target.value === '__new_section__') {
+                      const name = prompt('Enter the name for the new section:')
+                      if (name && name.trim()) {
+                        const slug = name.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').trim()
+                        if (slug) {
+                          setLocalCustomSections(prev => [...prev, { value: slug, label: name }])
+                          setQSection(slug)
+                          setFormTitle(name)
+                        }
+                      }
+                    } else {
+                      setQSection(e.target.value)
+                    }
+                  }}>
+                    {getActiveSections().map(sec => (
                       <option key={sec.value} value={sec.value}>{sec.label}</option>
                     ))}
-                    {getTeacherSectionsForLevel(qLevel, qDay).length === 0 && (
-                      <option value="">No teacher sections (Auto-generated)</option>
-                    )}
+                    <option value="__new_section__">➕ Create New Section...</option>
                   </select>
                 </div>
               </div>

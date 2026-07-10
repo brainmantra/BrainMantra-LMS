@@ -206,10 +206,13 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
     if (dayNumber === 0) {
       const result = []
       for (const sec of sections) {
+        const isCustom = !LEVEL_SECTIONS[level]?.includes(sec) && sec !== 'power_exercise'
+        const isTeacherInput = TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' || isCustom
+
         let ready = false
         if (sec === 'power_exercise') {
           ready = true
-        } else if (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner') {
+        } else if (isTeacherInput) {
           const tq = await getTeacherQuestion(level, 0, sec)
           ready = !!tq
         } else {
@@ -218,7 +221,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
         let countVal = 5;
         if (sec === 'power_exercise') {
           countVal = 10;
-        } else if (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner') {
+        } else if (isTeacherInput) {
           countVal = 1;
           const tq = await getTeacherQuestion(level, 0, sec)
           ready = !!tq
@@ -234,9 +237,23 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
             } catch (e) {}
           }
         }
+
+        let labelVal = SECTION_LABELS[sec] || sec
+        if (!SECTION_LABELS[sec]) {
+          const tq = await getTeacherQuestion(level, 0, sec)
+          if (tq && tq.question) {
+            try {
+              const parsed = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
+              if (parsed && parsed.title) {
+                labelVal = parsed.title
+              }
+            } catch (e) {}
+          }
+        }
+
         result.push({
           section: sec,
-          label: SECTION_LABELS[sec] || sec,
+          label: labelVal,
           status: 'not_started',
           questionCount: countVal,
           timeTaken: 0,
@@ -267,11 +284,14 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
     // Map each section and check if teacher questions are ready for teacher-input sections
     const result = []
     for (const sec of sections) {
+      const isCustom = !LEVEL_SECTIONS[level]?.includes(sec) && sec !== 'power_exercise'
+      const isTeacherInput = TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' || isCustom
+
       let ready = true
       let countVal = 5;
       if (sec === 'power_exercise') {
         countVal = 10;
-      } else if (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner') {
+      } else if (isTeacherInput) {
         countVal = 1;
         const tq = await getTeacherQuestion(level, dayNumber, sec)
         ready = !!tq
@@ -287,9 +307,23 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
           } catch (e) {}
         }
       }
+
+      let labelVal = SECTION_LABELS[sec] || sec
+      if (!SECTION_LABELS[sec]) {
+        const tq = await getTeacherQuestion(level, dayNumber, sec)
+        if (tq && tq.question) {
+          try {
+            const parsed = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
+            if (parsed && parsed.title) {
+              labelVal = parsed.title
+            }
+          } catch (e) {}
+        }
+      }
+
       result.push({
         section: sec,
-        label: SECTION_LABELS[sec] || sec,
+        label: labelVal,
         status: sectionData[sec]?.status || 'not_started',
         questionCount: sectionData[sec]?.questionCount || countVal,
         timeTaken: sectionData[sec]?.timeTaken || 0,
@@ -361,8 +395,12 @@ router.get('/:id/progress/:dayNumber/sections/:section/questions', async (req, r
 
     const level = normalizeStudentLevel(student.level) || student.level
 
+    // Check if this section exists in teacher_questions
+    const tq = await getTeacherQuestion(level, dayNumber, section)
+    const isCustomTeacherSection = !!tq
+
     // Every-5th-day or teacher section or level 1/beginner: fetch from teacher_questions
-    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section) || level === 'l1' || level === 'beginner') {
+    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section) || level === 'l1' || level === 'beginner' || isCustomTeacherSection) {
       if (dayNumber === 0 && section === 'power_exercise') {
         const tq = await getTeacherQuestion(level, 0, 'power_exercise')
         if (tq) {

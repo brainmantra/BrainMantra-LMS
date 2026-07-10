@@ -1047,20 +1047,59 @@ function CustomFormsTab() {
     }
   }
 
+  const [localCustomSections, setLocalCustomSections] = useState([])
+
+  const getActiveSections = () => {
+    const std = getTeacherSectionsForLevel(qLevel, qDay)
+    const customSecs = []
+    
+    // Merge database discovered custom sections
+    savedQuestions.forEach(q => {
+      if (q.level === qLevel && q.day_number === parseInt(qDay, 10)) {
+        const isStd = std.some(s => s.value === q.section)
+        const isAlreadyAdded = customSecs.some(s => s.value === q.section)
+        if (!isStd && !isAlreadyAdded) {
+          let label = q.section
+          try {
+            const parsed = JSON.parse(q.question)
+            if (parsed && parsed.title) {
+              label = parsed.title
+            }
+          } catch(e) {}
+          customSecs.push({ value: q.section, label })
+        }
+      }
+    })
+
+    // Merge local unsaved custom sections
+    localCustomSections.forEach(localSec => {
+      const isStd = std.some(s => s.value === localSec.value)
+      const isDb = customSecs.some(s => s.value === localSec.value)
+      if (!isStd && !isDb) {
+        customSecs.push(localSec)
+      }
+    })
+
+    return [...std, ...customSecs]
+  }
+
   useEffect(() => {
     loadQuestions()
+    setLocalCustomSections([])
   }, [qLevel, qDay])
 
   useEffect(() => {
-    const secs = getTeacherSectionsForLevel(qLevel, qDay)
+    const secs = getActiveSections()
     if (secs.length > 0) {
-      if (!secs.some(s => s.value === qSection)) {
+      if (qSection && !secs.some(s => s.value === qSection)) {
+        setQSection(secs[0].value)
+      } else if (!qSection) {
         setQSection(secs[0].value)
       }
     } else {
       setQSection('')
     }
-  }, [qLevel, qDay, qSection])
+  }, [qLevel, qDay, savedQuestions, localCustomSections])
 
   useEffect(() => {
     if (!qLevel || !qDay || !qSection) return
@@ -1166,8 +1205,7 @@ function CustomFormsTab() {
     if (day === 0) {
       if (level === 'l1' || level === 'beginner') {
         return [
-          { value: 'abacus', label: '🧮 Abacus' },
-          { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
+          { value: 'abacus', label: '🧮 Abacus' }
         ]
       }
       return [
@@ -1175,8 +1213,7 @@ function CustomFormsTab() {
       ]
     }
     if (level === 'l1' || level === 'beginner') return [
-      { value: 'abacus', label: '🧮 Abacus' },
-      { value: 'teacher_input', label: '👨‍🏫 Teacher Input' }
+      { value: 'abacus', label: '🧮 Abacus' }
     ]
     if (level === 'l4') return [
       { value: 'form_the_question', label: '✏ Form The Question' }
@@ -1218,13 +1255,25 @@ function CustomFormsTab() {
         </div>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label className="form-label">Section</label>
-          <select value={qSection} onChange={e => setQSection(e.target.value)} style={{ width: 220 }}>
-            {getTeacherSectionsForLevel(qLevel, qDay).map(sec => (
+          <select value={qSection} onChange={e => {
+            if (e.target.value === '__new_section__') {
+              const name = prompt('Enter the name for the new section:')
+              if (name && name.trim()) {
+                const slug = name.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').trim()
+                if (slug) {
+                  setLocalCustomSections(prev => [...prev, { value: slug, label: name }])
+                  setQSection(slug)
+                  setFormTitle(name)
+                }
+              }
+            } else {
+              setQSection(e.target.value)
+            }
+          }} style={{ width: 220 }}>
+            {getActiveSections().map(sec => (
               <option key={sec.value} value={sec.value}>{sec.label}</option>
             ))}
-            {getTeacherSectionsForLevel(qLevel, qDay).length === 0 && (
-              <option value="">No custom sections (Auto-generated)</option>
-            )}
+            <option value="__new_section__">➕ Create New Section...</option>
           </select>
         </div>
       </div>
