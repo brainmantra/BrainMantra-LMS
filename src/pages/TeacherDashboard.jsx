@@ -356,6 +356,48 @@ export default function TeacherDashboard() {
     return [...std, ...customSecs]
   }
 
+  const handleRenameSection = async () => {
+    if (!qSection) return
+    const newName = prompt('Rename section to:', qSection)
+    if (!newName || !newName.trim() || newName.trim() === qSection) return
+    
+    const oldSectionName = qSection
+    const newSectionName = newName.trim()
+    
+    const match = savedQuestions.find(q => 
+      q.level === qLevel && 
+      q.day_number === parseInt(qDay, 10) && 
+      q.section === oldSectionName
+    )
+    
+    if (match) {
+      if (confirm(`Are you sure you want to rename "${oldSectionName}" to "${newSectionName}"? This will update the saved section name in the database.`)) {
+        try {
+          await teacherApi.delete(`/teachers/questions?level=${qLevel}&day_number=${qDay}&section=${encodeURIComponent(oldSectionName)}`)
+          
+          setLocalCustomSections(prev => prev.map(s => s.value === oldSectionName ? { value: newSectionName, label: newSectionName } : s))
+          
+          setSavedQuestions(prev => prev.map(q => 
+            (q.level === qLevel && q.day_number === parseInt(qDay, 10) && q.section === oldSectionName) 
+              ? { ...q, section: newSectionName } 
+              : q
+          ))
+          
+          setQSection(newSectionName)
+          setFormTitle(newSectionName)
+          toast.success('Section renamed! Click "Save Form" to save your edits.')
+        } catch (err) {
+          toast.error('Could not rename section in database.')
+        }
+      }
+    } else {
+      setLocalCustomSections(prev => prev.map(s => s.value === oldSectionName ? { value: newSectionName, label: newSectionName } : s))
+      setQSection(newSectionName)
+      setFormTitle(newSectionName)
+      toast.success('Section renamed locally.')
+    }
+  }
+
   const handleExcelImport = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -731,7 +773,19 @@ export default function TeacherDashboard() {
                   </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Section</label>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Section
+                    {qSection && !getTeacherSectionsForLevel(qLevel, qDay).some(s => s.value === qSection) && (
+                      <button 
+                        type="button"
+                        className="btn btn-ghost btn-sm" 
+                        onClick={handleRenameSection} 
+                        style={{ padding: '0 4px', fontSize: '0.75rem', height: 'auto', textDecoration: 'underline', color: 'var(--teacher-primary)', minHeight: 'unset' }}
+                      >
+                        ✏ Rename Section
+                      </button>
+                    )}
+                  </label>
                   <select value={qSection} onChange={e => {
                     if (e.target.value === '__new_section__') {
                       const name = prompt('Enter the name for the new section:')

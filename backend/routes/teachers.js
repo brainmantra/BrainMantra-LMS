@@ -190,6 +190,36 @@ router.post('/questions', requireTeacher, async (req, res) => {
   }
 })
 
+// ── DELETE /api/teachers/questions — delete a teacher question ─────────────
+router.delete('/questions', requireTeacher, async (req, res) => {
+  try {
+    const { level, day_number, section } = req.query
+    const teacherId = req.teacher.id
+    const levels = req.teacher.levels || []
+
+    if (!levels.includes(level)) {
+      return res.status(403).json({ message: 'Not assigned to this level.' })
+    }
+
+    await pool.query(
+      `DELETE FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
+      [level, parseInt(day_number, 10), section]
+    )
+
+    // Activity log
+    await pool.query(
+      `INSERT INTO teacher_activity_log (teacher_id, action, level, day_number, section, old_value, new_value)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [teacherId, 'delete_question', level, parseInt(day_number, 10), section, section, null]
+    )
+
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[delete question]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
 // ── GET /api/teachers/students — students in assigned levels ──────────────────
 router.get('/students', requireTeacher, async (req, res) => {
   try {

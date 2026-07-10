@@ -533,6 +533,21 @@ router.post('/teacher-questions', requireAdmin, async (req, res) => {
   }
 })
 
+// ── DELETE /api/admin/teacher-questions — delete a teacher question ─────────────
+router.delete('/teacher-questions', requireAdmin, async (req, res) => {
+  try {
+    const { level, day_number, section } = req.query
+    await pool.query(
+      `DELETE FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
+      [level, parseInt(day_number, 10), section]
+    )
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[delete question admin]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
 // ── GET /api/admin/performance ────────────────────────────────────────────────
 router.get('/performance', requireAdmin, async (req, res) => {
   try {
