@@ -48,6 +48,7 @@ export default function SectionAttemptPage() {
 
   const [currentPageIdx, setCurrentPageIdx] = useState(0)
   const [formAnswers, setFormAnswers] = useState({})
+  const [zoomedImage, setZoomedImage] = useState(null)
 
   const responsesRef = useRef(responses)
   const sectionSecondsRef = useRef(sectionSeconds)
@@ -801,7 +802,18 @@ export default function SectionAttemptPage() {
             {/* Question Image */}
             {currentQ.image && (
               <div style={{ textAlign: 'center', margin: '0.5rem 0' }}>
-                <img src={currentQ.image} alt="Question" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                <img 
+                  src={currentQ.image} 
+                  alt="Question" 
+                  onClick={() => setZoomedImage(currentQ.image)}
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '550px', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--border)',
+                    cursor: 'zoom-in',
+                  }} 
+                />
               </div>
             )}
 
@@ -983,7 +995,18 @@ export default function SectionAttemptPage() {
             {/* Question Image */}
             {currentQ.image && (
               <div style={{ textAlign: 'center' }}>
-                <img src={currentQ.image} alt="Block Image" style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                <img 
+                  src={currentQ.image} 
+                  alt="Block Image" 
+                  onClick={() => setZoomedImage(currentQ.image)}
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '650px', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--border)',
+                    cursor: 'zoom-in',
+                  }} 
+                />
               </div>
             )}
             
@@ -1371,6 +1394,40 @@ export default function SectionAttemptPage() {
           </button>
         </div>
       </div>
+
+      {/* Lightbox for zooming images */}
+      {zoomedImage && (
+        <div 
+          onClick={() => setZoomedImage(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'zoom-out',
+            padding: '2rem',
+          }}
+        >
+          <img 
+            src={zoomedImage} 
+            alt="Zoomed Visual" 
+            style={{ 
+              maxWidth: '95%', 
+              maxHeight: '95%', 
+              objectFit: 'contain', 
+              borderRadius: '8px', 
+              boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+              border: '2px solid rgba(255,255,255,0.1)',
+            }} 
+          />
+        </div>
+      )}
     </div>
   )
 }

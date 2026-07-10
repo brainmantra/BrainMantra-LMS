@@ -15,7 +15,8 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',').map(s => s.trim())
 
 app.use(cors({ origin: allowedOrigins, credentials: true }))
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
