@@ -265,7 +265,7 @@ function StudentsTab() {
     setSyncing(true)
     try {
       const res = await adminApi.post('/admin/students/sync')
-      toast.success(`Synced! ${res.data.addedCount} new added, ${res.data.credentialsGenerated} credentials assigned.`)
+      toast.success(`Synced! ${res.data.addedCount} added, ${res.data.updatedCount} updated, ${res.data.deletedCount} deleted.`)
       fetchStudents()
     } catch (err) {
       toast.error('Failed to sync students from sheet.')

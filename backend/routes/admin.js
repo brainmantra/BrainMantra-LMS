@@ -147,15 +147,26 @@ router.get('/students', requireAdmin, async (req, res) => {
 router.post('/students/sync', requireAdmin, async (req, res) => {
   try {
     const sheetRows = await fetchRegistrationSheet()
-    const { rows: dbStudents } = await pool.query('SELECT name, mobile FROM students')
-    const dbStudentKeys = new Set(dbStudents.map(s => `${s.name.trim().toLowerCase()}_${s.mobile}`))
-
-    const newStudents = sheetRows.filter(r => !dbStudentKeys.has(`${r.name.trim().toLowerCase()}_${r.mobile}`))
     
-    // Also find existing students who have no username
-    const { rows: missingCredentials } = await pool.query('SELECT id, mobile, name FROM students WHERE username IS NULL')
+    // Deduplicate sheet rows by mobile (keep the first entry)
+    const seenMobiles = new Set()
+    const uniqueSheetRows = []
+    for (const row of sheetRows) {
+      if (!seenMobiles.has(row.mobile)) {
+        seenMobiles.add(row.mobile)
+        uniqueSheetRows.push(row)
+      }
+    }
+
+    const { rows: dbStudents } = await pool.query('SELECT id, name, mobile, level FROM students')
+    
+    // Create lookup maps
+    const dbStudentsByMobile = new Map(dbStudents.map(s => [s.mobile, s]))
+    const sheetMobiles = new Set(uniqueSheetRows.map(r => r.mobile))
     
     let addedCount = 0
+    let updatedCount = 0
+    let deletedCount = 0
     let credentialsGenerated = 0
 
     // Helper to generate credentials — login ID is derived from the student's name
@@ -173,21 +184,36 @@ router.post('/students/sync', requireAdmin, async (req, res) => {
       return { username, plain_password }
     }
 
-    // 1. Insert new students
-    for (const st of newStudents) {
+    // 1. Process sheet rows: Update existing, insert new
+    for (const st of uniqueSheetRows) {
       const levelId = normaliseLevel(st.level) || 'l1'
-      const { username, plain_password } = await generateCredentials(st.name, st.mobile)
-      const hash = await bcrypt.hash(plain_password, 12)
+      const existing = dbStudentsByMobile.get(st.mobile)
       
-      await pool.query(
-        `INSERT INTO students (name, mobile, level, username, password_hash, plain_password, registration_date)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [st.name, st.mobile, levelId, username, hash, plain_password]
-      )
-      addedCount++
+      if (existing) {
+        // If name or level changed, update only these
+        if (existing.level !== levelId || existing.name !== st.name) {
+          await pool.query(
+            'UPDATE students SET name = $1, level = $2, updated_at = NOW() WHERE id = $3',
+            [st.name, levelId, existing.id]
+          )
+          updatedCount++
+        }
+      } else {
+        // Insert new student
+        const { username, plain_password } = await generateCredentials(st.name, st.mobile)
+        const hash = await bcrypt.hash(plain_password, 12)
+        
+        await pool.query(
+          `INSERT INTO students (name, mobile, level, username, password_hash, plain_password, registration_date)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [st.name, st.mobile, levelId, username, hash, plain_password]
+        )
+        addedCount++
+      }
     }
 
     // 2. Assign credentials to existing students missing them
+    const { rows: missingCredentials } = await pool.query('SELECT id, mobile, name FROM students WHERE username IS NULL')
     for (const st of missingCredentials) {
       const { username, plain_password } = await generateCredentials(st.name, st.mobile)
       const hash = await bcrypt.hash(plain_password, 12)
@@ -198,7 +224,22 @@ router.post('/students/sync', requireAdmin, async (req, res) => {
       credentialsGenerated++
     }
 
-    res.json({ success: true, addedCount, credentialsGenerated, totalSynced: addedCount + credentialsGenerated })
+    // 3. Delete students who are in the DB but NOT in the sheet
+    for (const dbSt of dbStudents) {
+      if (!sheetMobiles.has(dbSt.mobile)) {
+        await pool.query('DELETE FROM students WHERE id = $1', [dbSt.id])
+        deletedCount++
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      addedCount, 
+      updatedCount, 
+      deletedCount, 
+      credentialsGenerated, 
+      totalSynced: addedCount + credentialsGenerated 
+    })
   } catch (err) {
     console.error('[admin/students/sync]', err)
     res.status(500).json({ message: 'Server error during sync.' })
