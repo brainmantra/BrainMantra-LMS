@@ -23,7 +23,7 @@ const isMultiLineRequired = (level, day) => {
   const normLevel = String(level).toLowerCase().trim();
   const dNum = parseInt(day, 10);
   if (normLevel === 'l1' || normLevel === 'beginner') return true;
-  if (dNum === 5) return true;
+  if (dNum > 0 && dNum % 5 === 0) return true;
   return false;
 };
 
@@ -1276,7 +1276,25 @@ export default function SectionAttemptPage() {
                         );
                       }
 
-                      const inputElem = (
+                      const inputElem = isMultiLineRequired(student?.level, dayNum) ? (
+                        <textarea
+                          key={idx}
+                          className={boxFeedbackClass}
+                          style={{
+                            width: '100%', minHeight: '60px', display: 'block', margin: '0.5rem 0',
+                            padding: '0.4rem', fontSize: '1.1rem', borderRadius: '4px', border: '1px solid var(--border)',
+                            background: 'transparent', color: 'var(--text-primary)', resize: 'vertical'
+                          }}
+                          value={parsedAns[currentBoxIdx] || ''}
+                          onChange={e => {
+                            const newAns = [...parsedAns];
+                            newAns[currentBoxIdx] = e.target.value;
+                            setAnswer(JSON.stringify(newAns));
+                          }}
+                          disabled={!!feedback}
+                          autoFocus={currentBoxIdx === 0}
+                        />
+                      ) : (
                         <input
                           key={idx}
                           type="text"
@@ -1355,7 +1373,7 @@ export default function SectionAttemptPage() {
                       );
                     } else {
                       return (
-                        <span key={idx} style={{ display: 'inline-block', marginBottom: '1rem', width: '100%' }}>
+                        <span key={idx} style={{ display: 'inline-block', marginBottom: '1rem', width: '100%', whiteSpace: 'pre-wrap' }}>
                           {block.content}
                         </span>
                       );
