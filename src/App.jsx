@@ -81,6 +81,11 @@ export default function App() {
             error:   { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
           }}
         />
+        {/* Global Premium Ambient Background Orbs */}
+        <div className="orb orb-orange" style={{ top: '-15%', left: '-15%', width: '600px', height: '600px', opacity: 0.25 }} />
+        <div className="orb orb-violet" style={{ bottom: '-10%', right: '-10%', width: '500px', height: '500px', opacity: 0.2 }} />
+        <div className="orb orb-teal" style={{ top: '35%', left: '75%', width: '450px', height: '450px', opacity: 0.15 }} />
+        
         <AppRoutes />
         <ThemeToggle />
       </AuthProvider>

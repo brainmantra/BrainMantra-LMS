@@ -140,6 +140,7 @@ export default function SectionAttemptPage() {
         const rawQs = res.data.questions || []
         const flatQs = []
         rawQs.forEach(q => {
+          // Always attempt to parse teacher JSON questions
           if (q.question) {
             try {
               const parsed = typeof q.question === 'string' ? JSON.parse(q.question) : q.question
@@ -147,16 +148,16 @@ export default function SectionAttemptPage() {
                 if (parsed.title) {
                   setCustomSectionTitle(parsed.title)
                 }
-                if (Array.isArray(parsed.items)) {
+                if (Array.isArray(parsed.items) && parsed.items.length > 0) {
                   parsed.items.forEach(item => {
                     if (item.type === 'question') {
                       flatQs.push({
                         id: item.id,
                         dbQuestionId: q.id,
                         virtualType: 'teacher_custom',
-                        questionType: item.questionType,
-                        questionText: item.questionText,
-                        image: item.image,
+                        questionType: item.questionType || 'short_answer',
+                        questionText: item.questionText || '',
+                        image: item.image || '',
                         options: item.options || [],
                         correctAnswer: item.correctAnswer,
                       })
@@ -166,19 +167,52 @@ export default function SectionAttemptPage() {
                         dbQuestionId: q.id,
                         virtualType: 'image_only',
                         questionText: item.description || '',
-                        image: item.image,
+                        image: item.image || '',
                         options: [],
                         correctAnswer: null,
                       })
                     }
+                    // skip section_header items — they are not answerable
                   })
+                  return // successfully parsed, skip raw push
                 }
+                // Has parsed object but no items array — treat as single question
+                if (parsed.title && !parsed.items) {
+                  flatQs.push({
+                    id: q.id,
+                    dbQuestionId: q.id,
+                    virtualType: 'teacher_custom',
+                    questionType: 'short_answer',
+                    questionText: parsed.title || '',
+                    image: '',
+                    options: [],
+                    correctAnswer: q.answer || '',
+                  })
+                  return
+                }
+              }
+            } catch (e) {
+              // JSON parse failed — q.question is a plain string, use as-is
+              if (String(q.question).trim().startsWith('{') || String(q.question).trim().startsWith('[')) {
+                // Looks like broken JSON — show as a teacher custom question with plain text
+                flatQs.push({
+                  id: q.id,
+                  dbQuestionId: q.id,
+                  virtualType: 'teacher_custom',
+                  questionType: 'short_answer',
+                  questionText: q.question_text || q.display_text || 'Teacher Question',
+                  image: '',
+                  options: [],
+                  correctAnswer: q.answer_text || q.answer || '',
+                })
                 return
               }
-            } catch (e) {}
+            }
           }
+          // Raw DB question (abacus, mul/div, etc.) — push as-is
           flatQs.push(q)
         })
+
 
         setQuestions(flatQs)
         setPhase('countdown')
@@ -762,7 +796,7 @@ export default function SectionAttemptPage() {
                 )}
               </div>
             )}
-            <div className="mul-card animate-pop" style={{ width: '100%' }}>
+            <div className="mul-card card-3d animate-pop" style={{ width: '100%' }}>
               <span className="mul-card__operand">{currentQ.operand1}</span>
               <span className="mul-card__operator">{currentQ.operator}</span>
               <span className="mul-card__operand">{currentQ.operand2}</span>
@@ -784,7 +818,7 @@ export default function SectionAttemptPage() {
 
         {/* Virtual Custom Card display */}
         {isVirtualCustom && (
-          <div className="mul-card animate-pop" style={{
+          <div className="mul-card card-3d animate-pop" style={{
             width: '100%',
             maxWidth: 680,
             flexDirection: 'column',
@@ -988,7 +1022,7 @@ export default function SectionAttemptPage() {
 
         {/* Virtual Image Only Card display */}
         {isVirtualImageOnly && (
-          <div className="mul-card animate-pop" style={{
+          <div className="mul-card card-3d animate-pop" style={{
             width: '100%',
             maxWidth: 680,
             flexDirection: 'column',

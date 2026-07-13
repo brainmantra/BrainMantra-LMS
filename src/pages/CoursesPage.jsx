@@ -19,7 +19,7 @@ export default function CoursesPage() {
           
           {/* Card: 100 Days of Abacus */}
           <div 
-            className="card card-hover"
+            className="glass-panel-orange card-3d card-shiny"
             style={{
               padding: '1.75rem',
               display: 'flex',
@@ -28,9 +28,6 @@ export default function CoursesPage() {
               minHeight: 280,
               position: 'relative',
               overflow: 'hidden',
-              background: 'linear-gradient(135deg, rgba(22,28,45,0.9), rgba(25,35,60,0.85))',
-              border: '1px solid var(--border-strong)',
-              boxShadow: 'var(--shadow-md)'
             }}
           >
             {/* Background design bead decoration */}

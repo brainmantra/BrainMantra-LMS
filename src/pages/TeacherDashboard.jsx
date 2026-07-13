@@ -151,9 +151,9 @@ const FormPreview = ({ questionJson }) => {
 
 function StatCard({ icon, label, value, color }) {
   return (
-    <div className="stat-card">
+    <div className="stat-card stat-card--teal card-shiny">
       <div className="stat-card__icon">{icon}</div>
-      <div className="stat-card__value" style={{ color: color || 'var(--primary-light)' }}>{value}</div>
+      <div className="stat-card__value">{value}</div>
       <div className="stat-card__label">{label}</div>
     </div>
   )
@@ -546,23 +546,27 @@ export default function TeacherDashboard() {
       q.day_number === parseInt(qDay, 10) && 
       q.section === qSection
     )
+    const std = getTeacherSectionsForLevel(qLevel, qDay)
+    const stdMatch = std.find(s => s.value === qSection)
+    const defaultTitle = stdMatch ? stdMatch.label : qSection
+
     if (match) {
       setEditQId(match.id)
       setQFormatExample(match.format_example || '')
       try {
         const parsed = JSON.parse(match.question)
         if (parsed && typeof parsed === 'object' && parsed.items) {
-          setFormTitle(parsed.title || 'Abacus Daily Challenge')
+          setFormTitle(parsed.title || defaultTitle)
           setFormDescription(parsed.description || '')
           setFormItems(parsed.items || [])
         } else {
           const convertedItems = convertLegacyToFormItems(parsed || match.question, match.answer)
-          setFormTitle(`Daily Challenge - Day ${qDay}`)
+          setFormTitle(defaultTitle)
           setFormDescription('')
           setFormItems(convertedItems)
         }
       } catch (e) {
-        setFormTitle(`Daily Challenge - Day ${qDay}`)
+        setFormTitle(defaultTitle)
         setFormDescription('')
         setFormItems([{
           id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -577,7 +581,7 @@ export default function TeacherDashboard() {
     } else {
       setEditQId(null)
       setQFormatExample('')
-      setFormTitle(`Daily Challenge - Day ${qDay}`)
+      setFormTitle(defaultTitle)
       setFormDescription('')
       setFormItems([{
         id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,

@@ -1156,3 +1156,468 @@ select option { background: var(--bg-elevated); }
   padding: var(--space-3) var(--space-4);
   font-size: 0.85rem; margin-bottom: var(--space-4);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PREMIUM 3D ENHANCEMENT LAYER
+   Floating orbs, glassmorphism, neon glows, perspective transforms
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Floating ambient orbs ──────────────────────────────────────────────────── */
+@keyframes float-orb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%       { transform: translate(30px, -40px) scale(1.05); }
+  50%       { transform: translate(-20px, -60px) scale(0.95); }
+  75%       { transform: translate(40px, -20px) scale(1.03); }
+}
+@keyframes float-orb-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(-40px, 30px) scale(1.08); }
+  66%       { transform: translate(25px, 50px) scale(0.92); }
+}
+
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+}
+.orb-orange {
+  background: radial-gradient(circle, rgba(255,122,0,0.7), rgba(255,80,0,0.4), transparent 70%);
+  animation: float-orb 18s ease-in-out infinite;
+}
+.orb-violet {
+  background: radial-gradient(circle, rgba(139,92,246,0.6), rgba(109,40,217,0.3), transparent 70%);
+  animation: float-orb-2 22s ease-in-out infinite;
+}
+.orb-teal {
+  background: radial-gradient(circle, rgba(0,212,170,0.5), rgba(0,180,216,0.3), transparent 70%);
+  animation: float-orb 26s ease-in-out infinite reverse;
+}
+.orb-gold {
+  background: radial-gradient(circle, rgba(245,200,66,0.5), rgba(245,158,11,0.3), transparent 70%);
+  animation: float-orb-2 20s ease-in-out infinite;
+}
+
+/* ── Enhanced glassmorphism panels ─────────────────────────────────────────── */
+.glass-panel {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.06) inset;
+  border-radius: var(--radius-lg);
+}
+.glass-panel-orange {
+  background: rgba(255,122,0,0.04);
+  border: 1px solid rgba(255,122,0,0.18);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 40px rgba(255,122,0,0.06), 0 1px 0 rgba(255,255,255,0.06) inset;
+  border-radius: var(--radius-lg);
+}
+.glass-panel-gold {
+  background: rgba(245,200,66,0.03);
+  border: 1px solid rgba(245,200,66,0.18);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 40px rgba(245,200,66,0.06), 0 1px 0 rgba(255,255,255,0.06) inset;
+  border-radius: var(--radius-lg);
+}
+.glass-panel-teal {
+  background: rgba(0,180,216,0.03);
+  border: 1px solid rgba(0,180,216,0.18);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 40px rgba(0,180,216,0.06), 0 1px 0 rgba(255,255,255,0.06) inset;
+  border-radius: var(--radius-lg);
+}
+
+/* ── 3D card hover tilt ─────────────────────────────────────────────────────── */
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform var(--trans-base), box-shadow var(--trans-base);
+  cursor: default;
+}
+.card-3d:hover {
+  transform: perspective(800px) rotateX(-3deg) rotateY(3deg) translateY(-6px);
+  box-shadow: 10px 18px 0 rgba(255,122,0,0.12), 0 24px 60px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.08) inset;
+}
+
+/* ── Hero animated gradient sections ───────────────────────────────────────── */
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.hero-gradient {
+  background: linear-gradient(135deg,
+    rgba(255,122,0,0.12) 0%,
+    rgba(139,92,246,0.08) 30%,
+    rgba(0,212,170,0.06) 60%,
+    rgba(255,122,0,0.10) 100%);
+  background-size: 400% 400%;
+  animation: gradient-shift 10s ease infinite;
+}
+
+/* ── Dashboard hero header ──────────────────────────────────────────────────── */
+.dash-hero {
+  padding: 2rem 2.5rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255,122,0,0.08) 0%, rgba(30,38,60,0.5) 50%, rgba(0,0,0,0.02) 100%);
+  border: 1px solid rgba(255,122,0,0.15);
+  position: relative;
+  overflow: hidden;
+}
+.dash-hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(255,122,0,0.14), transparent 70%);
+  pointer-events: none;
+}
+.dash-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -5%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(139,92,246,0.08), transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Neon glow text utilities ────────────────────────────────────────────────── */
+.neon-text-orange {
+  text-shadow:
+    0 0 8px rgba(255,122,0,0.9),
+    0 0 16px rgba(255,122,0,0.6),
+    0 0 40px rgba(255,122,0,0.3);
+}
+.neon-text-teal {
+  text-shadow:
+    0 0 8px rgba(0,180,216,0.9),
+    0 0 16px rgba(0,180,216,0.6),
+    0 0 40px rgba(0,180,216,0.3);
+}
+.neon-text-gold {
+  text-shadow:
+    0 0 8px rgba(245,200,66,0.9),
+    0 0 16px rgba(245,200,66,0.6),
+    0 0 40px rgba(245,200,66,0.3);
+}
+.neon-text-violet {
+  text-shadow:
+    0 0 8px rgba(139,92,246,0.9),
+    0 0 16px rgba(139,92,246,0.6),
+    0 0 40px rgba(139,92,246,0.3);
+}
+
+/* ── Premium sidebar overrides ──────────────────────────────────────────────── */
+.admin-sidebar {
+  background: linear-gradient(180deg, #0d1117 0%, #111520 50%, #0c0e15 100%) !important;
+  border-right: 1px solid rgba(255,122,0,0.12) !important;
+  box-shadow: 4px 0 40px rgba(0,0,0,0.6), inset -1px 0 0 rgba(255,122,0,0.06) !important;
+}
+.admin-sidebar__logo h2 {
+  font-size: 1.05rem !important;
+  letter-spacing: 0.02em;
+}
+.admin-nav-item.active {
+  background: linear-gradient(90deg, rgba(255,122,0,0.18) 0%, rgba(255,122,0,0.08) 60%, transparent 100%) !important;
+  border-right: 3px solid var(--primary) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 0 24px rgba(255,122,0,0.08) !important;
+  color: var(--primary-bright) !important;
+}
+.admin-nav-item:hover {
+  background: rgba(255,122,0,0.07) !important;
+  padding-left: calc(var(--space-6) + 3px) !important;
+  color: var(--primary-light) !important;
+  transition: all 0.18s ease !important;
+}
+
+/* ── Premium stat card variants ─────────────────────────────────────────────── */
+.stat-card--gold::before {
+  background: linear-gradient(90deg, #a37800, var(--accent-gold), #fde68a) !important;
+}
+.stat-card--gold .stat-card__value {
+  background: linear-gradient(135deg, #a37800, var(--accent-gold), #fde68a) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 8px rgba(245,200,66,0.4)) !important;
+}
+.stat-card--teal::before {
+  background: linear-gradient(90deg, #0077b6, var(--teacher-primary), #48cae4) !important;
+}
+.stat-card--teal .stat-card__value {
+  background: linear-gradient(135deg, #0077b6, var(--teacher-primary), #48cae4) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 8px rgba(0,180,216,0.4)) !important;
+}
+.stat-card--violet::before {
+  background: linear-gradient(90deg, #5b21b6, var(--accent-violet), #c4b5fd) !important;
+}
+.stat-card--violet .stat-card__value {
+  background: linear-gradient(135deg, #5b21b6, var(--accent-violet), #c4b5fd) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 8px rgba(139,92,246,0.4)) !important;
+}
+.stat-card--success::before {
+  background: linear-gradient(90deg, #047857, var(--success), #34d399) !important;
+}
+.stat-card--success .stat-card__value {
+  background: linear-gradient(135deg, #047857, var(--success), #34d399) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 8px rgba(16,185,129,0.4)) !important;
+}
+
+/* ── Skeleton shimmer loading ────────────────────────────────────────────────── */
+@keyframes skeleton-shine {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--bg-elevated) 25%,
+    rgba(255,122,0,0.06) 50%,
+    var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shine 1.5s linear infinite;
+  border-radius: var(--radius-md);
+}
+
+/* ── Premium form inputs ──────────────────────────────────────────────────── */
+.input-premium {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1.5px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,255,0.04) inset !important;
+}
+.input-premium:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(255,122,0,0.15), 0 0 24px rgba(255,122,0,0.1), 0 1px 0 rgba(255,255,255,0.04) inset !important;
+  background: rgba(255,122,0,0.03) !important;
+}
+
+/* ── Glow dividers ──────────────────────────────────────────────────────────── */
+.divider-glow {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255,122,0,0.3) 30%,
+    rgba(255,122,0,0.6) 50%,
+    rgba(255,122,0,0.3) 70%,
+    transparent);
+  box-shadow: 0 0 8px rgba(255,122,0,0.25);
+  margin: 1.5rem 0;
+}
+.divider-glow-teal {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent, rgba(0,180,216,0.5) 50%, transparent);
+  box-shadow: 0 0 8px rgba(0,180,216,0.25);
+  margin: 1.5rem 0;
+}
+.divider-glow-gold {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent, rgba(245,200,66,0.5) 50%, transparent);
+  box-shadow: 0 0 8px rgba(245,200,66,0.25);
+  margin: 1.5rem 0;
+}
+
+/* ── Data table enhancements ─────────────────────────────────────────────────── */
+.data-table tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.data-table th {
+  background: rgba(255,122,0,0.06) !important;
+  border-bottom: 1px solid rgba(255,122,0,0.2) !important;
+}
+
+/* ── Login page 3D enhancement ──────────────────────────────────────────────── */
+.login-page {
+  position: relative;
+  overflow: hidden;
+}
+.login-page::before {
+  content: '';
+  position: fixed;
+  top: -20%;
+  left: -15%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255,122,0,0.12), rgba(255,60,0,0.06), transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 0;
+  animation: float-orb 20s ease-in-out infinite;
+}
+.login-page::after {
+  content: '';
+  position: fixed;
+  bottom: -20%;
+  right: -15%;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(139,92,246,0.1), rgba(0,180,216,0.06), transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  animation: float-orb-2 25s ease-in-out infinite;
+}
+.login-layout { position: relative; z-index: 1; }
+
+.login-form-panel {
+  background: rgba(14,18,28,0.88) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  border: 1px solid rgba(255,122,0,0.2) !important;
+  box-shadow:
+    0 24px 80px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,122,0,0.08),
+    0 1px 0 rgba(255,255,255,0.07) inset !important;
+  border-radius: 24px !important;
+}
+.login-brand {
+  position: relative;
+}
+.login-brand::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255,122,0,0.08), transparent 70%);
+  pointer-events: none;
+}
+.login-brand-title {
+  font-size: 2.4rem !important;
+  text-shadow: 0 0 30px rgba(255,122,0,0.3) !important;
+}
+.login-form-title {
+  font-size: 1.6rem !important;
+}
+.login-submit {
+  width: 100% !important;
+  height: 52px !important;
+  font-size: 1.05rem !important;
+  letter-spacing: 0.04em !important;
+  border-radius: 14px !important;
+}
+
+/* ── 3D Section items depth transform ───────────────────────────────────────── */
+.section-item:hover {
+  transform: perspective(600px) translateX(6px) translateY(-2px) rotateY(-1deg) !important;
+  box-shadow: -6px 6px 0 rgba(255,122,0,0.12), 0 12px 40px rgba(0,0,0,0.55) !important;
+}
+
+/* ── Premium badge depth ─────────────────────────────────────────────────────── */
+.badge-3d {
+  box-shadow: 0 2px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.1) inset;
+  transform: translateY(-1px);
+}
+
+/* ── Card shine sweep on hover ───────────────────────────────────────────────── */
+@keyframes shine-sweep {
+  0%   { left: -100%; }
+  100% { left: 200%; }
+}
+.card-shiny {
+  position: relative;
+  overflow: hidden;
+}
+.card-shiny:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: shine-sweep 0.6s ease forwards;
+  pointer-events: none;
+}
+
+/* ── Stats grid for challenge page ──────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(5, 1fr);
+  transition: all 0.3s ease;
+}
+[data-sidebar='open'] .stats-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (max-width: 580px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── Admin/Teacher portal glow headers ──────────────────────────────────────── */
+.portal-header {
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, rgba(255,122,0,0.07) 0%, transparent 60%);
+  border-bottom: 1px solid rgba(255,122,0,0.12);
+  margin-bottom: 2rem;
+  position: relative;
+}
+.portal-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--primary-bright), var(--primary), transparent);
+  box-shadow: 0 0 12px rgba(255,122,0,0.5);
+}
+.portal-header-teacher::before {
+  background: linear-gradient(90deg, transparent, var(--teacher-primary), #48cae4, var(--teacher-primary), transparent);
+  box-shadow: 0 0 12px rgba(0,180,216,0.5);
+}
+.portal-header-admin::before {
+  background: linear-gradient(90deg, transparent, var(--admin-primary), #fde68a, var(--admin-primary), transparent);
+  box-shadow: 0 0 12px rgba(245,200,66,0.5);
+}
+
+/* ── Whatsapp button ─────────────────────────────────────────────────────────── */
+.btn-whatsapp {
+  background: linear-gradient(160deg, #4ade80, #25d366, #128c4b);
+  color: #fff;
+  box-shadow: 0 4px 0 #128c4b, 0 6px 20px rgba(37,211,102,0.35), 0 1px 0 rgba(255,255,255,0.2) inset;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+.btn-whatsapp:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #128c4b, 0 10px 30px rgba(37,211,102,0.45), 0 1px 0 rgba(255,255,255,0.2) inset;
+}
+
+/* ── Student sidebar nav items ──────────────────────────────────────────────── */
+.student-nav-active {
+  background: linear-gradient(90deg, rgba(255,122,0,0.18) 0%, rgba(255,122,0,0.06) 60%, transparent 100%) !important;
+  border-right: 3px solid var(--primary);
+  color: var(--primary-bright) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}

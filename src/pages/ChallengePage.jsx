@@ -97,43 +97,41 @@ export default function ChallengePage() {
     <StudentLayout>
 
       <div className="container challenge-body" style={{ padding: 0, maxWidth: '100%' }}>
-        <section className="challenge-intro animate-fade" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <section className="dash-hero animate-fade" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
-            <h1 className="challenge-title">
+            <h1 className="challenge-title" style={{ fontSize: '2.2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
               Hey {student.name.split(' ')[0]} 👋
             </h1>
-            <p className="challenge-subtitle">
-              <span className="badge badge-amber">{LEVEL_LABELS[student?.level] || student?.level}</span>
-              {' '}You're on Day <strong>{clampedCurrentDay}</strong> of 100.
+            <p className="challenge-subtitle" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span className="badge badge-primary badge-3d">{LEVEL_LABELS[student?.level] || student?.level}</span>
+              <span style={{ color: 'var(--text-secondary)' }}>You're on Day <strong>{clampedCurrentDay}</strong> of 100.</span>
             </p>
           </div>
-          <div className="challenge-progress-ring">
-            <svg width="74" height="74" viewBox="0 0 74 74">
-              <circle cx="37" cy="37" r="32" fill="none" stroke="var(--ivory-dark)" strokeWidth="7" />
+          <div className="challenge-progress-ring" style={{ position: 'relative' }}>
+            <svg width="74" height="74" viewBox="0 0 74 74" style={{ filter: 'drop-shadow(0 4px 12px rgba(255,122,0,0.25))' }}>
+              <circle cx="37" cy="37" r="32" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="6" />
               <circle
-                cx="37" cy="37" r="32" fill="none" stroke="var(--amber)" strokeWidth="7"
+                cx="37" cy="37" r="32" fill="none" stroke="var(--primary)" strokeWidth="6"
                 strokeDasharray={2 * Math.PI * 32}
                 strokeDashoffset={2 * Math.PI * 32 * (1 - completedCount / 100)}
                 strokeLinecap="round"
                 transform="rotate(-90 37 37)"
               />
             </svg>
-            <span className="challenge-progress-label">{completedCount}/100</span>
+            <span className="challenge-progress-label" style={{ fontWeight: 800, color: 'var(--text-primary)', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{completedCount}/100</span>
           </div>
         </section>
 
         {/* Tab Switcher */}
-        <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', paddingBottom: '0.5rem' }}>
+        <div className="tabs" style={{ marginBottom: '2rem' }}>
           <button 
-            className={`btn ${activeTab === 'map' ? 'btn-primary' : 'btn-ghost'}`} 
-            style={{ fontSize: '0.9rem', padding: '0.4rem 1rem' }}
+            className={`tab ${activeTab === 'map' ? 'active' : ''}`} 
             onClick={() => setActiveTab('map')}
           >
             🗺️ Challenge Map
           </button>
           <button 
-            className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-ghost'}`} 
-            style={{ fontSize: '0.9rem', padding: '0.4rem 1rem' }}
+            className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`} 
             onClick={() => setActiveTab('dashboard')}
           >
             📊 My Dashboard
@@ -223,30 +221,30 @@ export default function ChallengePage() {
                   }
                 }
               `}</style>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>⚡</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{student?.xp_total || 0} XP</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total XP</div>
+              <div className="stat-card stat-card--gold card-shiny">
+                <div className="stat-card__icon">⚡</div>
+                <div className="stat-card__value">{student?.xp_total || 0} XP</div>
+                <div className="stat-card__label">Total XP</div>
               </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>✅</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.completedCount}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Days Completed</div>
+              <div className="stat-card stat-card--success card-shiny">
+                <div className="stat-card__icon">✅</div>
+                <div className="stat-card__value">{stats.completedCount}</div>
+                <div className="stat-card__label">Days Completed</div>
               </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🔥</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff5722' }}>{streak} Days</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Current Streak</div>
+              <div className="stat-card card-shiny" style={{ '--primary-glow': 'rgba(255,87,34,0.3)' }}>
+                <div className="stat-card__icon">🔥</div>
+                <div className="stat-card__value" style={{ background: 'linear-gradient(135deg, #ff8a65, #ff5722)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', filter: 'drop-shadow(0 0 8px rgba(255,87,34,0.3))' }}>{streak} Days</div>
+                <div className="stat-card__label">Current Streak</div>
               </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🎯</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-light)' }}>{stats.avgAccuracy}%</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Avg Accuracy</div>
+              <div className="stat-card card-shiny" style={{ '--primary-glow': 'var(--primary-glow)' }}>
+                <div className="stat-card__icon">🎯</div>
+                <div className="stat-card__value">{stats.avgAccuracy}%</div>
+                <div className="stat-card__label">Avg Accuracy</div>
               </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>⏱</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-teal)' }}>{Math.round(stats.totalTime / 60)} m</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total Time Spent</div>
+              <div className="stat-card stat-card--teal card-shiny">
+                <div className="stat-card__icon">⏱</div>
+                <div className="stat-card__value">{Math.round(stats.totalTime / 60)} m</div>
+                <div className="stat-card__label">Total Time Spent</div>
               </div>
             </div>
 

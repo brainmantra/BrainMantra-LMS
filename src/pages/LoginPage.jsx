@@ -129,7 +129,7 @@ export default function LoginPage() {
               <label className="form-label" htmlFor="loginId">Login ID</label>
               <input
                 id="loginId"
-                className="form-input"
+                className="input-premium"
                 type="text"
                 placeholder="Username, email, or mobile"
                 value={loginId}
@@ -145,7 +145,7 @@ export default function LoginPage() {
               <label className="form-label" htmlFor="password">Password</label>
               <input
                 id="password"
-                className="form-input"
+                className="input-premium"
                 type="password"
                 placeholder="••••••••"
                 value={password}

@@ -18,6 +18,22 @@ const SECTION_ICONS = {
   two_steps:         '📋',
   cracking:          '✏',
   bodmas:            '🧮',
+  power_exercise:    '⚡',
+}
+
+const SECTION_LABELS = {
+  abacus:            '🧮 Abacus',
+  visual:            '👁 Visual',
+  multiplication:    '✖ Multiplication',
+  division:          '➗ Division',
+  tables:            '📋 Tables',
+  form_the_question: '✏ Form The Question',
+  teacher_input:     '👨‍🏫 Teacher Section',
+  teacher_day:       '🌟 Special Day',
+  two_steps:         '📋 Two Steps',
+  cracking:          '✏ Cracking',
+  bodmas:            '🧮 Bodmas',
+  power_exercise:    '⚡ Power Exercise',
 }
 
 const STATUS_CONFIG = {
@@ -220,7 +236,7 @@ export default function SectionListPage() {
                 <div className="section-item__left">
                   <div className="section-item__icon">{icon}</div>
                   <div>
-                    <div className="section-item__name">{sec.label}</div>
+                    <div className="section-item__name">{sec.label || SECTION_LABELS[sec.section] || sec.section}</div>
                     <div className="section-item__meta">
                       {isDone
                         ? `✓ ${sec.marks ?? 0} marks · ${sec.timeTaken ?? 0}s`

@@ -150,9 +150,9 @@ const FormPreview = ({ questionJson }) => {
 
 function StatCard({ icon, label, value, color }) {
   return (
-    <div className="stat-card">
+    <div className="stat-card stat-card--gold card-shiny">
       <div className="stat-card__icon">{icon}</div>
-      <div className="stat-card__value" style={{ color: color || 'var(--primary-light)' }}>{value}</div>
+      <div className="stat-card__value">{value}</div>
       <div className="stat-card__label">{label}</div>
     </div>
   )
