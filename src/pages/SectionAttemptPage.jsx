@@ -140,10 +140,10 @@ export default function SectionAttemptPage() {
         const rawQs = res.data.questions || []
         const flatQs = []
         rawQs.forEach(q => {
-          // Always attempt to parse teacher JSON questions
-          if (q.question) {
+          const qContent = q.question || q.question_text || q.questionText;
+          if (qContent) {
             try {
-              const parsed = typeof q.question === 'string' ? JSON.parse(q.question) : q.question
+              const parsed = typeof qContent === 'string' ? JSON.parse(qContent) : qContent
               if (parsed && typeof parsed === 'object') {
                 if (parsed.title) {
                   setCustomSectionTitle(parsed.title)
@@ -252,9 +252,10 @@ export default function SectionAttemptPage() {
 
   let isGoogleForm = false
   let parsedForm = null
-  if (currentQ && currentQ.question) {
+  const currentQContent = currentQ?.question || currentQ?.question_text || currentQ?.questionText;
+  if (currentQContent) {
     try {
-      const parsed = typeof currentQ.question === 'string' ? JSON.parse(currentQ.question) : currentQ.question
+      const parsed = typeof currentQContent === 'string' ? JSON.parse(currentQContent) : currentQContent
       if (parsed && typeof parsed === 'object' && parsed.items) {
         isGoogleForm = true
         parsedForm = parsed

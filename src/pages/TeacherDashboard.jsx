@@ -685,8 +685,9 @@ export default function TeacherDashboard() {
     <div className="admin-layout">
       {/* Sidebar */}
       <aside className="admin-sidebar">
-        <div className="admin-sidebar__logo">
-          <h2 style={{ color: 'var(--teacher-primary)' }}>👨‍🏫 Teacher Portal</h2>
+        <div className="admin-sidebar__logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+          <img src="/brand-logo.png" alt="Brain Mantra Logo" style={{ width: 42, height: 42, borderRadius: 10, marginBottom: 4 }} />
+          <h2 style={{ color: 'var(--teacher-primary)' }}>Teacher Portal</h2>
           <p>{teacher?.name}</p>
           <p style={{ fontSize: '0.7rem', marginTop: 2 }}>{teacher?.assigned_levels?.map(l => LEVEL_LABELS[l]).join(', ')}</p>
         </div>

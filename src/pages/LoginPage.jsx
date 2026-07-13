@@ -91,18 +91,7 @@ export default function LoginPage() {
         {/* Brand panel */}
         <div className="login-brand animate-fade">
           <div className="login-brand-logo">
-            <svg width="56" height="56" viewBox="0 0 52 52" fill="none">
-              <rect width="52" height="52" rx="14" fill="#f5a623"/>
-              <rect x="10" y="14" width="32" height="3" rx="1.5" fill="#1a2340"/>
-              <rect x="10" y="24.5" width="32" height="3" rx="1.5" fill="#1a2340"/>
-              <rect x="10" y="35" width="32" height="3" rx="1.5" fill="#1a2340"/>
-              <circle cx="19" cy="15.5" r="5" fill="#1a2340"/>
-              <circle cx="29" cy="26" r="5" fill="#1a2340"/>
-              <circle cx="22" cy="36.5" r="5" fill="#1a2340"/>
-              <circle cx="35" cy="15.5" r="5" fill="white" opacity="0.45"/>
-              <circle cx="14" cy="26" r="5" fill="white" opacity="0.45"/>
-              <circle cx="36" cy="36.5" r="5" fill="white" opacity="0.45"/>
-            </svg>
+            <img src="/brand-logo.png" alt="Brain Mantra Logo" style={{ width: 56, height: 56, borderRadius: 14 }} />
           </div>
           <h1 className="login-brand-title">Brain Mantra</h1>
           <p className="login-brand-tagline">
