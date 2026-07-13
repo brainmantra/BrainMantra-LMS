@@ -35,12 +35,12 @@ router.post('/login', async (req, res) => {
 
     const valid = await bcrypt.compare(password, admin.password_hash)
     if (!valid) {
-      await logActivity({ userType: 'admin', userLabel: cleanEmail, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
+      await logActivity({ userType: 'admin', userLabel: email, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
 
     const token = signAdminToken(admin)
-    await logActivity({ userType: 'admin', userId: admin.id, userLabel: cleanEmail, action: 'login_success', req })
+    await logActivity({ userType: 'admin', userId: admin.id, userLabel: email, action: 'login_success', req })
     res.json({ token, admin: { id: admin.id, email: admin.email } })
   } catch (err) {
     console.error('[admin/login]', err)
