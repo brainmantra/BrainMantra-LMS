@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['brand-logo.jpeg', 'icons.svg'],
+      includeAssets: ['brand-logo.png', 'icons.svg'],
       manifest: {
         name: 'Brain Mantra',
         short_name: 'Brain Mantra',
@@ -15,14 +15,14 @@ export default defineConfig({
         theme_color: '#0c0e15',
         icons: [
           {
-            src: 'brand-logo.jpeg',
+            src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/jpeg'
+            type: 'image/png'
           },
           {
-            src: 'brand-logo.jpeg',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/jpeg'
+            type: 'image/png'
           }
         ]
       },
