@@ -18,10 +18,11 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password required.' })
     }
 
-    const { rows } = await pool.query('SELECT * FROM admin WHERE email = $1', [email])
+    const cleanEmail = String(email).trim().toLowerCase()
+    const { rows } = await pool.query('SELECT * FROM admin WHERE LOWER(email) = $1', [cleanEmail])
     const admin = rows[0]
     if (!admin) {
-      await logActivity({ userType: 'admin', userLabel: email, action: 'login_fail', req, metadata: { reason: 'not_found' } })
+      await logActivity({ userType: 'admin', userLabel: cleanEmail, action: 'login_fail', req, metadata: { reason: 'not_found' } })
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
 

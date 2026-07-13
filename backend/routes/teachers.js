@@ -15,19 +15,20 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body
     if (!email || !password) return res.status(400).json({ message: 'Email and password required.' })
 
+    const cleanEmail = String(email).trim().toLowerCase()
     const { rows } = await pool.query(
-      `SELECT * FROM teachers WHERE email = $1 AND is_active = TRUE`,
-      [email]
+      `SELECT * FROM teachers WHERE LOWER(email) = $1 AND is_active = TRUE`,
+      [cleanEmail]
     )
     const teacher = rows[0]
     if (!teacher || !teacher.is_active) {
-      await logActivity({ userType: 'teacher', userLabel: email, action: 'login_fail', req, metadata: { reason: !teacher ? 'not_found' : 'inactive' } })
+      await logActivity({ userType: 'teacher', userLabel: cleanEmail, action: 'login_fail', req, metadata: { reason: !teacher ? 'not_found' : 'inactive' } })
       return res.status(401).json({ message: 'Invalid credentials or inactive account.' })
     }
 
     const valid = await bcrypt.compare(password, teacher.password_hash)
     if (!valid) {
-      await logActivity({ userType: 'teacher', userLabel: email, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
+      await logActivity({ userType: 'teacher', userLabel: cleanEmail, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
 
