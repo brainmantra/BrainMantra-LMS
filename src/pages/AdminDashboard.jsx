@@ -707,6 +707,20 @@ function TeachersTab() {
     catch { toast.error('Could not deactivate.') }
   }
 
+  const handleReactivate = async (t) => {
+    if (!confirm('Reactivate this teacher?')) return
+    try {
+      await adminApi.put(`/admin/teachers/${t.id}`, {
+        name: t.name,
+        email: t.email,
+        assigned_levels: t.assigned_levels || [],
+        is_active: true
+      })
+      toast.success('Teacher reactivated.')
+      fetch()
+    } catch { toast.error('Could not reactivate.') }
+  }
+
   return (
     <div className="animate-slide-up">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -745,7 +759,11 @@ function TeachersTab() {
                 ))}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div className="form-group" style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input type="checkbox" id="teacherActive" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
+              <label htmlFor="teacherActive" style={{ color: 'var(--text-secondary)' }}>Account is active</label>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
               <button type="submit" className="btn btn-admin" disabled={saving}>
                 {saving ? <div className="spinner spinner-sm" /> : '💾 Save'}
               </button>
@@ -773,7 +791,11 @@ function TeachersTab() {
                   <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{new Date(t.created_at).toLocaleDateString()}</td>
                   <td style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(t)}>Edit</button>
-                    {t.is_active && <button className="btn btn-sm" style={{ background: 'var(--error-bg)', color: 'var(--error)', border: '1px solid rgba(239,68,68,0.3)' }} onClick={() => handleDeactivate(t.id)}>Deactivate</button>}
+                    {t.is_active ? (
+                      <button className="btn btn-sm" style={{ background: 'var(--error-bg)', color: 'var(--error)', border: '1px solid rgba(239,68,68,0.3)' }} onClick={() => handleDeactivate(t.id)}>Deactivate</button>
+                    ) : (
+                      <button className="btn btn-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }} onClick={() => handleReactivate(t)}>Reactivate</button>
+                    )}
                   </td>
                 </tr>
               ))}
