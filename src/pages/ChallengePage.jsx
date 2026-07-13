@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import StudentLayout from '../components/StudentLayout'
 import { getChallengeDay } from '../utils/dateUtils'
@@ -9,70 +8,21 @@ import DayCard from '../components/DayCard'
 import StreakCorner from '../components/StreakCorner'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Joyride, STATUS } from 'react-joyride'
 import './ChallengePage.css'
 
 export default function ChallengePage() {
-  const { student, logout } = useAuth()
-  const navigate = useNavigate()
-  const [days, setDays] = useState([]) // array of day records from backend
+  const { student } = useAuth()
+  const [days, setDays] = useState([])
   const [streak, setStreak] = useState(0)
   const [longestStreak, setLongestStreak] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('map') // 'map' or 'dashboard'
+  const [activeTab, setActiveTab] = useState('map')
 
   const LEVEL_LABELS = {
     beginner: 'Beginner',
     l1: 'Level 1', l2: 'Level 2', l3: 'Level 3', l4: 'Level 4',
     l5: 'Level 5', l6: 'Level 6', l7: 'Level 7', l8: 'Level 8',
     alumni: 'Alumni', gm: 'Grand Master (GM)'
-  }
-
-  const [{ run, steps }, setTourState] = useState({
-    run: false,
-    steps: [
-      {
-        target: '.tour-step-progress',
-        content: 'This shows your overall completion out of 100 days. Keep going!',
-        disableBeacon: true,
-      },
-      {
-        target: '.tour-step-streak',
-        content: 'Here you can see your current streak. Solve everyday to keep it going!',
-      },
-      {
-        target: '.tour-step-demo',
-        content: 'This is the Demo Day. You can practice here as many times as you like without affecting your streak!',
-      },
-      {
-        target: '.tour-step-dashboard',
-        content: 'Click here to switch to your dashboard and view your performance statistics.',
-      }
-    ]
-  })
-
-  // Start tour automatically if not seen
-  useEffect(() => {
-    if (student?.id) {
-      const hasSeenTour = localStorage.getItem(`tour_seen_${student.id}`)
-      if (!hasSeenTour) {
-        // slight delay to let elements render
-        setTimeout(() => setTourState(prev => ({ ...prev, run: true })), 500)
-      }
-    }
-  }, [student])
-
-  const handleJoyrideCallback = (data) => {
-    const { status } = data
-    const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED]
-    if (finishedStatuses.includes(status)) {
-      localStorage.setItem(`tour_seen_${student.id}`, 'true')
-      setTourState(prev => ({ ...prev, run: false }))
-    }
-  }
-
-  const startTourManually = () => {
-    setTourState(prev => ({ ...prev, run: true }))
   }
 
   const currentDay = useMemo(() => getChallengeDay(student?.first_login_date || student?.registration_date), [student])
@@ -145,43 +95,19 @@ export default function ChallengePage() {
 
   return (
     <StudentLayout>
-      <Joyride
-        callback={handleJoyrideCallback}
-        continuous
-        hideCloseButton
-        run={run}
-        scrollToFirstStep
-        showProgress
-        showSkipButton
-        steps={steps}
-        styles={{
-          options: {
-            primaryColor: '#f5a623',
-            zIndex: 10000,
-          }
-        }}
-      />
 
       <div className="container challenge-body" style={{ padding: 0, maxWidth: '100%' }}>
         <section className="challenge-intro animate-fade" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="challenge-title" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <span>Hey {student.name.split(' ')[0]} 👋</span>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={startTourManually}
-                title="Replay page tour"
-                style={{ fontSize: '0.8rem', padding: '3px 10px', border: '1px solid var(--border)', borderRadius: '6px' }}
-              >
-                Replay Tour ℹ️
-              </button>
+            <h1 className="challenge-title">
+              Hey {student.name.split(' ')[0]} 👋
             </h1>
             <p className="challenge-subtitle">
               <span className="badge badge-amber">{LEVEL_LABELS[student?.level] || student?.level}</span>
               {' '}You're on Day <strong>{clampedCurrentDay}</strong> of 100.
             </p>
           </div>
-          <div className="challenge-progress-ring tour-step-progress">
+          <div className="challenge-progress-ring">
             <svg width="74" height="74" viewBox="0 0 74 74">
               <circle cx="37" cy="37" r="32" fill="none" stroke="var(--ivory-dark)" strokeWidth="7" />
               <circle
@@ -206,7 +132,7 @@ export default function ChallengePage() {
             🗺️ Challenge Map
           </button>
           <button 
-            className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-ghost'} tour-step-dashboard`} 
+            className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-ghost'}`} 
             style={{ fontSize: '0.9rem', padding: '0.4rem 1rem' }}
             onClick={() => setActiveTab('dashboard')}
           >
@@ -216,7 +142,7 @@ export default function ChallengePage() {
 
         {activeTab === 'map' ? (
           <>
-            <section className="animate-fade tour-step-streak" style={{ animationDelay: '0.05s', marginBottom: 28 }}>
+            <section className="animate-fade" style={{ animationDelay: '0.05s', marginBottom: 28 }}>
               <StreakCorner streak={streak} longestStreak={longestStreak} />
             </section>
 
@@ -227,7 +153,7 @@ export default function ChallengePage() {
             ) : (
               <>
                 {/* Horizontal Demo Day Card */}
-                <div className="demo-day-horizontal-card-container tour-step-demo" style={{ marginBottom: '2.5rem' }}>
+                <div className="demo-day-horizontal-card-container" style={{ marginBottom: '2.5rem' }}>
                   <DayCard
                     dayNumber={0}
                     registrationDate={student.first_login_date || student.registration_date}
@@ -273,8 +199,30 @@ export default function ChallengePage() {
           </>
         ) : (
           <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {/* Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+            {/* Stats Row - responsive to sidebar state */}
+            <div className="stats-grid">
+              <style>{`
+                /* Sidebar open: 3 cols then 2 cols (5 cards) */
+                [data-sidebar='open'] .stats-grid {
+                  grid-template-columns: repeat(3, 1fr);
+                }
+                /* Sidebar closed: single row of 5 */
+                [data-sidebar='closed'] .stats-grid {
+                  grid-template-columns: repeat(5, 1fr);
+                }
+                /* Default fallback (auto) */
+                .stats-grid {
+                  display: grid;
+                  gap: 1rem;
+                  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                }
+                @media (max-width: 991px) {
+                  [data-sidebar='open'] .stats-grid,
+                  [data-sidebar='closed'] .stats-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                  }
+                }
+              `}</style>
               <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>⚡</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{student?.xp_total || 0} XP</div>

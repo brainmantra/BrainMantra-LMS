@@ -8,7 +8,7 @@ export default function StudentLayout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [profileOpen, setProfileOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -66,12 +66,12 @@ export default function StudentLayout({ children }) {
   }
 
   return (
-    <div className="admin-layout" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="admin-layout" data-sidebar={sidebarOpen ? 'open' : 'closed'} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* Sidebar Overlay (Mobile Close trigger) */}
-      {menuOpen && (
+      {/* Sidebar Overlay (Mobile only - close on click outside) */}
+      {sidebarOpen && typeof window !== 'undefined' && window.innerWidth <= 991 && (
         <div 
-          onClick={() => setMenuOpen(false)}
+          onClick={() => setSidebarOpen(false)}
           style={{
             position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
             background: 'rgba(0,0,0,0.5)', zIndex: 40, backdropFilter: 'blur(3px)'
@@ -81,12 +81,8 @@ export default function StudentLayout({ children }) {
 
       {/* Sidebar container */}
       <aside 
-        className="admin-sidebar"
-        style={{
-          transform: menuOpen ? 'translateX(0)' : undefined,
-          transition: 'transform 0.3s ease',
-          display: 'block' // Ensure display is override block for media query display none
-        }}
+        className="admin-sidebar student-sidebar"
+        style={{ transition: 'transform 0.3s ease, width 0.3s ease', display: 'block' }}
       >
         <div className="admin-sidebar__logo" style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
           <h2>Brain Mantra</h2>
@@ -111,16 +107,16 @@ export default function StudentLayout({ children }) {
               <span>My Courses</span>
             </button>
 
-            <button 
-              className={`admin-nav-item${isActive('/leaderboard') ? ' active' : ''}`}
-              onClick={() => { navigate('/leaderboard'); setMenuOpen(false); }}
-            >
-              <span>🏅</span>
-              <span>Leaderboard</span>
-            </button>
           </div>
 
-          <div style={{ padding: '0 1rem' }}>
+          <div style={{ padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <button 
+              className="btn btn-primary btn-block btn-sm"
+              onClick={handleInstall}
+              style={{ justifyContent: 'center', fontSize: '0.8rem' }}
+            >
+              📲 Install App
+            </button>
             <button 
               className="btn btn-ghost btn-block btn-sm"
               onClick={handleLogoutClick}
@@ -134,13 +130,13 @@ export default function StudentLayout({ children }) {
 
       {/* Main Content Area */}
       <div 
-        className="admin-main"
+        className="admin-main student-main"
         style={{
-          marginLeft: '240px',
           padding: '1.5rem',
           minHeight: '100vh',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          transition: 'margin-left 0.3s ease'
         }}
       >
         
@@ -158,13 +154,17 @@ export default function StudentLayout({ children }) {
             position: 'relative'
           }}
         >
-          {/* Mobile hamburger menu toggle */}
+          {/* Hamburger menu toggle - always visible */}
           <button 
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{
-              background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '1.5rem', cursor: 'pointer'
+              background: 'none', border: 'none', color: 'var(--text-primary)', fontSize: '1.4rem', cursor: 'pointer',
+              width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: '8px', transition: 'background 0.2s'
             }}
-            className="student-menu-toggle-btn"
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
           >
             ☰
           </button>
@@ -212,56 +212,6 @@ export default function StudentLayout({ children }) {
               )}
             </div>
 
-            {/* Settings Dropdown Toggle */}
-            <div style={{ position: 'relative' }}>
-              <button 
-                onClick={() => { setSettingsOpen(!settingsOpen); setProfileOpen(false); }}
-                style={{
-                  width: 38, height: 38, borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
-                  color: 'var(--text-secondary)', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1.1rem', transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
-                title="Portal Settings"
-              >
-                ⚙️
-              </button>
-
-              {settingsOpen && (
-                <>
-                  <div onClick={() => setSettingsOpen(false)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 100 }} />
-                  <div 
-                    className="card animate-pop"
-                    style={{
-                      position: 'absolute', right: 0, marginTop: '0.5rem', width: 220,
-                      padding: '0.75rem', zIndex: 101, border: '1px solid var(--border-strong)',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.3)', background: 'var(--bg-elevated)',
-                      display: 'flex', flexDirection: 'column', gap: '0.5rem'
-                    }}
-                  >
-                    <button 
-                      className="btn btn-primary btn-sm btn-block"
-                      onClick={handleInstall}
-                      style={{ justifyContent: 'center', fontSize: '0.85rem' }}
-                    >
-                      📲 Install Web App
-                    </button>
-                    
-                    <button 
-                      className="btn btn-ghost btn-sm btn-block"
-                      onClick={handleLogoutClick}
-                      style={{ justifyContent: 'center', color: 'var(--accent-coral)', fontSize: '0.85rem' }}
-                    >
-                      🚪 Log Out
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
           </div>
         </header>
 
@@ -271,20 +221,37 @@ export default function StudentLayout({ children }) {
         </main>
       </div>
 
-      {/* Embedded CSS overrides for student sidebar toggle layout */}
+      {/* Embedded CSS overrides for student sidebar layout */}
       <style>{`
-        .student-menu-toggle-btn {
-          display: none;
+        /* Desktop: sidebar open */
+        [data-sidebar='open'] .student-sidebar {
+          transform: translateX(0);
+          width: 240px;
         }
+        [data-sidebar='open'] .student-main {
+          margin-left: 240px;
+        }
+        /* Desktop: sidebar closed */
+        [data-sidebar='closed'] .student-sidebar {
+          transform: translateX(-240px);
+          width: 240px;
+        }
+        [data-sidebar='closed'] .student-main {
+          margin-left: 0;
+        }
+        /* Mobile overrides */
         @media (max-width: 991px) {
-          .admin-sidebar {
+          [data-sidebar='open'] .student-sidebar {
+            transform: translateX(0);
+            position: fixed;
+            z-index: 50;
+          }
+          [data-sidebar='closed'] .student-sidebar {
             transform: translateX(-240px);
           }
-          .admin-main {
+          [data-sidebar='open'] .student-main,
+          [data-sidebar='closed'] .student-main {
             margin-left: 0 !important;
-          }
-          .student-menu-toggle-btn {
-            display: block;
           }
         }
       `}</style>
