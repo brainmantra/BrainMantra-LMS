@@ -493,7 +493,7 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const stored = localStorage.getItem('abacus_teacher')
-    if (!stored) { navigate('/teacher'); return }
+    if (!stored) { navigate('/'); return }
     const t = JSON.parse(stored)
     setTeacher(t)
     if (t.assigned_levels?.length) setQLevel(t.assigned_levels[0])
@@ -513,7 +513,7 @@ export default function TeacherDashboard() {
       setActivity(actRes.data)
       setFifthDays(fifthRes.data)
     } catch (err) {
-      if (err.response?.status === 401) { navigate('/teacher'); return }
+      if (err.response?.status === 401) { navigate('/'); return }
       toast.error('Could not load data.')
     } finally {
       setLoading(false)
@@ -643,7 +643,7 @@ export default function TeacherDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('abacus_teacher_token')
     localStorage.removeItem('abacus_teacher')
-    navigate('/teacher')
+    navigate('/')
   }
 
   const openStudent = async (s) => {

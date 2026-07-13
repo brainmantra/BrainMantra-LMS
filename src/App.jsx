@@ -7,6 +7,7 @@ import ThemeToggle from './components/ThemeToggle'
 import LoginPage           from './pages/LoginPage'
 import WelcomePage         from './pages/WelcomePage'
 import ChallengePage       from './pages/ChallengePage'
+import CoursesPage         from './pages/CoursesPage'
 import SectionListPage     from './pages/SectionListPage'
 import SectionAttemptPage  from './pages/SectionAttemptPage'
 import PerformanceReportPage from './pages/PerformanceReportPage'
@@ -39,20 +40,21 @@ function AppRoutes() {
       <Route path="/"           element={<LoginPage />} />
       <Route path="/welcome"    element={<ProtectedRoute><WelcomePage /></ProtectedRoute>} />
       <Route path="/challenge"  element={<ProtectedRoute><ChallengePage /></ProtectedRoute>} />
+      <Route path="/courses"    element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
 
       {/* Day → Section List → Section Attempt → Report */}
       <Route path="/challenge/day/:dayNumber/sections"                    element={<ProtectedRoute><SectionListPage /></ProtectedRoute>} />
       <Route path="/challenge/day/:dayNumber/sections/:section"            element={<ProtectedRoute><SectionAttemptPage /></ProtectedRoute>} />
       <Route path="/challenge/day/:dayNumber/report"                       element={<ProtectedRoute><PerformanceReportPage /></ProtectedRoute>} />
 
-      <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
 
       {/* Admin */}
-      <Route path="/admin"           element={<AdminLogin />} />
+      <Route path="/admin"           element={<Navigate to="/" replace />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
       {/* Teacher */}
-      <Route path="/teacher"           element={<TeacherLogin />} />
+      <Route path="/teacher"           element={<Navigate to="/" replace />} />
       <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
 
       <Route path="*" element={<NotFoundPage />} />

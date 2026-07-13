@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import StudentLayout from '../components/StudentLayout'
 import { getChallengeDay } from '../utils/dateUtils'
 import { LEVELS } from '../utils/formsConfig'
 import api from '../utils/api'
@@ -143,7 +144,7 @@ export default function ChallengePage() {
   }
 
   return (
-    <div className="page-wrapper">
+    <StudentLayout>
       <Joyride
         callback={handleJoyrideCallback}
         continuous
@@ -160,35 +161,21 @@ export default function ChallengePage() {
           }
         }}
       />
-      <header className="challenge-header">
-        <div className="container challenge-header-inner">
-          <div className="challenge-brand">
-            <svg width="32" height="32" viewBox="0 0 52 52" fill="none">
-              <rect width="52" height="52" rx="14" fill="#f5a623"/>
-              <circle cx="19" cy="15.5" r="5" fill="#1a2340"/>
-              <circle cx="29" cy="26" r="5" fill="#1a2340"/>
-              <circle cx="22" cy="36.5" r="5" fill="#1a2340"/>
-            </svg>
-            <span className="challenge-brand-text">Brain Mantra</span>
-          </div>
-          <nav className="challenge-nav">
-            <button
-              className="btn btn-ghost"
-              onClick={startTourManually}
-              title="Replay page tour"
-              style={{ marginRight: '0.5rem' }}
-            >
-              ℹ️ Help
-            </button>
-            <button className="btn btn-ghost" onClick={() => { logout(); navigate('/') }}>Log out</button>
-          </nav>
-        </div>
-      </header>
 
-      <div className="container challenge-body">
-        <section className="challenge-intro animate-fade">
+      <div className="container challenge-body" style={{ padding: 0, maxWidth: '100%' }}>
+        <section className="challenge-intro animate-fade" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="challenge-title">Hey {student.name.split(' ')[0]} 👋</h1>
+            <h1 className="challenge-title" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <span>Hey {student.name.split(' ')[0]} 👋</span>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={startTourManually}
+                title="Replay page tour"
+                style={{ fontSize: '0.8rem', padding: '3px 10px', border: '1px solid var(--border)', borderRadius: '6px' }}
+              >
+                Replay Tour ℹ️
+              </button>
+            </h1>
             <p className="challenge-subtitle">
               <span className="badge badge-amber">{LEVEL_LABELS[student?.level] || student?.level}</span>
               {' '}You're on Day <strong>{clampedCurrentDay}</strong> of 100.
@@ -396,6 +383,6 @@ export default function ChallengePage() {
           </div>
         )}
       </div>
-    </div>
+    </StudentLayout>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import StudentLayout from '../components/StudentLayout'
 import api from '../utils/api'
 import confetti from 'canvas-confetti'
 
@@ -90,15 +91,17 @@ export default function PerformanceReportPage() {
   }
 
   return (
-    <div className="page page-bg-dots" style={{ paddingBottom: '4rem' }}>
-
-      {/* Hero header */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(108,99,255,0.2), rgba(0,212,170,0.15), rgba(245,200,66,0.1))',
-        borderBottom: '1px solid var(--border)',
-        padding: '2.5rem 1.5rem',
-        textAlign: 'center',
-      }}>
+    <StudentLayout>
+      <div className="container-md" style={{ padding: 0, maxWidth: '100%' }}>
+        {/* Hero header */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(108,99,255,0.1), rgba(0,212,170,0.08))',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '2rem 1.5rem',
+          textAlign: 'center',
+          marginBottom: '1.5rem'
+        }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem', animation: 'float 3s ease-in-out infinite' }}>🏆</div>
         <h1 className="gradient-text" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>
           Day {dayNum} Report
@@ -225,7 +228,8 @@ export default function PerformanceReportPage() {
             No detailed response data available.
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </StudentLayout>
   )
 }

@@ -2493,12 +2493,12 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('abacus_admin_token')
-    if (!token) navigate('/admin')
+    if (!token) navigate('/')
   }, [navigate])
 
   const handleLogout = () => {
     localStorage.removeItem('abacus_admin_token')
-    navigate('/admin')
+    navigate('/')
   }
 
   const NAV = [

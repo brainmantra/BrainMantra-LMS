@@ -7,6 +7,7 @@ import cronRouter        from './routes/cron.js'
 import webhooksRouter    from './routes/webhooks.js'
 import adminRouter       from './routes/admin.js'
 import teachersRouter    from './routes/teachers.js'
+import authRouter        from './routes/auth.js'
 
 const app = express()
 
@@ -30,6 +31,7 @@ app.use('/api/cron',        cronRouter)
 app.use('/api/webhooks',    webhooksRouter)
 app.use('/api/admin',       adminRouter)
 app.use('/api/teachers',    teachersRouter)
+app.use('/api/auth',        authRouter)
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use('/api', (req, res) => {

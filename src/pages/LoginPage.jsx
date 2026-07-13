@@ -19,36 +19,57 @@ export default function LoginPage() {
     return null
   }
 
+  // Auto redirect if other roles are already logged in
+  const adminToken = localStorage.getItem('abacus_admin_token')
+  if (adminToken) {
+    navigate('/admin/dashboard', { replace: true })
+    return null
+  }
+  const teacherToken = localStorage.getItem('abacus_teacher_token')
+  if (teacherToken) {
+    navigate('/teacher/dashboard', { replace: true })
+    return null
+  }
+
   const handleLogin = async (e) => {
     e.preventDefault()
-    if (!loginId.trim()) {
-      toast.error('Login ID is required')
+    if (!loginId.trim() || !password.trim()) {
+      toast.error('Please enter both Login ID and password')
       return
     }
     setLoading(true)
     setNotFound(false)
     try {
-      const res = await api.post('/students/login', { loginId, password })
+      const res = await api.post('/auth/login', { loginId, password })
       
-      // Prevent crashes if the server returns HTML instead of JSON
-      if (!res.data || !res.data.student) {
-        throw new Error('Invalid response from server. Check API URL configuration.')
+      const { role, token, user, redirectUrl } = res.data
+
+      if (role === 'admin') {
+        localStorage.setItem('abacus_admin_token', token)
+        toast.success('Welcome back, Admin!')
+        navigate(redirectUrl)
+      } else if (role === 'teacher') {
+        localStorage.setItem('abacus_teacher_token', token)
+        localStorage.setItem('abacus_teacher', JSON.stringify(user))
+        toast.success(`Welcome back, Teacher ${user.name}!`)
+        navigate(redirectUrl)
+      } else if (role === 'student') {
+        login(user)
+        toast.success(`Welcome back, ${user.name}!`)
+        navigate(redirectUrl)
+      } else {
+        throw new Error('Unknown user role.')
       }
-      
-      login(res.data.student)
-      toast.success(`Welcome back, ${res.data.student.name}!`)
-      navigate('/welcome')
+
     } catch (err) {
       console.error('[Login Error]', err)
       const status = err.response?.status
       
-      if (status === 404) {
+      if (status === 401) {
         setNotFound(true)
       } else if (err.response?.data?.message) {
-        // Show the exact error message thrown by the backend (e.g. Invalid Level, 503, etc)
         toast.error(err.response.data.message)
       } else if (err.message) {
-        // Show network errors or our custom thrown error
         toast.error(err.message)
       } else {
         toast.error('Something went wrong. Please try again.')
@@ -97,9 +118,9 @@ export default function LoginPage() {
         {/* Login form panel */}
         <div className="login-form-panel animate-pop">
           <div className="login-form-header">
-            <h2 className="login-form-title">Student Login</h2>
+            <h2 className="login-form-title">Unified Login Portal</h2>
             <p className="login-form-subtitle">
-              Enter your unique Login ID and Password to access your challenge.
+              Enter your login ID and password to access your dashboard.
             </p>
           </div>
 
@@ -110,7 +131,7 @@ export default function LoginPage() {
                 id="loginId"
                 className="form-input"
                 type="text"
-                placeholder="Enter your Login ID"
+                placeholder="Username, email, or mobile"
                 value={loginId}
                 onChange={e => {
                   setLoginId(e.target.value)
@@ -126,20 +147,20 @@ export default function LoginPage() {
                 id="password"
                 className="form-input"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
               />
             </div>
 
             {notFound && (
-              <div className="login-not-found animate-fade">
+              <div className="login-not-found animate-fade" style={{ marginTop: '1rem' }}>
                 <div className="login-not-found-icon">⚠</div>
                 <div>
                   <p className="login-not-found-title">Login Failed</p>
                   <p className="login-not-found-text">
-                    Invalid Login ID or Password. If you haven't been assigned credentials yet,
-                    please contact your teacher or fill in the registration form.
+                    Invalid Login ID or Password. If you are a student and haven't enrolled yet,
+                    please fill in the registration form.
                   </p>
                   <a
                     href={REGISTRATION_FORM_URL}
@@ -157,16 +178,17 @@ export default function LoginPage() {
               type="submit"
               className="btn btn-primary login-submit"
               disabled={loading || !loginId.trim() || !password.trim()}
+              style={{ marginTop: '1.5rem' }}
             >
               {loading
-                ? <><span className="btn-spinner" /> Verifying…</>
-                : 'Continue to Challenge →'}
+                ? <><span className="btn-spinner" /> Signing in…</>
+                : 'Sign In →'}
             </button>
           </form>
 
-          <div className="login-footer-note">
+          <div className="login-footer-note" style={{ marginTop: '1.5rem' }}>
             <p>
-              Not registered yet?{' '}
+              Students: Not registered yet?{' '}
               <a
                 href={REGISTRATION_FORM_URL}
                 target="_blank"
@@ -177,24 +199,6 @@ export default function LoginPage() {
               </a>{' '}
               and ask your teacher to activate your account.
             </p>
-            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-              <button 
-                type="button" 
-                onClick={() => navigate('/teacher')}
-                className="btn btn-ghost" 
-                style={{ fontSize: '13px', color: '#666', border: '1px solid #ddd' }}
-              >
-                Teacher Login
-              </button>
-              <button 
-                type="button" 
-                onClick={() => navigate('/admin')}
-                className="btn btn-ghost" 
-                style={{ fontSize: '13px', color: '#666', border: '1px solid #ddd' }}
-              >
-                Admin Login
-              </button>
-            </div>
           </div>
         </div>
       </div>
