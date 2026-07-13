@@ -569,7 +569,29 @@ function StudentsTab() {
               {students.map(s => (
                 <tr key={s.id}>
                   <td style={{ fontWeight: 600 }}>{s.name}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{s.mobile}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span>{s.mobile}</span>
+                    <a
+                      href={`https://wa.me/${(s.mobile || '').replace(/\D/g, '').length === 10 ? '91' + (s.mobile || '').replace(/\D/g, '') : (s.mobile || '').replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Chat on WhatsApp"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#25D366',
+                        transition: 'transform 0.2s ease',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M12.012 2C6.48 2 2 6.48 2 12.012c0 1.765.46 3.42 1.258 4.908L2 22.012l5.244-1.374A9.957 9.957 0 0012.012 22c5.532 0 10.012-4.48 10.012-10.012S17.544 2 12.012 2zm0 18.024c-1.616 0-3.136-.42-4.464-1.152l-.324-.192-3.324.87.882-3.216-.216-.348a8.03 8.03 0 01-1.224-4.29A8.025 8.025 0 0112.012 4c4.422 0 8.022 3.6 8.022 8.022s-3.6 8.022-8.022 8.022z"/>
+                        <path d="M15.93 13.914c-.216-.108-1.272-.624-1.47-.702-.198-.078-.342-.114-.486.108-.144.216-.558.702-.684.846-.126.138-.252.156-.468.048a5.9 5.9 0 01-1.74-1.074 6.51 6.51 0 01-1.206-1.5c-.126-.216-.012-.336.096-.444.096-.096.216-.252.324-.378.108-.126.144-.216.216-.36.072-.144.036-.27-.018-.378-.054-.108-.486-1.17-.666-1.602-.174-.426-.354-.366-.486-.372-.126-.006-.27-.006-.414-.006-.144 0-.378.054-.576.27-.198.216-.756.738-.756 1.794s.774 2.076.882 2.22c.108.144 1.524 2.328 3.69 3.264.516.222.918.354 1.23.456.522.162.996.138 1.374.084.42-.06 1.272-.522 1.452-1.02.18-.498.18-.924.126-1.02-.054-.096-.198-.156-.414-.264z"/>
+                      </svg>
+                    </a>
+                  </td>
                   <td><span className="badge badge-info">{LEVEL_LABELS[s.level] || s.level}</span></td>
                   <td style={{ fontSize: '0.85rem' }}>
                     <div style={{ color: 'var(--primary-light)' }}>{s.username || '—'}</div>
