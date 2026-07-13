@@ -14,6 +14,7 @@ import {
   isTeacherDay,
   SECTION_LABELS,
   TEACHER_INPUT_SECTIONS,
+  LEVEL_SECTIONS,
 } from '../utils/questionSelector.js'
 import { logActivity } from '../utils/logger.js'
 
@@ -207,7 +208,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
       const result = []
       for (const sec of sections) {
         const isCustom = !LEVEL_SECTIONS[level]?.includes(sec) && sec !== 'power_exercise'
-        const isTeacherInput = TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' || isCustom
+        const isTeacherInput = TEACHER_INPUT_SECTIONS.has(sec) || isCustom
 
         let ready = false
         if (sec === 'power_exercise') {
@@ -285,7 +286,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
     const result = []
     for (const sec of sections) {
       const isCustom = !LEVEL_SECTIONS[level]?.includes(sec) && sec !== 'power_exercise'
-      const isTeacherInput = TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' || isCustom
+      const isTeacherInput = TEACHER_INPUT_SECTIONS.has(sec) || isCustom
 
       let ready = true
       let countVal = 5;
@@ -399,8 +400,8 @@ router.get('/:id/progress/:dayNumber/sections/:section/questions', async (req, r
     const tq = await getTeacherQuestion(level, dayNumber, section)
     const isCustomTeacherSection = !!tq
 
-    // Every-5th-day or teacher section or level 1/beginner: fetch from teacher_questions
-    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section) || level === 'l1' || level === 'beginner' || isCustomTeacherSection) {
+    // Every-5th-day or teacher section: fetch from teacher_questions
+    if (section === 'teacher_day' || TEACHER_INPUT_SECTIONS.has(section) || isCustomTeacherSection) {
       if (dayNumber === 0 && section === 'power_exercise') {
         const tq = await getTeacherQuestion(level, 0, 'power_exercise')
         if (tq) {
@@ -599,7 +600,7 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
           if (sectionData[sec]?.status !== 'done') {
             sectionData[sec] = {
               status: 'done',
-              questionCount: sec === 'power_exercise' ? 10 : (TEACHER_INPUT_SECTIONS.has(sec) || level === 'l1' || level === 'beginner' ? 1 : 5),
+              questionCount: sec === 'power_exercise' ? 10 : (TEACHER_INPUT_SECTIONS.has(sec) || (!LEVEL_SECTIONS[level]?.includes(sec) && sec !== 'power_exercise') ? 1 : 5),
               correct: 0,
               marks: 0,
               xpEarned: 0,
