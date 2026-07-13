@@ -144,7 +144,7 @@ router.get('/:id/progress', async (req, res) => {
     const [{ rows: days }, streakResult] = await Promise.all([
       pool.query(
         `SELECT day_number, opened, opened_at, completed, completed_at,
-                accuracy, time_taken_seconds, xp_earned, total_marks
+                accuracy, time_taken_seconds, xp_earned, total_marks, section_data
          FROM day_records WHERE student_id = $1 ORDER BY day_number`,
         [studentId]
       ),
