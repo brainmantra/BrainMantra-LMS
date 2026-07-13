@@ -9,7 +9,7 @@ import 'dotenv/config'
 import pool from './db.js'
 import bcrypt from 'bcryptjs'
 
-const SQL = `
+export const SQL = `
 -- ── Students ──────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS students (
   id                 SERIAL PRIMARY KEY,
@@ -287,11 +287,21 @@ async function migrate() {
 
   } catch (err) {
     console.error('[migrate] ✗ Migration failed:', err)
-    process.exit(1)
+    throw err
   } finally {
     client.release()
-    await pool.end()
   }
 }
 
-migrate()
+import { fileURLToPath } from 'url'
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  migrate().then(() => {
+    pool.end()
+    process.exit(0)
+  }).catch(() => {
+    pool.end()
+    process.exit(1)
+  })
+}
+
+export { migrate }

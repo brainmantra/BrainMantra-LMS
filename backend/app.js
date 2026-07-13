@@ -47,23 +47,51 @@ app.get('/api/setup-test-users', async (req, res) => {
   try {
     const bcrypt = (await import('bcryptjs')).default;
     const pool = (await import('./db.js')).default;
-    const hash = await bcrypt.hash('password', 10);
     
-    await pool.query(\`
+    // Create test admin and test student
+    const testHash = await bcrypt.hash('password', 10);
+    await pool.query(`
       INSERT INTO admin (email, password_hash) 
       VALUES ('test@admin.com', $1) 
       ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
-    \`, [hash]);
+    `, [testHash]);
     
-    await pool.query(\`
+    await pool.query(`
       INSERT INTO students (name, mobile, username, password_hash, level, registration_date) 
       VALUES ('Test Student', '0000000000', 'test', $1, 'l1', NOW()) 
       ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash
-    \`, [hash]);
+    `, [testHash]);
 
-    res.json({ message: 'Test users created successfully!', admin: 'test@admin.com / password', student: 'test / password' });
+    let realAdminMsg = 'No real admin configured in env.';
+    // Also try to create the real admin if env vars are set
+    if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD_PLAIN) {
+       const realHash = await bcrypt.hash(process.env.ADMIN_PASSWORD_PLAIN, 10);
+       await pool.query(`
+         INSERT INTO admin (email, password_hash) 
+         VALUES ($1, $2) 
+         ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
+       `, [process.env.ADMIN_EMAIL, realHash]);
+       realAdminMsg = `Real admin seeded: ${process.env.ADMIN_EMAIL}`;
+    }
+
+    res.json({ 
+      message: 'Test users created successfully!', 
+      admin: 'test@admin.com / password', 
+      student: 'test / password',
+      realAdmin: realAdminMsg
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/run-migration', async (req, res) => {
+  try {
+    const { migrate } = await import('./migrate.js');
+    await migrate();
+    res.json({ success: true, message: 'Migration completed. Real admin seeded if env vars were set.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
