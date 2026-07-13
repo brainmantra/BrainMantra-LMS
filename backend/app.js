@@ -43,6 +43,30 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ message: 'Internal server error.' })
 })
 
+app.get('/api/setup-test-users', async (req, res) => {
+  try {
+    const bcrypt = (await import('bcryptjs')).default;
+    const pool = (await import('./db.js')).default;
+    const hash = await bcrypt.hash('password', 10);
+    
+    await pool.query(\`
+      INSERT INTO admin (email, password_hash) 
+      VALUES ('test@admin.com', $1) 
+      ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
+    \`, [hash]);
+    
+    await pool.query(\`
+      INSERT INTO students (name, mobile, username, password_hash, level, registration_date) 
+      VALUES ('Test Student', '0000000000', 'test', $1, 'l1', NOW()) 
+      ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash
+    \`, [hash]);
+
+    res.json({ message: 'Test users created successfully!', admin: 'test@admin.com / password', student: 'test / password' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Local dev server ──────────────────────────────────────────────────────────
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 5000
