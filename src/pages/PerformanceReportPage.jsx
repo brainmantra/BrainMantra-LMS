@@ -211,11 +211,6 @@ export default function PerformanceReportPage() {
                           ⏳ <em>Pending review by teacher</em>
                         </span>
                       )}
-                      {r.is_correct === false && (
-                        <span style={{ color: 'var(--success)' }}>
-                          Correct: <strong>{formatDisplayAnswer(r.correct_answer)}</strong>
-                        </span>
-                      )}
                       <span style={{ color: 'var(--text-muted)' }}>⏱ {r.time_taken_seconds}s</span>
                     </div>
                   </div>

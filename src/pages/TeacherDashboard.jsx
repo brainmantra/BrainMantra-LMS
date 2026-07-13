@@ -1791,24 +1791,21 @@ const StudentPreviewModal = ({ sectionData, onClose }) => {
 
                   {/* Multiple Choice */}
                   {currentQ.questionType === 'multiple_choice' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                       {currentQ.options.map(opt => (
                         <div key={opt.id} style={{
                           display: 'flex',
-                          alignItems: 'flex-start',
+                          alignItems: 'center',
                           gap: '0.75rem',
-                          padding: '0.6rem 1rem',
-                          background: 'rgba(255,255,255,0.02)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '8px',
+                          padding: '0.3rem 0',
                         }}>
                           <input
                             type="radio"
                             disabled
-                            style={{ accentColor: 'var(--primary)', marginTop: '0.25rem' }}
+                            style={{ accentColor: 'var(--primary)', transform: 'scale(1.25)' }}
                           />
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <span style={{ fontSize: '0.95rem' }}>{opt.text}</span>
+                            <span style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>{opt.text}</span>
                             {opt.image && (
                               <img src={opt.image} alt={opt.text} style={{ maxHeight: '60px', borderRadius: '4px' }} />
                             )}

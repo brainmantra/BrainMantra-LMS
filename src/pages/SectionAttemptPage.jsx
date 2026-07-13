@@ -898,17 +898,14 @@ export default function SectionAttemptPage() {
             )}
 
             {currentQ.questionType === 'multiple_choice' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {currentQ.options.map(opt => (
                   <label key={opt.id} style={{
                     display: 'flex',
-                    alignItems: 'flex-start',
+                    alignItems: 'center',
                     gap: '0.75rem',
                     cursor: !!feedback ? 'default' : 'pointer',
-                    padding: '0.6rem 1rem',
-                    background: answer === opt.text ? 'rgba(255,122,0,0.12)' : 'rgba(255,255,255,0.02)',
-                    border: answer === opt.text ? '1.5px solid var(--primary)' : '1.5px solid var(--border)',
-                    borderRadius: '8px',
+                    padding: '0.3rem 0',
                     transition: 'all 0.2s ease',
                   }}>
                     <input
@@ -917,10 +914,14 @@ export default function SectionAttemptPage() {
                       checked={answer === opt.text}
                       disabled={!!feedback}
                       onChange={() => setAnswer(opt.text)}
-                      style={{ accentColor: 'var(--primary)', marginTop: '0.25rem' }}
+                      style={{ 
+                        accentColor: 'var(--primary)', 
+                        transform: 'scale(1.25)', 
+                        cursor: !!feedback ? 'default' : 'pointer'
+                      }}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{opt.text}</span>
+                      <span style={{ fontSize: '1.05rem', color: 'var(--text-primary)', cursor: !!feedback ? 'default' : 'pointer' }}>{opt.text}</span>
                       {opt.image && (
                         <img src={opt.image} alt={opt.text} style={{ maxHeight: '60px', borderRadius: '4px', border: '1px solid var(--border)' }} />
                       )}
@@ -1113,18 +1114,18 @@ export default function SectionAttemptPage() {
                           )}
 
                           {item.questionType === 'multiple_choice' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                               {item.options.map(opt => (
-                                <label key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', padding: '0.3rem 0' }}>
+                                <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.3rem 0' }}>
                                   <input
                                     type="radio"
                                     name={item.id}
                                     checked={formAnswers[item.id] === opt.text}
                                     onChange={() => setFormAnswers({ ...formAnswers, [item.id]: opt.text })}
-                                    style={{ marginTop: '0.25rem' }}
+                                    style={{ transform: 'scale(1.25)', cursor: 'pointer' }}
                                   />
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span>{opt.text}</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <span style={{ fontSize: '1.05rem', color: 'var(--text-primary)' }}>{opt.text}</span>
                                     {opt.image && (
                                       <img src={opt.image} alt={opt.text} style={{ maxHeight: '60px', borderRadius: '4px', border: '1px solid var(--border)' }} />
                                     )}
