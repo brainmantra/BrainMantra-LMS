@@ -1798,7 +1798,12 @@ const StudentPreviewModal = ({ sectionData, onClose }) => {
                   lineHeight: 1.6, 
                   marginBottom: '1.5rem',
                   whiteSpace: 'pre-wrap',
-                  color: 'var(--text-primary)'
+                  color: 'var(--text-primary)',
+                  fontFamily: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'var(--font-mono)' : 'inherit',
+                  textAlign: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'right' : 'left',
+                  display: 'inline-block',
+                  minWidth: '3rem',
+                  margin: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? '0 auto 1.5rem auto' : '0 0 1.5rem 0'
                 }}>
                   {currentQ.questionText}
                 </div>

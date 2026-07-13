@@ -844,9 +844,19 @@ export default function SectionAttemptPage() {
           }}>
             {/* Question Header & Badge */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 600, fontSize: '1.25rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+              <div style={{ 
+                fontWeight: 600, 
+                fontSize: '1.25rem', 
+                color: 'var(--text-primary)', 
+                whiteSpace: 'pre-wrap',
+                fontFamily: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'var(--font-mono)' : 'inherit',
+                textAlign: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'right' : 'left',
+                display: 'inline-block',
+                minWidth: '3rem',
+                margin: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? '0 auto' : '0'
+              }}>
                 {currentQ.questionText}
-              </span>
+              </div>
               {!(currentQ.questionType === 'checkbox' ? (Array.isArray(currentQ.correctAnswer) && currentQ.correctAnswer.length > 0) : (currentQ.correctAnswer && String(currentQ.correctAnswer).trim() !== '')) && (
                 <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>⚠️ To be checked by teacher</span>
               )}

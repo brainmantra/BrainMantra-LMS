@@ -230,6 +230,13 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 3px var(--primary-glow), 0 1px 3px rgba(0,0,0,0.2);
   background: var(--bg-card);
 }
+input[type="radio"], input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
 select option { background: var(--bg-elevated); }
 
 /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
