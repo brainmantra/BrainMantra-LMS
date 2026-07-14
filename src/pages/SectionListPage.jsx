@@ -89,7 +89,8 @@ export default function SectionListPage() {
     return () => { mounted = false }
   }, [dayNum, student, navigate])
 
-  const allDone = data?.sections?.every(s => s.status === 'done')
+  const visibleSections = data.sections?.filter(sec => sec.questionCount > 0) || []
+  const allDone = visibleSections.every(s => s.status === 'done') && visibleSections.length > 0
 
   const handleSubmitPaper = async () => {
     if (!allDone) return
@@ -182,7 +183,7 @@ export default function SectionListPage() {
                 </p>
               ) : (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                  {levelLabel} • {data.sections?.length} section{data.sections?.length !== 1 ? 's' : ''}
+                  {levelLabel} • {visibleSections.length} section{visibleSections.length !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
@@ -211,7 +212,7 @@ export default function SectionListPage() {
         {/* Progress summary */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           {['not_started', 'in_progress', 'done'].map(s => {
-            const count = data.sections?.filter(sec => sec.status === s).length || 0
+            const count = visibleSections.filter(sec => sec.status === s).length || 0
             const cfg = STATUS_CONFIG[s]
             return (
               <span key={s} className={`badge ${cfg.badge}`} style={{ fontSize: '0.8rem', padding: '5px 12px' }}>
@@ -223,7 +224,11 @@ export default function SectionListPage() {
 
         {/* Section list */}
         <div className="section-list" style={{ marginBottom: '2rem' }}>
-          {data.sections?.map((sec) => {
+          {visibleSections.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              No questions are available for this day yet.
+            </div>
+          ) : visibleSections.map((sec) => {
             const isReady = sec.ready !== false
             const statusCfg = isReady ? (STATUS_CONFIG[sec.status] || STATUS_CONFIG.not_started) : { label: 'Teacher preparing...', badge: 'badge-warning', icon: '⏳' }
             const icon = SECTION_ICONS[sec.section] || '📖'
