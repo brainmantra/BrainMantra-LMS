@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import StudentLayout from '../components/StudentLayout'
 import { useState, useEffect, useMemo } from 'react'
@@ -8,9 +8,9 @@ import DayCard from '../components/DayCard'
 import toast from 'react-hot-toast'
 
 // Helper component for winding map
-function WindingLevelMap({ days, currentDay, student, dayMap, onBack }) {
+function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDayNum }) {
   const allDays = [0, ...Array.from({ length: 100 }, (_, i) => i + 1)]
-  const [selectedDayNum, setSelectedDayNum] = useState(null)
+  const [selectedDayNum, setSelectedDayNum] = useState(defaultDayNum ?? null)
 
   // Chunk array of days into rows of 5
   const itemsPerRow = 5
@@ -259,8 +259,9 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack }) {
 export default function CoursesPage() {
   const { student } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   
-  const [activeCourse, setActiveCourse] = useState(null)
+  const [activeCourse, setActiveCourse] = useState(location.state?.openDemoDay ? '100-days-of-abacus' : null)
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(false)
 
@@ -302,13 +303,14 @@ export default function CoursesPage() {
 
     return (
       <StudentLayout>
-        <WindingLevelMap 
-          days={days} 
-          currentDay={currentDay} 
-          student={student} 
-          dayMap={dayMap} 
-          onBack={() => setActiveCourse(null)} 
-        />
+          <WindingLevelMap 
+            days={days} 
+            dayMap={dayMap}
+            currentDay={currentDay} 
+            student={student} 
+            onBack={() => setActiveCourse(null)} 
+            defaultDayNum={location.state?.openDemoDay ? 0 : null}
+          />
       </StudentLayout>
     )
   }

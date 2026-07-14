@@ -125,7 +125,7 @@ export default function SectionAttemptPage() {
             if (e.response?.status === 409) {
               // Already opened and done — redirect back
               toast.error(e.response.data.message || 'This section is not available.')
-              navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)
+              navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)
               return
             }
           }
@@ -136,7 +136,7 @@ export default function SectionAttemptPage() {
 
         if (res.data.teacherNotReady) {
           toast("Today's question isn't ready yet.")
-          navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)
+          navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)
           return
         }
 
@@ -241,7 +241,7 @@ export default function SectionAttemptPage() {
         setPhase('countdown')
       } catch (err) {
         toast.error(err.response?.data?.message || 'Could not load questions.')
-        navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)
+        navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)
       }
     }
     init()
@@ -687,7 +687,7 @@ export default function SectionAttemptPage() {
 
           <button
             className="btn btn-primary btn-block"
-            onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)}
+            onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)}
           >
             {isDemo ? 'Back to Demo →' : 'Back to Paper →'}
           </button>
@@ -705,7 +705,7 @@ export default function SectionAttemptPage() {
           <p style={{ color: 'var(--text-muted)', margin: '1rem 0 1.5rem' }}>
             Could not save your responses.
           </p>
-          <button className="btn btn-primary" onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)}>
+          <button className="btn btn-primary" onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)}>
             {isDemo ? 'Back to Demo' : 'Back to Paper'}
           </button>
         </div>
