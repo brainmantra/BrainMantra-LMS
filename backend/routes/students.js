@@ -474,6 +474,11 @@ router.post('/:id/progress/:dayNumber/sections/:section/open', async (req, res) 
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
+    const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
+    if (dayNumber !== currentDay && dayNumber !== 0) {
+      return res.status(403).json({ message: 'This day is not currently active.' })
+    }
+
     const level = normalizeStudentLevel(student.level) || student.level
 
     // Update section_data in day_records
@@ -482,6 +487,10 @@ router.post('/:id/progress/:dayNumber/sections/:section/open', async (req, res) 
       [studentId, dayNumber]
     )
     const sectionData = rows[0]?.section_data || {}
+
+    if (sectionData[section]?.status === 'done') {
+      return res.status(409).json({ message: 'This section is already completed.' })
+    }
 
     if (!sectionData[section]) {
       sectionData[section] = { status: 'in_progress', startedAt: new Date().toISOString() }
@@ -509,6 +518,20 @@ router.get('/:id/progress/:dayNumber/sections/:section/questions', async (req, r
 
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
+    if (dayNumber !== currentDay && dayNumber !== 0) {
+      return res.status(403).json({ message: 'This day is not currently active.' })
+    }
+
+    const { rows } = await pool.query(
+      `SELECT section_data FROM day_records WHERE student_id = $1 AND day_number = $2`,
+      [studentId, dayNumber]
+    )
+    const sectionData = rows[0]?.section_data || {}
+    if (sectionData[section]?.status === 'done') {
+      return res.status(409).json({ message: 'This section is already completed.' })
+    }
 
     const level = normalizeStudentLevel(student.level) || student.level
 
@@ -600,6 +623,19 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
 
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
+    if (dayNumber !== currentDay && dayNumber !== 0) {
+      return res.status(403).json({ message: 'This day is not currently active.' })
+    }
+
+    const { rows: checkRows } = await pool.query(
+      `SELECT section_data FROM day_records WHERE student_id = $1 AND day_number = $2`,
+      [studentId, dayNumber]
+    )
+    if (checkRows[0]?.section_data && checkRows[0].section_data[section]?.status === 'done') {
+      return res.status(409).json({ message: 'This section is already completed.' })
+    }
 
     const level = normalizeStudentLevel(student.level) || student.level
     let tableName = `responses_l${level.replace('l', '')}`
@@ -710,6 +746,11 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
     const dayNumber = parseInt(req.params.dayNumber, 10)
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
+    if (dayNumber !== currentDay && dayNumber !== 0) {
+      return res.status(403).json({ message: 'This day is not currently active.' })
+    }
 
     const { force } = req.body || {}
     const { rows: dayRows } = await pool.query(
