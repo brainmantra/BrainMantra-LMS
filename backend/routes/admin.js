@@ -128,7 +128,8 @@ router.get('/students', requireAdmin, async (req, res) => {
       `SELECT s.id, s.name, s.mobile, s.level, s.registration_date,
               s.streak, s.longest_streak, s.xp_total, s.username, s.plain_password,
               MAX(d.completed_at) AS last_active,
-              COUNT(CASE WHEN d.completed THEN 1 END) AS days_completed
+              COUNT(CASE WHEN d.completed THEN 1 END) AS days_completed,
+              ARRAY_REMOVE(ARRAY_AGG(CASE WHEN d.completed THEN d.accuracy END ORDER BY d.day_number DESC), NULL) AS recent_accuracies
        FROM students s
        LEFT JOIN day_records d ON d.student_id = s.id
        ${where}
@@ -144,7 +145,33 @@ router.get('/students', requireAdmin, async (req, res) => {
       countParams
     )
 
-    res.json({ students: rows, total: parseInt(countRows[0].count) })
+    // Calculate struggling state
+    const now = new Date()
+    const mapped = rows.map(r => {
+      let isStruggling = false
+      let strugglingReason = ''
+
+      if (r.last_active) {
+        const daysSince = (now - new Date(r.last_active)) / (1000 * 60 * 60 * 24)
+        if (daysSince > 5) {
+          isStruggling = true
+          strugglingReason = `Inactive for ${Math.floor(daysSince)} days`
+        }
+      }
+
+      if (!isStruggling && r.recent_accuracies && r.recent_accuracies.length > 0) {
+        const recent3 = r.recent_accuracies.slice(0, 3)
+        const avg = recent3.reduce((a, b) => a + parseFloat(b), 0) / recent3.length
+        if (avg < 70) {
+          isStruggling = true
+          strugglingReason = `Recent accuracy is low (${Math.round(avg)}%)`
+        }
+      }
+
+      return { ...r, is_struggling: isStruggling, struggling_reason: strugglingReason }
+    })
+
+    res.json({ students: mapped, total: parseInt(countRows[0].count) })
   } catch (err) {
     console.error('[admin/students]', err)
     res.status(500).json({ message: 'Server error.' })

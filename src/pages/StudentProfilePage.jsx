@@ -5,6 +5,9 @@ import StudentLayout from '../components/StudentLayout'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 import { calculateAchievements } from '../utils/achievements'
+import { CertificateTemplate } from '../components/CertificateTemplate'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 const LEVEL_LABELS = {
   beginner: '🌱 Beginner', l1: '⭐ Level 1', l2: '⭐⭐ Level 2',
@@ -34,6 +37,29 @@ export default function StudentProfilePage() {
   const { student, login } = useAuth()
   const navigate = useNavigate()
   const fileRef = useRef(null)
+  const certRef = useRef(null)
+
+  const handleDownloadCertificate = async () => {
+    if (!certRef.current) return
+    const toastId = toast.loading('Generating your certificate...')
+    try {
+      const canvas = await html2canvas(certRef.current, { scale: 2 })
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      })
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+      pdf.save(`${student.name}_100_Days_Abacus.pdf`)
+      toast.success('Certificate Downloaded!', { id: toastId })
+      try {
+        import('../utils/sound.js').then(s => s.playFanfare())
+      } catch(e) {}
+    } catch (err) {
+      toast.error('Failed to generate certificate', { id: toastId })
+    }
+  }
 
   // Profile data
   const [profile, setProfile]       = useState(null)
@@ -401,6 +427,38 @@ export default function StudentProfilePage() {
               )}
             </div>
           </div>
+          
+          {stats.count >= 100 && (
+            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+              <button
+                onClick={handleDownloadCertificate}
+                style={{
+                  padding: '0.75rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: 800,
+                  color: '#fff',
+                  background: 'linear-gradient(135deg, var(--accent-gold), #FF7A00)',
+                  border: 'none',
+                  borderRadius: '50px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(255,122,0,0.4)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  animation: 'pulseGlow 2s infinite'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                🎓 Download 100 Days Certificate
+              </button>
+            </div>
+          )}
+
+          <CertificateTemplate 
+            ref={certRef}
+            studentName={profile?.name || student?.name}
+            level={LEVEL_LABELS[profile?.level] || profile?.level || 'Abacus Training'}
+            date={new Date().toLocaleDateString()}
+          />
         </div>
 
         {/* ── Stats Row ── */}

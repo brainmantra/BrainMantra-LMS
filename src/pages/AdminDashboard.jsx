@@ -594,7 +594,12 @@ function StudentsTab() {
             <tbody>
               {students.map(s => (
                 <tr key={s.id}>
-                  <td style={{ fontWeight: 600 }}>{s.name}</td>
+                  <td style={{ fontWeight: 600 }}>
+                    {s.name}
+                    {s.is_struggling && (
+                      <span title={s.struggling_reason} style={{ marginLeft: '0.5rem', cursor: 'help' }}>⚠️</span>
+                    )}
+                  </td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <span>{s.mobile}</span>
                     <a

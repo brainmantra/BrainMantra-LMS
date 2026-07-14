@@ -1699,7 +1699,12 @@ export default function TeacherDashboard() {
                 <tbody>
                   {students.map(s => (
                     <tr key={s.id}>
-                      <td style={{ fontWeight: 600 }}>{s.name}</td>
+                      <td style={{ fontWeight: 600 }}>
+                        {s.name}
+                        {s.is_struggling && (
+                          <span title={s.struggling_reason} style={{ marginLeft: '0.5rem', cursor: 'help' }}>⚠️</span>
+                        )}
+                      </td>
                       <td><span className="badge badge-info">{LEVEL_LABELS[s.level] || s.level}</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }} title={`${s.days_completed || 0}/100 Days Completed`}>
