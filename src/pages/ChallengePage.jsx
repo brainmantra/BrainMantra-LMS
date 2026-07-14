@@ -18,10 +18,6 @@ export default function ChallengePage() {
   const [loading, setLoading] = useState(true)
   const [selectedBadge, setSelectedBadge] = useState(null)
 
-  // Gamification states
-  const [quests, setQuests] = useState([])
-  const [questsLoading, setQuestsLoading] = useState(true)
-
   const achievements = useMemo(() => calculateAchievements(days, streak, longestStreak), [days, streak, longestStreak])
 
   const LEVEL_LABELS = {
@@ -53,17 +49,6 @@ export default function ChallengePage() {
 
 
 
-  const loadQuests = async () => {
-    try {
-      const res = await api.get(`/students/${student.id}/quests`)
-      setQuests(res.data.quests || [])
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setQuestsLoading(false)
-    }
-  }
-
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -81,7 +66,6 @@ export default function ChallengePage() {
     }
     if (student?.id) {
       load()
-      loadQuests()
     }
     return () => { mounted = false }
   }, [student])
@@ -193,79 +177,7 @@ export default function ChallengePage() {
             </div>
           </div>
 
-          {/* ─── Daily Quest Board ─────── */}
-            <div className="card animate-fade" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', marginBottom: '0.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 700 }}>⚔️ Daily Quest Board</h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Complete quests to earn bonus XP. Resets every midnight.</p>
-                </div>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', background: 'rgba(255,122,0,0.08)', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(255,122,0,0.15)' }}>
-                  +50 XP each
-                </span>
-              </div>
-              {questsLoading ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Loading quests…</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {quests.map(q => {
-                    const pct = Math.min((q.current / q.target) * 100, 100)
-                    return (
-                      <div key={q.id} style={{
-                        display: 'flex', alignItems: 'center', gap: '1rem',
-                        padding: '0.9rem 1.1rem',
-                        background: q.claimed ? 'rgba(16,185,129,0.04)' : q.completed ? 'rgba(255,122,0,0.04)' : 'rgba(255,255,255,0.02)',
-                        border: q.claimed ? '1px solid rgba(16,185,129,0.25)' : q.completed ? '1px solid rgba(255,122,0,0.25)' : '1px solid rgba(255,255,255,0.07)',
-                        borderRadius: '12px',
-                        transition: 'all 0.3s',
-                      }}>
-                        <div style={{ fontSize: '1.8rem', flexShrink: 0 }}>
-                          {q.id === 'bead_fun_100' ? '🧮' : q.id === 'solve_25' ? '📐' : '⏱'}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{q.title}</span>
-                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{q.current}/{q.target} {q.unit}</span>
-                          </div>
-                          <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{q.desc}</p>
-                          <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: q.claimed ? 'var(--success)' : 'linear-gradient(90deg,var(--primary),var(--primary-bright))', borderRadius: 3, transition: 'width 0.5s ease' }} />
-                          </div>
-                        </div>
-                        <button
-                          disabled={!q.completed || q.claimed}
-                          onClick={async () => {
-                            try {
-                              await api.post(`/students/${student.id}/quests/${q.id}/claim`)
-                              toast.success(`+50 XP earned for "${q.title}"! 🎉`)
-                              loadQuests()
-                            } catch (e) {
-                              toast.error(e?.response?.data?.message || 'Could not claim quest.')
-                            }
-                          }}
-                          style={{
-                            padding: '0.45rem 0.9rem',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            borderRadius: '8px',
-                            border: 'none',
-                            cursor: q.completed && !q.claimed ? 'pointer' : 'not-allowed',
-                            background: q.claimed ? 'rgba(16,185,129,0.12)' : q.completed ? 'linear-gradient(135deg,var(--primary),var(--primary-bright))' : 'rgba(255,255,255,0.04)',
-                            color: q.claimed ? 'var(--success)' : q.completed ? '#fff' : 'var(--text-muted)',
-                            opacity: q.completed || q.claimed ? 1 : 0.5,
-                            transition: 'all 0.2s',
-                            flexShrink: 0,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {q.claimed ? '✓ Claimed' : q.completed ? 'Claim +50' : 'Locked'}
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+
 
           {/* Badges & Achievements Section */}
           <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem' }}>
