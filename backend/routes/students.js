@@ -128,9 +128,95 @@ router.get('/:id', async (req, res) => {
   try {
     const student = await getStudentById(parseInt(req.params.id, 10))
     if (!student) return res.status(404).json({ message: 'Student not found.' })
-    res.json(student)
+    const safe = { ...student }
+    delete safe.password_hash
+    delete safe.plain_password
+    res.json(safe)
   } catch {
     res.status(400).json({ message: 'Invalid student ID.' })
+  }
+})
+
+// ── GET /api/students/:id/profile ─────────────────────────────────────────────
+router.get('/:id/profile', async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id, 10)
+    const student = await getStudentById(studentId)
+    if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const safe = { ...student }
+    delete safe.password_hash
+    delete safe.plain_password
+
+    res.json(safe)
+  } catch (err) {
+    console.error('[profile get]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── PUT /api/students/:id/profile ─────────────────────────────────────────────
+router.put('/:id/profile', async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id, 10)
+    const student = await getStudentById(studentId)
+    if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const { date_of_birth, gender, profile_picture } = req.body
+
+    // Validate gender if provided
+    const validGenders = ['male', 'female', 'other', 'prefer_not_to_say']
+    if (gender && !validGenders.includes(gender)) {
+      return res.status(400).json({ message: 'Invalid gender value.' })
+    }
+
+    // Validate date of birth format if provided
+    if (date_of_birth) {
+      const dob = new Date(date_of_birth)
+      if (isNaN(dob.getTime())) {
+        return res.status(400).json({ message: 'Invalid date of birth.' })
+      }
+      // Must be at least 3 years old and max 100 years old
+      const now = new Date()
+      const age = (now - dob) / (1000 * 60 * 60 * 24 * 365.25)
+      if (age < 3 || age > 100) {
+        return res.status(400).json({ message: 'Date of birth is out of valid range.' })
+      }
+    }
+
+    // Validate profile picture size (base64 max ~2MB)
+    if (profile_picture && profile_picture.length > 2_800_000) {
+      return res.status(400).json({ message: 'Profile picture is too large. Please use an image under 2MB.' })
+    }
+
+    const updates = []
+    const values = []
+    let idx = 1
+
+    if (date_of_birth !== undefined) { updates.push(`date_of_birth = $${idx++}`); values.push(date_of_birth || null) }
+    if (gender !== undefined)        { updates.push(`gender = $${idx++}`);         values.push(gender || null) }
+    if (profile_picture !== undefined) { updates.push(`profile_picture = $${idx++}`); values.push(profile_picture || null) }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ message: 'No fields to update.' })
+    }
+
+    updates.push(`updated_at = NOW()`)
+    values.push(studentId)
+
+    const { rows } = await pool.query(
+      `UPDATE students SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
+    )
+
+    const updated = rows[0]
+    delete updated.password_hash
+    delete updated.plain_password
+
+    res.json(updated)
+  } catch (err) {
+    console.error('[profile update]', err)
+    res.status(500).json({ message: 'Server error.' })
   }
 })
 

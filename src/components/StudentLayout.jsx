@@ -161,6 +161,21 @@ export default function StudentLayout({ children }) {
               <span>My Courses</span>
               {isActive('/courses') && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 8px var(--primary)' }} />}
             </button>
+
+            <button 
+              className={`admin-nav-item${isActive('/profile') ? ' active' : ''}`}
+              onClick={() => { navigate('/profile'); setSidebarOpen(window.innerWidth > 991 ? sidebarOpen : false); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.1rem', width: 22, textAlign: 'center' }}>
+                {student?.profile_picture
+                  ? <img src={student.profile_picture} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
+                  : '👤'
+                }
+              </span>
+              <span>My Profile</span>
+              {isActive('/profile') && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 8px var(--primary)' }} />}
+            </button>
           </div>
         </div>
 
@@ -253,22 +268,26 @@ export default function StudentLayout({ children }) {
 
             {/* Profile avatar dropdown */}
             <div style={{ position: 'relative' }}>
+              {/* Avatar — click opens dropdown; long-press or direct icon navigates to /profile */}
               <button 
                 onClick={() => { setProfileOpen(!profileOpen); setSettingsOpen(false); }}
                 className={equippedFrame ? `avatar-frame-${equippedFrame}` : ''}
                 style={{
                   width: 38, height: 38, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                  background: student?.profile_picture ? 'transparent' : 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
                   color: 'white', fontWeight: 800, border: '2px solid rgba(255,122,0,0.4)',
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '1rem',
+                  fontSize: '1rem', overflow: 'hidden',
                   boxShadow: '0 4px 12px rgba(255,122,0,0.35), 0 0 0 1px rgba(255,122,0,0.2)',
                   transition: 'all 0.2s ease',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box', padding: 0,
                 }}
-                title="View Profile"
+                title="View profile menu"
               >
-                {student?.name ? student.name[0].toUpperCase() : '👤'}
+                {student?.profile_picture
+                  ? <img src={student.profile_picture} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                  : (student?.name ? student.name[0].toUpperCase() : '👤')
+                }
               </button>
 
               {profileOpen && (
@@ -299,23 +318,42 @@ export default function StudentLayout({ children }) {
                           className={equippedFrame ? `avatar-frame-${equippedFrame}` : ''}
                           style={{
                             width: 44, height: 44, borderRadius: '50%',
-                            background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                            background: student?.profile_picture ? 'transparent' : 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: '1.2rem', fontWeight: 800, color: '#fff',
                             boxShadow: '0 4px 12px rgba(255,122,0,0.4)',
-                            boxSizing: 'border-box',
+                            boxSizing: 'border-box', overflow: 'hidden',
                             border: '2px solid rgba(255,122,0,0.4)'
                           }}
                         >
-                          {student?.name ? student.name[0].toUpperCase() : '👤'}
+                          {student?.profile_picture
+                            ? <img src={student.profile_picture} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : (student?.name ? student.name[0].toUpperCase() : '👤')
+                          }
                         </div>
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{student?.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--primary-light)', fontWeight: 600 }}>
                             {LEVEL_LABELS[student?.level] || student?.level || 'Student'}
                           </div>
                         </div>
                       </div>
+                      {/* View Full Profile CTA */}
+                      <button
+                        onClick={() => { setProfileOpen(false); navigate('/profile'); }}
+                        style={{
+                          marginTop: '0.85rem', width: '100%',
+                          padding: '0.5rem', borderRadius: 10,
+                          border: '1px solid rgba(255,122,0,0.3)',
+                          background: 'rgba(255,122,0,0.08)', color: 'var(--primary-bright)',
+                          fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,122,0,0.16)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,122,0,0.08)'}
+                      >
+                        👤 View Full Profile
+                      </button>
                     </div>
 
                     {/* Profile Details */}

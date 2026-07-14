@@ -13,6 +13,7 @@ import SectionAttemptPage  from './pages/SectionAttemptPage'
 import PerformanceReportPage from './pages/PerformanceReportPage'
 import LeaderboardPage     from './pages/LeaderboardPage'
 import NotFoundPage        from './pages/NotFoundPage'
+import StudentProfilePage  from './pages/StudentProfilePage'
 
 // Staff pages
 import AdminLogin          from './pages/AdminLogin'
@@ -48,6 +49,7 @@ function AppRoutes() {
       <Route path="/challenge/day/:dayNumber/report"                       element={<ProtectedRoute><PerformanceReportPage /></ProtectedRoute>} />
 
       <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
+      <Route path="/profile"     element={<ProtectedRoute><StudentProfilePage /></ProtectedRoute>} />
 
       {/* Admin */}
       <Route path="/admin"           element={<Navigate to="/" replace />} />
