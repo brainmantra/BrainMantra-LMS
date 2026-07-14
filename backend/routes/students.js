@@ -780,4 +780,327 @@ router.get('/:id/progress/:dayNumber/questions', async (req, res) => {
   }
 })
 
+// ── GET /api/students/:id/quests ──────────────────────────────────────────────
+router.get('/:id/quests', async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id, 10)
+    const student = await getStudentById(studentId)
+    if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const dayNumber = getChallengeDay(student.first_login_date || student.registration_date)
+    
+    // Retrieve today's record
+    const { rows } = await pool.query(
+      `SELECT section_data, time_taken_seconds FROM day_records WHERE student_id = $1 AND day_number = $2`,
+      [studentId, dayNumber]
+    )
+    const dayRecord = rows[0]
+    const sectionData = dayRecord?.section_data ? (typeof dayRecord.section_data === 'string' ? JSON.parse(dayRecord.section_data) : dayRecord.section_data) : {}
+    const timeSpent = dayRecord?.time_taken_seconds || 0
+
+    // Evaluate progress
+    // 1. Complete bead_fun section with 100% accuracy
+    const beadFunDone = sectionData['bead_fun']?.status === 'done' && parseFloat(sectionData['bead_fun']?.accuracy || 0) === 100
+    
+    // 2. Solve 25 questions total
+    let totalQs = 0
+    Object.values(sectionData).forEach(sec => {
+      if (sec && typeof sec === 'object' && sec.status === 'done') {
+        totalQs += parseInt(sec.questionCount || 0, 10)
+      }
+    })
+
+    // 3. Practice for 10 minutes (600s)
+    const minutesSpent = Math.round(timeSpent / 60 * 10) / 10
+
+    // Quests claimed parse
+    let questsClaimed = {}
+    try {
+      questsClaimed = typeof student.quests_claimed === 'string' ? JSON.parse(student.quests_claimed || '{}') : (student.quests_claimed || {})
+    } catch (e) {}
+
+    const todayStr = new Date().toISOString().split('T')[0]
+    if (questsClaimed.date !== todayStr) {
+      questsClaimed = { date: todayStr, claimed: [] }
+    }
+
+    const quests = [
+      {
+        id: 'bead_fun_100',
+        title: 'Perfect Bead Fun',
+        desc: 'Complete Bead Fun section with 100% accuracy',
+        current: beadFunDone ? 1 : 0,
+        target: 1,
+        unit: 'section',
+        completed: beadFunDone,
+        claimed: questsClaimed.claimed.includes('bead_fun_100')
+      },
+      {
+        id: 'solve_25',
+        title: 'Arithmetic Workout',
+        desc: 'Solve 25 questions total today',
+        current: totalQs,
+        target: 25,
+        unit: 'questions',
+        completed: totalQs >= 25,
+        claimed: questsClaimed.claimed.includes('solve_25')
+      },
+      {
+        id: 'practice_10',
+        title: 'Mind Focus',
+        desc: 'Practice on abacus for 10 minutes',
+        current: minutesSpent,
+        target: 10,
+        unit: 'minutes',
+        completed: minutesSpent >= 10,
+        claimed: questsClaimed.claimed.includes('practice_10')
+      }
+    ]
+
+    res.json({ quests, xp_total: student.xp_total, spent_xp: student.spent_xp || 0, unlocked_items: student.unlocked_items || '[]', equipped_frame: student.equipped_frame, equipped_theme: student.equipped_theme })
+  } catch (err) {
+    console.error('[quests]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── POST /api/students/:id/quests/:questId/claim ──────────────────────────────
+router.post('/:id/quests/:questId/claim', async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id, 10)
+    const { questId } = req.params
+    const student = await getStudentById(studentId)
+    if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    let questsClaimed = {}
+    try {
+      questsClaimed = typeof student.quests_claimed === 'string' ? JSON.parse(student.quests_claimed || '{}') : (student.quests_claimed || {})
+    } catch (e) {}
+
+    const todayStr = new Date().toISOString().split('T')[0]
+    if (questsClaimed.date !== todayStr) {
+      questsClaimed = { date: todayStr, claimed: [] }
+    }
+
+    if (questsClaimed.claimed.includes(questId)) {
+      return res.status(400).json({ message: 'Quest already claimed today.' })
+    }
+
+    // Add questId to claimed list
+    questsClaimed.claimed.push(questId)
+
+    // Reward +50 XP
+    await pool.query(
+      `UPDATE students 
+       SET xp_total = xp_total + 50, quests_claimed = $1, updated_at = NOW() 
+       WHERE id = $2`,
+      [JSON.stringify(questsClaimed), studentId]
+    )
+
+    res.json({ success: true, xpEarned: 50, questsClaimed })
+  } catch (err) {
+    console.error('[claim quest]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── GET /api/students/:id/league ──────────────────────────────────────────────
+router.get('/:id/league', async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id, 10)
+    const student = await getStudentById(studentId)
+    if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const currentTier = student.league_tier || 'Bronze'
+
+    // Find weekly XP for the student
+    const now = new Date()
+    const day = now.getDay()
+    const daysSinceMon = (day === 0 ? 6 : day - 1)
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - daysSinceMon)
+    weekStart.setHours(0, 0, 0, 0)
+
+    const { rows: xpRows } = await pool.query(
+      `SELECT COALESCE(SUM(xp_earned), 0) as weekly_xp
+       FROM day_records
+       WHERE student_id = $1 AND completed = TRUE AND completed_at >= $2`,
+      [studentId, weekStart.toISOString()]
+    )
+    const studentWeeklyXp = parseInt(xpRows[0]?.weekly_xp || 0, 10)
+
+    // Get other real students in this league tier
+    const { rows: classmates } = await pool.query(
+      `SELECT id, name, xp_total, equipped_frame FROM students WHERE league_tier = $1 AND id != $2 LIMIT 5`,
+      [currentTier, studentId]
+    )
+
+    // Generate mock competitors to fill up to 10 standings
+    const competitorList = []
+    competitorList.push({
+      id: studentId,
+      name: student.name,
+      weeklyXp: studentWeeklyXp,
+      isPlayer: true,
+      equippedFrame: student.equipped_frame,
+    })
+
+    // Map real classmates
+    for (const c of classmates) {
+      const { rows: cXp } = await pool.query(
+        `SELECT COALESCE(SUM(xp_earned), 0) as weekly_xp
+         FROM day_records
+         WHERE student_id = $1 AND completed = TRUE AND completed_at >= $2`,
+        [c.id, weekStart.toISOString()]
+      )
+      competitorList.push({
+        id: c.id,
+        name: c.name,
+        weeklyXp: parseInt(cXp[0]?.weekly_xp || 0, 10),
+        isPlayer: false,
+        equippedFrame: c.equipped_frame
+      })
+    }
+
+    // Fill up to 10 with mock competitors
+    const namesList = [
+      'Aarav Sharma', 'Rohan Verma', 'Kavya Nair', 'Vivaan Patel',
+      'Aditi Rao', 'Sai Teja', 'Ananya Iyer', 'Dev Bajpai',
+      'Meera Deshmukh', 'Arjun Gupta', 'Ishaan Sen', 'Siddharth Roy',
+      'Pooja Hegde', 'Rithvik Reddy', 'Sneha Kapoor', 'Tarun Gill'
+    ]
+
+    const weekNum = Math.floor(now.getTime() / (1000 * 60 * 60 * 24 * 7))
+
+    let idx = 0
+    while (competitorList.length < 10) {
+      const name = namesList[(studentId + idx) % namesList.length]
+      // Deterministic score based on name index, week number, and target distribution
+      const competitorSeed = (studentId * 7 + idx * 31 + weekNum * 13) % 100
+      
+      // Arrange mock competitors around the player's XP
+      let compXp = 0
+      if (idx === 0) compXp = studentWeeklyXp + 70 + (competitorSeed % 30) // top contender
+      else if (idx === 1) compXp = studentWeeklyXp + 20 + (competitorSeed % 20)
+      else if (idx === 2) compXp = Math.max(0, studentWeeklyXp - 15 - (competitorSeed % 15))
+      else compXp = Math.max(0, studentWeeklyXp - 40 - (competitorSeed % 80))
+
+      // Make sure scores look realistic
+      compXp = Math.max(compXp, 10 + (competitorSeed % 40))
+
+      competitorList.push({
+        id: 9999 + idx,
+        name: name + ' (Classmate)',
+        weeklyXp: compXp,
+        isPlayer: false,
+        equippedFrame: idx % 3 === 0 ? 'gold_glow' : null
+      })
+      idx++
+    }
+
+    // Sort standings by weekly XP descending
+    competitorList.sort((a, b) => b.weeklyXp - a.weeklyXp)
+
+    // Add rank and promotion/relegation zones
+    const standings = competitorList.map((competitor, rankIdx) => {
+      const rank = rankIdx + 1
+      let status = 'safe' // promotion|safe|relegation
+      if (rank <= 3) status = 'promotion'
+      else if (rank >= 8) status = 'relegation'
+
+      return {
+        ...competitor,
+        rank,
+        status
+      }
+    })
+
+    res.json({
+      tier: currentTier,
+      standings,
+      promotedCount: 3,
+      relegatedCount: 3,
+    })
+  } catch (err) {
+    console.error('[league standings]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── POST /api/students/:id/buy-item ───────────────────────────────────────────
+router.post('/:id/buy-item', async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id, 10)
+    const { itemId, cost } = req.body
+    const student = await getStudentById(studentId)
+    if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    const balance = student.xp_total - (student.spent_xp || 0)
+    if (balance < cost) {
+      return res.status(400).json({ message: 'Insufficient XP points balance.' })
+    }
+
+    let unlocked = []
+    try {
+      unlocked = JSON.parse(student.unlocked_items || '[]')
+    } catch (e) {}
+
+    if (unlocked.includes(itemId)) {
+      return res.status(400).json({ message: 'Item already purchased.' })
+    }
+
+    unlocked.push(itemId)
+
+    await pool.query(
+      `UPDATE students 
+       SET spent_xp = spent_xp + $1, unlocked_items = $2, updated_at = NOW() 
+       WHERE id = $3`,
+      [cost, JSON.stringify(unlocked), studentId]
+    )
+
+    res.json({ success: true, unlockedItems: unlocked, spentXp: (student.spent_xp || 0) + cost })
+  } catch (err) {
+    console.error('[buy item]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── POST /api/students/:id/equip-item ─────────────────────────────────────────
+router.post('/:id/equip-item', async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id, 10)
+    const { itemId, type } = req.body // type = 'frame' | 'theme'
+    const student = await getStudentById(studentId)
+    if (!student) return res.status(404).json({ message: 'Student not found.' })
+
+    let unlocked = []
+    try {
+      unlocked = JSON.parse(student.unlocked_items || '[]')
+    } catch (e) {}
+
+    // Default items are always unlocked
+    const isDefault = itemId === null || itemId === 'default'
+    if (!isDefault && !unlocked.includes(itemId)) {
+      return res.status(400).json({ message: 'Item not unlocked yet.' })
+    }
+
+    if (type === 'frame') {
+      await pool.query(
+        `UPDATE students SET equipped_frame = $1, updated_at = NOW() WHERE id = $2`,
+        [isDefault ? null : itemId, studentId]
+      )
+    } else if (type === 'theme') {
+      await pool.query(
+        `UPDATE students SET equipped_theme = $1, updated_at = NOW() WHERE id = $2`,
+        [isDefault ? null : itemId, studentId]
+      )
+    }
+
+    res.json({ success: true, equippedFrame: type === 'frame' ? (isDefault ? null : itemId) : student.equipped_frame, equippedTheme: type === 'theme' ? (isDefault ? null : itemId) : student.equipped_theme })
+  } catch (err) {
+    console.error('[equip item]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
 export default router

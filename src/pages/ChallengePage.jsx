@@ -18,6 +18,17 @@ export default function ChallengePage() {
   const [loading, setLoading] = useState(true)
   const [selectedBadge, setSelectedBadge] = useState(null)
 
+  // Gamification tab states
+  const [activeTab, setActiveTab] = useState('dashboard') // 'dashboard' | 'league' | 'shop'
+  const [quests, setQuests] = useState([])
+  const [spentXp, setSpentXp] = useState(0)
+  const [unlockedItems, setUnlockedItems] = useState([])
+  const [equippedFrame, setEquippedFrame] = useState(null)
+  const [equippedTheme, setEquippedTheme] = useState(null)
+  const [leagueData, setLeagueData] = useState({ tier: 'Bronze', standings: [] })
+  const [questsLoading, setQuestsLoading] = useState(true)
+  const [leagueLoading, setLeagueLoading] = useState(true)
+
   const achievements = useMemo(() => calculateAchievements(days, streak, longestStreak), [days, streak, longestStreak])
 
   const LEVEL_LABELS = {
@@ -49,6 +60,33 @@ export default function ChallengePage() {
 
 
 
+  const loadQuestsAndShop = async () => {
+    try {
+      const res = await api.get(`/students/${student.id}/quests`)
+      setQuests(res.data.quests || [])
+      setSpentXp(res.data.spent_xp || 0)
+      setUnlockedItems(JSON.parse(res.data.unlocked_items || '[]'))
+      setEquippedFrame(res.data.equipped_frame || null)
+      setEquippedTheme(res.data.equipped_theme || null)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setQuestsLoading(false)
+    }
+  }
+
+  const loadLeague = async () => {
+    setLeagueLoading(true)
+    try {
+      const res = await api.get(`/students/${student.id}/league`)
+      setLeagueData(res.data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLeagueLoading(false)
+    }
+  }
+
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -64,9 +102,18 @@ export default function ChallengePage() {
         if (mounted) setLoading(false)
       }
     }
-    if (student?.id) load()
+    if (student?.id) {
+      load()
+      loadQuestsAndShop()
+    }
     return () => { mounted = false }
   }, [student])
+
+  useEffect(() => {
+    if (activeTab === 'league' && student?.id) {
+      loadLeague()
+    }
+  }, [activeTab, student])
 
   const dayMap = useMemo(() => {
     const m = {}
@@ -173,7 +220,296 @@ export default function ChallengePage() {
             </div>
           </div>
 
+          {/* ─── Gamification Tab Bar ───────────────────────────── */}
+          <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', marginBottom: '0.5rem' }}>
+            {[
+              { id: 'dashboard', label: '🏠 Dashboard' },
+              { id: 'league',    label: '🏆 Weekly League' },
+              { id: 'shop',      label: '🛍 XP Shop' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '0.6rem 1.1rem',
+                  background: activeTab === tab.id ? 'linear-gradient(90deg,rgba(255,122,0,0.18),rgba(255,122,0,0.06))' : 'transparent',
+                  color: activeTab === tab.id ? 'var(--primary-bright)' : 'var(--text-secondary)',
+                  border: 'none',
+                  borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontWeight: activeTab === tab.id ? 700 : 500,
+                  fontSize: '0.9rem',
+                  borderRadius: '6px 6px 0 0',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
+          {/* ─── Daily Quest Board (inside Dashboard tab) ─────── */}
+          {activeTab === 'dashboard' && (
+            <div className="card animate-fade" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 700 }}>⚔️ Daily Quest Board</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Complete quests to earn bonus XP. Resets every midnight.</p>
+                </div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', background: 'rgba(255,122,0,0.08)', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(255,122,0,0.15)' }}>
+                  +50 XP each
+                </span>
+              </div>
+              {questsLoading ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Loading quests…</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {quests.map(q => {
+                    const pct = Math.min((q.current / q.target) * 100, 100)
+                    return (
+                      <div key={q.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '1rem',
+                        padding: '0.9rem 1.1rem',
+                        background: q.claimed ? 'rgba(16,185,129,0.04)' : q.completed ? 'rgba(255,122,0,0.04)' : 'rgba(255,255,255,0.02)',
+                        border: q.claimed ? '1px solid rgba(16,185,129,0.25)' : q.completed ? '1px solid rgba(255,122,0,0.25)' : '1px solid rgba(255,255,255,0.07)',
+                        borderRadius: '12px',
+                        transition: 'all 0.3s',
+                      }}>
+                        <div style={{ fontSize: '1.8rem', flexShrink: 0 }}>
+                          {q.id === 'bead_fun_100' ? '🧮' : q.id === 'solve_25' ? '📐' : '⏱'}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{q.title}</span>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{q.current}/{q.target} {q.unit}</span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{q.desc}</p>
+                          <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: q.claimed ? 'var(--success)' : 'linear-gradient(90deg,var(--primary),var(--primary-bright))', borderRadius: 3, transition: 'width 0.5s ease' }} />
+                          </div>
+                        </div>
+                        <button
+                          disabled={!q.completed || q.claimed}
+                          onClick={async () => {
+                            try {
+                              await api.post(`/students/${student.id}/quests/${q.id}/claim`)
+                              toast.success(`+50 XP earned for "${q.title}"! 🎉`)
+                              loadQuestsAndShop()
+                            } catch (e) {
+                              toast.error(e?.response?.data?.message || 'Could not claim quest.')
+                            }
+                          }}
+                          style={{
+                            padding: '0.45rem 0.9rem',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            borderRadius: '8px',
+                            border: 'none',
+                            cursor: q.completed && !q.claimed ? 'pointer' : 'not-allowed',
+                            background: q.claimed ? 'rgba(16,185,129,0.12)' : q.completed ? 'linear-gradient(135deg,var(--primary),var(--primary-bright))' : 'rgba(255,255,255,0.04)',
+                            color: q.claimed ? 'var(--success)' : q.completed ? '#fff' : 'var(--text-muted)',
+                            opacity: q.completed || q.claimed ? 1 : 0.5,
+                            transition: 'all 0.2s',
+                            flexShrink: 0,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {q.claimed ? '✓ Claimed' : q.completed ? 'Claim +50' : 'Locked'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─── Weekly League Panel ───────────────────────────── */}
+          {activeTab === 'league' && (
+            <div className="card animate-fade" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+              {leagueLoading ? (
+                <p style={{ color: 'var(--text-muted)' }}>Loading league standings…</p>
+              ) : (() => {
+                const tierColors = {
+                  Bronze: '#cd7f32', Silver: '#c0c0c0', Gold: '#f5c842',
+                  Platinum: '#00d4aa', Diamond: '#60a5fa', Master: '#8b5cf6', 'Grand Master': '#ff7a00'
+                }
+                const tierColor = tierColors[leagueData.tier] || '#cd7f32'
+                return (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
+                      <div style={{ fontSize: '2.8rem' }}>
+                        {leagueData.tier === 'Bronze' ? '🥉' : leagueData.tier === 'Silver' ? '🥈' : leagueData.tier === 'Gold' ? '🥇' : leagueData.tier === 'Platinum' ? '💎' : leagueData.tier === 'Diamond' ? '💠' : leagueData.tier === 'Master' ? '👑' : '🔱'}
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: tierColor }}>{leagueData.tier} League</h3>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>Weekly standings reset on Monday. Top 3 get promoted 🚀</p>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981', display: 'inline-block' }} /> Promotion Zone (Top 3)</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} /> Relegation Zone (Bottom 3)</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {leagueData.standings?.map(p => (
+                        <div
+                          key={p.id}
+                          className={p.status === 'promotion' ? 'league-zone-promotion' : p.status === 'relegation' ? 'league-zone-relegation' : ''}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '0.9rem',
+                            padding: '0.7rem 1rem',
+                            borderRadius: '10px',
+                            background: p.isPlayer ? 'rgba(255,122,0,0.06)' : 'rgba(255,255,255,0.02)',
+                            border: p.isPlayer ? '1px solid rgba(255,122,0,0.3)' : '1px solid transparent',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <span style={{ fontWeight: 800, fontSize: '0.85rem', minWidth: 22, color: p.rank <= 3 ? tierColor : 'var(--text-muted)', textAlign: 'center' }}>
+                            {p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : `#${p.rank}`}
+                          </span>
+                          <div style={{
+                            width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: p.isPlayer ? 'linear-gradient(135deg,var(--primary),var(--primary-dark))' : 'rgba(255,255,255,0.06)',
+                            fontWeight: 800, fontSize: '0.85rem', color: p.isPlayer ? '#fff' : 'var(--text-secondary)',
+                            flexShrink: 0,
+                          }}>
+                            {p.name[0]}
+                          </div>
+                          <span style={{ flex: 1, fontSize: '0.88rem', fontWeight: p.isPlayer ? 700 : 400, color: p.isPlayer ? 'var(--primary-bright)' : 'var(--text-primary)' }}>
+                            {p.name} {p.isPlayer && <span style={{ fontSize: '0.72rem', background: 'rgba(255,122,0,0.12)', padding: '2px 6px', borderRadius: 4, color: 'var(--primary)' }}>YOU</span>}
+                          </span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>{p.weeklyXp} XP</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          )}
+
+          {/* ─── XP Shop Panel ────────────────────────────────── */}
+          {activeTab === 'shop' && (() => {
+            const xpBalance = (student?.xp_total || 0) - spentXp
+            const SHOP_ITEMS = [
+              { id: 'gold_glow', type: 'frame', name: 'Gold Glow Frame', desc: 'Golden pulsing glow around your avatar', icon: '✨', cost: 200 },
+              { id: 'cyber_pulse', type: 'frame', name: 'Cyber Pulse Frame', desc: 'Teal energy field avatar ring', icon: '⚡', cost: 350 },
+              { id: 'magic_shield', type: 'frame', name: 'Magic Shield Frame', desc: 'Violet mystic shield ring', icon: '🔮', cost: 500 },
+              { id: 'gm_border', type: 'frame', name: 'Grand Master Border', desc: 'Exclusive fiery Grand Master ring', icon: '🔱', cost: 1000 },
+              { id: 'orange_neon', type: 'skin', name: 'Orange Neon Skin', desc: 'Neon-orange glow on all cards', icon: '🟠', cost: 150 },
+              { id: 'teal_neon', type: 'skin', name: 'Teal Neon Skin', desc: 'Teal glow on all cards', icon: '🩵', cost: 150 },
+              { id: 'violet_neon', type: 'skin', name: 'Violet Neon Skin', desc: 'Purple mystical glow on all cards', icon: '💜', cost: 150 },
+              { id: 'cyberpunk', type: 'theme', name: 'Cyberpunk Theme', desc: 'Dark grid overlay background', icon: '🌐', cost: 300 },
+              { id: 'deep_forest', type: 'theme', name: 'Deep Forest Theme', desc: 'Soft green nature background', icon: '🌲', cost: 300 },
+            ]
+
+            return (
+              <div className="card animate-fade" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>🛍 XP Shop</h3>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Spend your XP on avatar frames, card skins, and themes</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-gold)' }}>⚡ {xpBalance} XP</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Available balance</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+                  {SHOP_ITEMS.map(item => {
+                    const owned = unlockedItems.includes(item.id)
+                    const isEquipped = equippedFrame === item.id || equippedTheme === item.id
+                    const canAfford = xpBalance >= item.cost
+
+                    return (
+                      <div key={item.id} style={{
+                        padding: '1.1rem',
+                        borderRadius: '14px',
+                        background: owned ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.02)',
+                        border: isEquipped ? '1.5px solid rgba(255,122,0,0.5)' : owned ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(255,255,255,0.07)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontSize: '2rem' }}>{item.icon}</span>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{item.name}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>{item.desc}</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: owned ? 'var(--success)' : canAfford ? 'var(--accent-gold)' : 'var(--error)' }}>
+                            {owned ? '✓ Owned' : `⚡ ${item.cost} XP`}
+                          </span>
+                          {owned ? (
+                            <button
+                              onClick={async () => {
+                                const equipType = item.type === 'frame' ? 'frame' : 'theme'
+                                try {
+                                  await api.post(`/students/${student.id}/equip-item`, {
+                                    itemId: isEquipped ? 'default' : item.id,
+                                    type: equipType,
+                                  })
+                                  toast.success(isEquipped ? 'Item unequipped.' : `${item.name} equipped! ✨`)
+                                  loadQuestsAndShop()
+                                } catch (e) {
+                                  toast.error('Could not equip item.')
+                                }
+                              }}
+                              style={{
+                                padding: '0.35rem 0.75rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                borderRadius: '8px',
+                                border: isEquipped ? '1px solid rgba(255,122,0,0.4)' : '1px solid rgba(255,255,255,0.12)',
+                                background: isEquipped ? 'rgba(255,122,0,0.12)' : 'rgba(255,255,255,0.05)',
+                                color: isEquipped ? 'var(--primary-bright)' : 'var(--text-secondary)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {isEquipped ? '✦ Equipped' : 'Equip'}
+                            </button>
+                          ) : (
+                            <button
+                              disabled={!canAfford}
+                              onClick={async () => {
+                                try {
+                                  await api.post(`/students/${student.id}/buy-item`, { itemId: item.id, cost: item.cost })
+                                  toast.success(`${item.name} unlocked! 🎉`)
+                                  loadQuestsAndShop()
+                                } catch (e) {
+                                  toast.error(e?.response?.data?.message || 'Purchase failed.')
+                                }
+                              }}
+                              style={{
+                                padding: '0.35rem 0.75rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: canAfford ? 'linear-gradient(135deg,var(--primary),var(--primary-bright))' : 'rgba(255,255,255,0.04)',
+                                color: canAfford ? '#fff' : 'var(--text-muted)',
+                                cursor: canAfford ? 'pointer' : 'not-allowed',
+                                opacity: canAfford ? 1 : 0.5,
+                              }}
+                            >
+                              Buy
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Badges & Achievements Section */}
           <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem' }}>

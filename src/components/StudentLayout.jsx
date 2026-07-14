@@ -17,6 +17,8 @@ export default function StudentLayout({ children }) {
   const [days, setDays] = useState([])
   const [streak, setStreak] = useState(0)
   const [longestStreak, setLongestStreak] = useState(0)
+  const [equippedFrame, setEquippedFrame] = useState(null)
+  const [equippedTheme, setEquippedTheme] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -30,9 +32,28 @@ export default function StudentLayout({ children }) {
           }
         })
         .catch(() => {})
+
+      api.get(`/students/${student.id}/quests`)
+        .then(res => {
+          if (mounted) {
+            setEquippedFrame(res.data.equipped_frame || null)
+            setEquippedTheme(res.data.equipped_theme || null)
+          }
+        })
+        .catch(() => {})
     }
     return () => { mounted = false }
   }, [student])
+
+  useEffect(() => {
+    document.body.classList.remove('theme-cyberpunk', 'theme-deep_forest')
+    if (equippedTheme) {
+      document.body.classList.add(`theme-${equippedTheme}`)
+    }
+    return () => {
+      document.body.classList.remove('theme-cyberpunk', 'theme-deep_forest')
+    }
+  }, [equippedTheme])
 
   const achievements = calculateAchievements(days, streak, longestStreak)
   const earnedBadges = achievements.filter(b => b.earned)
@@ -234,6 +255,7 @@ export default function StudentLayout({ children }) {
             <div style={{ position: 'relative' }}>
               <button 
                 onClick={() => { setProfileOpen(!profileOpen); setSettingsOpen(false); }}
+                className={equippedFrame ? `avatar-frame-${equippedFrame}` : ''}
                 style={{
                   width: 38, height: 38, borderRadius: '50%',
                   background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
@@ -241,7 +263,8 @@ export default function StudentLayout({ children }) {
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '1rem',
                   boxShadow: '0 4px 12px rgba(255,122,0,0.35), 0 0 0 1px rgba(255,122,0,0.2)',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box'
                 }}
                 title="View Profile"
               >
@@ -272,13 +295,18 @@ export default function StudentLayout({ children }) {
                       borderBottom: '1px solid rgba(255,255,255,0.06)'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{
-                          width: 44, height: 44, borderRadius: '50%',
-                          background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '1.2rem', fontWeight: 800, color: '#fff',
-                          boxShadow: '0 4px 12px rgba(255,122,0,0.4)'
-                        }}>
+                        <div 
+                          className={equippedFrame ? `avatar-frame-${equippedFrame}` : ''}
+                          style={{
+                            width: 44, height: 44, borderRadius: '50%',
+                            background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.2rem', fontWeight: 800, color: '#fff',
+                            boxShadow: '0 4px 12px rgba(255,122,0,0.4)',
+                            boxSizing: 'border-box',
+                            border: '2px solid rgba(255,122,0,0.4)'
+                          }}
+                        >
                           {student?.name ? student.name[0].toUpperCase() : '👤'}
                         </div>
                         <div>

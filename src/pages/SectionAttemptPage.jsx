@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 import confetti from 'canvas-confetti'
+import { playBeadClick, playCorrectChime, playIncorrectBuzzer, playFanfare } from '../utils/sound'
 import { checkAnswer, formatAnswer } from '../utils/answerChecker'
 import AbacusCard from '../components/AbacusCard'
 import SectionTimer, { formatSectionTime } from '../components/SectionTimer'
@@ -550,6 +551,7 @@ export default function SectionAttemptPage() {
       } else {
         isCorrect = checkAnswer(answer, correctAns, qType)
         setFeedback(isCorrect ? 'correct' : 'incorrect')
+        if (isCorrect) playCorrectChime(); else playIncorrectBuzzer();
         xp = isCorrect ? 10 : 0
       }
     }
@@ -593,6 +595,7 @@ export default function SectionAttemptPage() {
     // Demo day (day 0) — skip saving to backend; just show confetti
     if (dayNum === 0) {
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } })
+      playFanfare()
       setPhase('done')
       return
     }
@@ -602,6 +605,7 @@ export default function SectionAttemptPage() {
         timeTakenSeconds: sectionSeconds,
       })
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } })
+      playFanfare()
       setPhase('done')
     } catch (err) {
       toast.error('Could not save section. Please try again.')

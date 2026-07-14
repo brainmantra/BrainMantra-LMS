@@ -1632,3 +1632,78 @@ select option { background: var(--bg-elevated); }
   color: var(--primary-bright) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
+
+/* ── Avatar Shop Frames ─────────────────────────────────────────────────────── */
+@keyframes gold-glow-pulse {
+  0%, 100% { box-shadow: 0 0 4px #f5c842, inset 0 0 4px #f5c842; }
+  50% { box-shadow: 0 0 16px #f5c842, inset 0 0 8px #f5c842; }
+}
+@keyframes cyber-pulse {
+  0%, 100% { box-shadow: 0 0 4px #00d4aa, inset 0 0 4px #00d4aa; }
+  50% { box-shadow: 0 0 16px #00b4d8, inset 0 0 8px #00b4d8; }
+}
+@keyframes magic-pulse {
+  0%, 100% { box-shadow: 0 0 4px #8b5cf6, inset 0 0 4px #8b5cf6; }
+  50% { box-shadow: 0 0 16px #c4b5fd, inset 0 0 8px #8b5cf6; }
+}
+@keyframes gm-pulse {
+  0%, 100% { box-shadow: 0 0 4px #ff7a00, inset 0 0 4px #ff7a00; }
+  50% { box-shadow: 0 0 16px #ff7a00, inset 0 0 8px #ff7a00; }
+}
+
+.avatar-frame-gold_glow {
+  border: 3px solid #f5c842 !important;
+  animation: gold-glow-pulse 2s infinite alternate !important;
+}
+.avatar-frame-cyber_pulse {
+  border: 3px solid #00d4aa !important;
+  animation: cyber-pulse 1.8s infinite alternate !important;
+}
+.avatar-frame-magic_shield {
+  border: 3px solid #8b5cf6 !important;
+  animation: magic-pulse 2.2s infinite alternate !important;
+}
+.avatar-frame-gm_border {
+  border: 3px solid #ff7a00 !important;
+  animation: gm-pulse 1.5s infinite alternate !important;
+}
+
+/* ── Neon Card Skins ────────────────────────────────────────────────────────── */
+.card-skin-orange_neon {
+  border: 1px solid rgba(255,122,0,0.4) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(255,122,0,0.12) !important;
+}
+.card-skin-teal_neon {
+  border: 1px solid rgba(0,212,170,0.4) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(0,212,170,0.12) !important;
+}
+.card-skin-violet_neon {
+  border: 1px solid rgba(139,92,246,0.4) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(139,92,246,0.12) !important;
+}
+
+/* ── Custom Theme Layouts ───────────────────────────────────────────────────── */
+body.theme-cyberpunk {
+  background-color: #05070d !important;
+  background-image: 
+    radial-gradient(rgba(0, 212, 170, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(255, 122, 0, 0.05) 1px, transparent 0) !important;
+  background-size: 40px 40px !important;
+  background-position: 0 0, 20px 20px !important;
+}
+body.theme-deep_forest {
+  background-color: #06140e !important;
+  background-image: 
+    radial-gradient(rgba(74, 222, 128, 0.04) 1px, transparent 0) !important;
+  background-size: 30px 30px !important;
+}
+
+/* ── League Standings Table & Custom Badges ───────────────────────────────────── */
+.league-zone-promotion {
+  background: rgba(16,185,129,0.04) !important;
+  box-shadow: inset 3px 0 0 #10b981 !important;
+}
+.league-zone-relegation {
+  background: rgba(239,68,68,0.04) !important;
+  box-shadow: inset 3px 0 0 #ef4444 !important;
+}
