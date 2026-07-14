@@ -142,16 +142,28 @@ export default function SectionAttemptPage() {
         const rawQs = res.data.questions || []
         const flatQs = []
         rawQs.forEach(q => {
-          // Always attempt to parse teacher JSON questions
-          if (q.question) {
+          const qContent = q.question || q.question_text || q.questionText;
+          if (qContent) {
             try {
-              const parsed = typeof q.question === 'string' ? JSON.parse(q.question) : q.question
+              const parsed = typeof qContent === 'string' ? JSON.parse(qContent) : qContent
               if (parsed && typeof parsed === 'object') {
                 if (parsed.title) {
                   setCustomSectionTitle(parsed.title)
                 }
                 if (Array.isArray(parsed.items) && parsed.items.length > 0) {
-                  parsed.items.forEach(item => {
+                  let itemsToRender = parsed.items;
+                  // Recover from double-encoded JSON corruption in TeacherDashboard fallback
+                  if (itemsToRender.length === 1 && typeof itemsToRender[0].questionText === 'string' && itemsToRender[0].questionText.startsWith('{"title":')) {
+                    try {
+                      const recovered = JSON.parse(itemsToRender[0].questionText);
+                      if (recovered && Array.isArray(recovered.items)) {
+                        itemsToRender = recovered.items;
+                        if (recovered.title) setCustomSectionTitle(recovered.title);
+                      }
+                    } catch(e) {}
+                  }
+
+                  itemsToRender.forEach(item => {
                     if (item.type === 'question') {
                       flatQs.push({
                         id: item.id,
@@ -254,9 +266,10 @@ export default function SectionAttemptPage() {
 
   let isGoogleForm = false
   let parsedForm = null
-  if (currentQ && currentQ.question) {
+  const currentQContent = currentQ?.question || currentQ?.question_text || currentQ?.questionText;
+  if (currentQContent) {
     try {
-      const parsed = typeof currentQ.question === 'string' ? JSON.parse(currentQ.question) : currentQ.question
+      const parsed = typeof currentQContent === 'string' ? JSON.parse(currentQContent) : currentQContent
       if (parsed && typeof parsed === 'object' && parsed.items) {
         isGoogleForm = true
         parsedForm = parsed
@@ -833,9 +846,19 @@ export default function SectionAttemptPage() {
           }}>
             {/* Question Header & Badge */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 600, fontSize: '1.25rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+              <div style={{ 
+                fontWeight: 600, 
+                fontSize: '1.25rem', 
+                color: 'var(--text-primary)', 
+                whiteSpace: 'pre-wrap',
+                fontFamily: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'var(--font-mono)' : 'inherit',
+                textAlign: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'right' : 'left',
+                display: 'inline-block',
+                minWidth: '3rem',
+                margin: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? '0 auto' : '0'
+              }}>
                 {currentQ.questionText}
-              </span>
+              </div>
               {!(currentQ.questionType === 'checkbox' ? (Array.isArray(currentQ.correctAnswer) && currentQ.correctAnswer.length > 0) : (currentQ.correctAnswer && String(currentQ.correctAnswer).trim() !== '')) && (
                 <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>⚠️ To be checked by teacher</span>
               )}

@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons.svg'],
+      includeAssets: ['brand-logo.png', 'icons.svg'],
       manifest: {
         name: 'Brain Mantra',
         short_name: 'Brain Mantra',

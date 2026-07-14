@@ -85,21 +85,10 @@ export default function StudentLayout({ children }) {
         style={{ transition: 'transform 0.3s ease, width 0.3s ease', display: 'block' }}
       >
         {/* Sidebar Logo */}
-        <div className="admin-sidebar__logo" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div style={{
-              width: 32, height: 32,
-              background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
-              borderRadius: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1rem',
-              boxShadow: '0 4px 12px rgba(255,122,0,0.4)'
-            }}>🧮</div>
-            <div>
-              <h2 style={{ fontSize: '0.95rem', lineHeight: 1.2 }}>Brain Mantra</h2>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>Student Portal</p>
-            </div>
-          </div>
+        <div className="admin-sidebar__logo" style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
+          <img src="/brand-logo.jpeg" alt="Brain Mantra Logo" style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 8 }} />
+          <h2 style={{ fontSize: '0.95rem', lineHeight: 1.2 }}>Brain Mantra</h2>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 1 }}>Student Portal</p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100% - 90px)', justifyContent: 'space-between' }}>

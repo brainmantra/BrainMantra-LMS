@@ -570,11 +570,24 @@ export default function TeacherDashboard() {
       setEditQId(match.id)
       setQFormatExample(match.format_example || '')
       try {
-        const parsed = JSON.parse(match.question)
+        const parsed = typeof match.question === 'string' ? JSON.parse(match.question) : match.question
         if (parsed && typeof parsed === 'object' && parsed.items) {
+          let itemsToLoad = parsed.items;
+          // Recover from double-encoded JSON corruption in TeacherDashboard fallback
+          if (itemsToLoad.length === 1 && typeof itemsToLoad[0].questionText === 'string' && itemsToLoad[0].questionText.startsWith('{"title":')) {
+            try {
+              const recovered = JSON.parse(itemsToLoad[0].questionText);
+              if (recovered && Array.isArray(recovered.items)) {
+                itemsToLoad = recovered.items;
+                if (recovered.title) parsed.title = recovered.title;
+                if (recovered.description) parsed.description = recovered.description;
+              }
+            } catch(e) {}
+          }
+
           setFormTitle(parsed.title || defaultTitle)
           setFormDescription(parsed.description || '')
-          setFormItems(parsed.items || [])
+          setFormItems(itemsToLoad || [])
         } else {
           const convertedItems = convertLegacyToFormItems(parsed || match.question, match.answer)
           setFormTitle(defaultTitle)
@@ -701,8 +714,9 @@ export default function TeacherDashboard() {
     <div className="admin-layout">
       {/* Sidebar */}
       <aside className="admin-sidebar">
-        <div className="admin-sidebar__logo">
-          <h2 style={{ color: 'var(--teacher-primary)' }}>👨‍🏫 Teacher Portal</h2>
+        <div className="admin-sidebar__logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+          <img src="/brand-logo.jpeg" alt="Brain Mantra Logo" style={{ width: 42, height: 42, borderRadius: 10, marginBottom: 4 }} />
+          <h2 style={{ color: 'var(--teacher-primary)' }}>Teacher Portal</h2>
           <p>{teacher?.name}</p>
           <p style={{ fontSize: '0.7rem', marginTop: 2 }}>{teacher?.assigned_levels?.map(l => LEVEL_LABELS[l]).join(', ')}</p>
         </div>
@@ -1825,7 +1839,12 @@ const StudentPreviewModal = ({ sectionData, onClose }) => {
                   lineHeight: 1.6, 
                   marginBottom: '1.5rem',
                   whiteSpace: 'pre-wrap',
-                  color: 'var(--text-primary)'
+                  color: 'var(--text-primary)',
+                  fontFamily: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'var(--font-mono)' : 'inherit',
+                  textAlign: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'right' : 'left',
+                  display: 'inline-block',
+                  minWidth: '3rem',
+                  margin: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? '0 auto 1.5rem auto' : '0 0 1.5rem 0'
                 }}>
                   {currentQ.questionText}
                 </div>
