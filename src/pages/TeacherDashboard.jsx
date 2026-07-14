@@ -342,7 +342,7 @@ export default function TeacherDashboard() {
       if (q.level === qLevel && q.day_number === parseInt(qDay, 10)) {
         try {
           const parsed = JSON.parse(q.question)
-          if (parsed && parsed.title) {
+          if (parsed && parsed.title && !parsed.title.startsWith('Daily Challenge - Day') && parsed.title !== 'Abacus Daily Challenge') {
             savedTitlesMap[q.section] = parsed.title
           }
         } catch(e) {}
@@ -585,7 +585,8 @@ export default function TeacherDashboard() {
             } catch(e) {}
           }
 
-          setFormTitle(parsed.title || defaultTitle)
+          const isDefault = parsed.title?.startsWith('Daily Challenge - Day') || parsed.title === 'Abacus Daily Challenge'
+          setFormTitle(isDefault ? defaultTitle : (parsed.title || defaultTitle))
           setFormDescription(parsed.description || '')
           setFormItems(itemsToLoad || [])
         } else {
