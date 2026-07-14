@@ -195,7 +195,7 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
         {/* Right Side */}
         <div className="day-card-right" style={{ flex: 2, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontWeight: 600 }}>📋 PRACTICE SECTIONS</h3>
-          <div className="day-card-sections-list" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', flexGrow: 0, marginBottom: 0 }}>
+          <div className="day-card-sections-list" style={{ flexGrow: 0, marginBottom: 0 }}>
             {sections.map((sec, idx) => {
               const secStatus = sectionData[sec]?.status || 'not_started'
               const isSecDone = secStatus === 'done' || dayRecord?.completed

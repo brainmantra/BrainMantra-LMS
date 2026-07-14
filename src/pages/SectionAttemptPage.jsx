@@ -124,8 +124,8 @@ export default function SectionAttemptPage() {
           } catch (e) {
             if (e.response?.status === 409) {
               // Already opened and done — redirect back
-              toast('This section is already completed.', { icon: '✓' })
-              navigate(`/challenge/day/${dayNum}/sections`)
+              toast.error(e.response.data.message || 'This section is not available.')
+              navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)
               return
             }
           }
@@ -136,7 +136,7 @@ export default function SectionAttemptPage() {
 
         if (res.data.teacherNotReady) {
           toast("Today's question isn't ready yet.")
-          navigate(`/challenge/day/${dayNum}/sections`)
+          navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)
           return
         }
 
@@ -241,7 +241,7 @@ export default function SectionAttemptPage() {
         setPhase('countdown')
       } catch (err) {
         toast.error(err.response?.data?.message || 'Could not load questions.')
-        navigate(`/challenge/day/${dayNum}/sections`)
+        navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)
       }
     }
     init()
@@ -687,7 +687,7 @@ export default function SectionAttemptPage() {
 
           <button
             className="btn btn-primary btn-block"
-            onClick={() => navigate(`/challenge/day/${dayNum}/sections`)}
+            onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)}
           >
             {isDemo ? 'Back to Demo →' : 'Back to Paper →'}
           </button>
@@ -705,8 +705,8 @@ export default function SectionAttemptPage() {
           <p style={{ color: 'var(--text-muted)', margin: '1rem 0 1.5rem' }}>
             Could not save your responses.
           </p>
-          <button className="btn btn-primary" onClick={() => navigate(`/challenge/day/${dayNum}/sections`)}>
-            Back to Paper
+          <button className="btn btn-primary" onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`)}>
+            {isDemo ? 'Back to Demo' : 'Back to Paper'}
           </button>
         </div>
       </div>
