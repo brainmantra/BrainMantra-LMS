@@ -19,36 +19,57 @@ export default function LoginPage() {
     return null
   }
 
+  // Auto redirect if other roles are already logged in
+  const adminToken = localStorage.getItem('abacus_admin_token')
+  if (adminToken) {
+    navigate('/admin/dashboard', { replace: true })
+    return null
+  }
+  const teacherToken = localStorage.getItem('abacus_teacher_token')
+  if (teacherToken) {
+    navigate('/teacher/dashboard', { replace: true })
+    return null
+  }
+
   const handleLogin = async (e) => {
     e.preventDefault()
-    if (!loginId.trim()) {
-      toast.error('Login ID is required')
+    if (!loginId.trim() || !password.trim()) {
+      toast.error('Please enter both Login ID and password')
       return
     }
     setLoading(true)
     setNotFound(false)
     try {
-      const res = await api.post('/students/login', { loginId, password })
+      const res = await api.post('/auth/login', { loginId, password })
       
-      // Prevent crashes if the server returns HTML instead of JSON
-      if (!res.data || !res.data.student) {
-        throw new Error('Invalid response from server. Check API URL configuration.')
+      const { role, token, user, redirectUrl } = res.data
+
+      if (role === 'admin') {
+        localStorage.setItem('abacus_admin_token', token)
+        toast.success('Welcome back, Admin!')
+        navigate(redirectUrl)
+      } else if (role === 'teacher') {
+        localStorage.setItem('abacus_teacher_token', token)
+        localStorage.setItem('abacus_teacher', JSON.stringify(user))
+        toast.success(`Welcome back, Teacher ${user.name}!`)
+        navigate(redirectUrl)
+      } else if (role === 'student') {
+        login(user)
+        toast.success(`Welcome back, ${user.name}!`)
+        navigate(redirectUrl)
+      } else {
+        throw new Error('Unknown user role.')
       }
-      
-      login(res.data.student)
-      toast.success(`Welcome back, ${res.data.student.name}!`)
-      navigate('/welcome')
+
     } catch (err) {
       console.error('[Login Error]', err)
       const status = err.response?.status
       
-      if (status === 404) {
+      if (status === 401) {
         setNotFound(true)
       } else if (err.response?.data?.message) {
-        // Show the exact error message thrown by the backend (e.g. Invalid Level, 503, etc)
         toast.error(err.response.data.message)
       } else if (err.message) {
-        // Show network errors or our custom thrown error
         toast.error(err.message)
       } else {
         toast.error('Something went wrong. Please try again.')
@@ -70,20 +91,9 @@ export default function LoginPage() {
         {/* Brand panel */}
         <div className="login-brand animate-fade">
           <div className="login-brand-logo">
-            <svg width="56" height="56" viewBox="0 0 52 52" fill="none">
-              <rect width="52" height="52" rx="14" fill="#f5a623"/>
-              <rect x="10" y="14" width="32" height="3" rx="1.5" fill="#1a2340"/>
-              <rect x="10" y="24.5" width="32" height="3" rx="1.5" fill="#1a2340"/>
-              <rect x="10" y="35" width="32" height="3" rx="1.5" fill="#1a2340"/>
-              <circle cx="19" cy="15.5" r="5" fill="#1a2340"/>
-              <circle cx="29" cy="26" r="5" fill="#1a2340"/>
-              <circle cx="22" cy="36.5" r="5" fill="#1a2340"/>
-              <circle cx="35" cy="15.5" r="5" fill="white" opacity="0.45"/>
-              <circle cx="14" cy="26" r="5" fill="white" opacity="0.45"/>
-              <circle cx="36" cy="36.5" r="5" fill="white" opacity="0.45"/>
-            </svg>
+            <img src="/brand-logo.jpeg" alt="Brain Mantra Logo" style={{ width: 56, height: 56, borderRadius: 14 }} />
           </div>
-          <h1 className="login-brand-title">100 Days of<br/>Abacus</h1>
+          <h1 className="login-brand-title">Brain Mantra</h1>
           <p className="login-brand-tagline">
             Build lightning-fast mental math skills, one day at a time.
           </p>
@@ -97,9 +107,9 @@ export default function LoginPage() {
         {/* Login form panel */}
         <div className="login-form-panel animate-pop">
           <div className="login-form-header">
-            <h2 className="login-form-title">Student Login</h2>
+            <h2 className="login-form-title">Login Portal</h2>
             <p className="login-form-subtitle">
-              Enter your unique Login ID and Password to access your challenge.
+              Enter your login ID and password to access your dashboard.
             </p>
           </div>
 
@@ -108,9 +118,9 @@ export default function LoginPage() {
               <label className="form-label" htmlFor="loginId">Login ID</label>
               <input
                 id="loginId"
-                className="form-input"
+                className="input-premium"
                 type="text"
-                placeholder="Enter your Login ID"
+                placeholder="Username, email, or mobile"
                 value={loginId}
                 onChange={e => {
                   setLoginId(e.target.value)
@@ -124,22 +134,22 @@ export default function LoginPage() {
               <label className="form-label" htmlFor="password">Password</label>
               <input
                 id="password"
-                className="form-input"
+                className="input-premium"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
               />
             </div>
 
             {notFound && (
-              <div className="login-not-found animate-fade">
+              <div className="login-not-found animate-fade" style={{ marginTop: '1rem' }}>
                 <div className="login-not-found-icon">⚠</div>
                 <div>
                   <p className="login-not-found-title">Login Failed</p>
                   <p className="login-not-found-text">
-                    Invalid Login ID or Password. If you haven't been assigned credentials yet,
-                    please contact your teacher or fill in the registration form.
+                    Invalid Login ID or Password. If you are a student and haven't enrolled yet,
+                    please fill in the registration form.
                   </p>
                   <a
                     href={REGISTRATION_FORM_URL}
@@ -157,16 +167,17 @@ export default function LoginPage() {
               type="submit"
               className="btn btn-primary login-submit"
               disabled={loading || !loginId.trim() || !password.trim()}
+              style={{ marginTop: '1.5rem' }}
             >
               {loading
-                ? <><span className="btn-spinner" /> Verifying…</>
-                : 'Continue to Challenge →'}
+                ? <><span className="btn-spinner" /> Signing in…</>
+                : 'Sign In →'}
             </button>
           </form>
 
-          <div className="login-footer-note">
+          <div className="login-footer-note" style={{ marginTop: '1.5rem' }}>
             <p>
-              Not registered yet?{' '}
+              Students: Not registered yet?{' '}
               <a
                 href={REGISTRATION_FORM_URL}
                 target="_blank"
@@ -177,16 +188,6 @@ export default function LoginPage() {
               </a>{' '}
               and ask your teacher to activate your account.
             </p>
-            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-              <button 
-                type="button" 
-                onClick={() => navigate('/teacher')}
-                className="btn btn-ghost" 
-                style={{ fontSize: '13px', color: '#666', border: '1px solid #ddd' }}
-              >
-                Teacher / Admin Login
-              </button>
-            </div>
           </div>
         </div>
       </div>

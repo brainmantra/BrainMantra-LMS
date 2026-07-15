@@ -15,24 +15,25 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body
     if (!email || !password) return res.status(400).json({ message: 'Email and password required.' })
 
+    const cleanEmail = String(email).trim().toLowerCase()
     const { rows } = await pool.query(
-      `SELECT * FROM teachers WHERE email = $1 AND is_active = TRUE`,
-      [email]
+      `SELECT * FROM teachers WHERE LOWER(TRIM(email)) = $1 AND is_active = TRUE`,
+      [cleanEmail]
     )
     const teacher = rows[0]
     if (!teacher || !teacher.is_active) {
-      await logActivity({ userType: 'teacher', userLabel: email, action: 'login_fail', req, metadata: { reason: !teacher ? 'not_found' : 'inactive' } })
+      await logActivity({ userType: 'teacher', userLabel: cleanEmail, action: 'login_fail', req, metadata: { reason: !teacher ? 'not_found' : 'inactive' } })
       return res.status(401).json({ message: 'Invalid credentials or inactive account.' })
     }
 
     const valid = await bcrypt.compare(password, teacher.password_hash)
     if (!valid) {
-      await logActivity({ userType: 'teacher', userLabel: email, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
+      await logActivity({ userType: 'teacher', userLabel: cleanEmail, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
       return res.status(401).json({ message: 'Invalid credentials.' })
     }
 
     const token = signTeacherToken(teacher)
-    await logActivity({ userType: 'teacher', userId: teacher.id, userLabel: email, action: 'login_success', req })
+    await logActivity({ userType: 'teacher', userId: teacher.id, userLabel: cleanEmail, action: 'login_success', req })
     res.json({
       token,
       teacher: {
@@ -230,7 +231,8 @@ router.get('/students', requireTeacher, async (req, res) => {
       `SELECT s.id, s.name, s.mobile, s.level, s.streak, s.xp_total,
               COUNT(CASE WHEN dr.completed THEN 1 END) AS days_completed,
               MAX(dr.completed_at) AS last_active,
-              ARRAY_REMOVE(ARRAY_AGG(CASE WHEN dr.completed THEN dr.day_number END), NULL) AS completed_days
+              ARRAY_REMOVE(ARRAY_AGG(CASE WHEN dr.completed THEN dr.day_number END ORDER BY dr.day_number DESC), NULL) AS completed_days,
+              ARRAY_REMOVE(ARRAY_AGG(CASE WHEN dr.completed THEN dr.accuracy END ORDER BY dr.day_number DESC), NULL) AS recent_accuracies
        FROM students s
        LEFT JOIN day_records dr ON dr.student_id = s.id
        WHERE s.level = ANY($1)
@@ -238,7 +240,34 @@ router.get('/students', requireTeacher, async (req, res) => {
        ORDER BY s.level, s.name`,
       [levels]
     )
-    res.json(rows)
+    
+    // Calculate struggling state
+    const now = new Date()
+    const mapped = rows.map(r => {
+      let isStruggling = false
+      let strugglingReason = ''
+
+      if (r.last_active) {
+        const daysSince = (now - new Date(r.last_active)) / (1000 * 60 * 60 * 24)
+        if (daysSince > 5) {
+          isStruggling = true
+          strugglingReason = `Inactive for ${Math.floor(daysSince)} days`
+        }
+      }
+
+      if (!isStruggling && r.recent_accuracies && r.recent_accuracies.length > 0) {
+        const recent3 = r.recent_accuracies.slice(0, 3)
+        const avg = recent3.reduce((a, b) => a + parseFloat(b), 0) / recent3.length
+        if (avg < 70) {
+          isStruggling = true
+          strugglingReason = `Recent accuracy is low (${Math.round(avg)}%)`
+        }
+      }
+
+      return { ...r, is_struggling: isStruggling, struggling_reason: strugglingReason }
+    })
+    
+    res.json(mapped)
   } catch (err) {
     res.status(500).json({ message: 'Server error.' })
   }

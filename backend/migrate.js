@@ -9,7 +9,7 @@ import 'dotenv/config'
 import pool from './db.js'
 import bcrypt from 'bcryptjs'
 
-const SQL = `
+export const SQL = `
 -- ── Students ──────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS students (
   id                 SERIAL PRIMARY KEY,
@@ -38,6 +38,15 @@ ALTER TABLE students ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS plain_password TEXT;
 ALTER TABLE students ADD COLUMN IF NOT EXISTS first_login_date TIMESTAMPTZ;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS spent_xp INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS unlocked_items TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE students ADD COLUMN IF NOT EXISTS equipped_frame VARCHAR(50) DEFAULT NULL;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS equipped_theme VARCHAR(50) DEFAULT NULL;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS league_tier VARCHAR(20) DEFAULT 'Bronze';
+ALTER TABLE students ADD COLUMN IF NOT EXISTS quests_claimed TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_picture TEXT DEFAULT NULL;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS date_of_birth DATE DEFAULT NULL;
+ALTER TABLE students ADD COLUMN IF NOT EXISTS gender VARCHAR(20) DEFAULT NULL;
 
 ALTER TABLE students DROP CONSTRAINT IF EXISTS students_mobile_key;
 
@@ -287,11 +296,21 @@ async function migrate() {
 
   } catch (err) {
     console.error('[migrate] ✗ Migration failed:', err)
-    process.exit(1)
+    throw err
   } finally {
     client.release()
-    await pool.end()
   }
 }
 
-migrate()
+import { fileURLToPath } from 'url'
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  migrate().then(() => {
+    pool.end()
+    process.exit(0)
+  }).catch(() => {
+    pool.end()
+    process.exit(1)
+  })
+}
+
+export { migrate }

@@ -4,12 +4,15 @@ import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 import confetti from 'canvas-confetti'
+import { playBeadClick, playCorrectChime, playIncorrectBuzzer, playFanfare } from '../utils/sound'
 import { checkAnswer, formatAnswer } from '../utils/answerChecker'
 import AbacusCard from '../components/AbacusCard'
 import SectionTimer, { formatSectionTime } from '../components/SectionTimer'
 
 const SECTION_LABELS = {
   abacus:            '🧮 Abacus',
+  bead_fun:          '🧮 Bead Fun',
+  activity:          '⚡ Activity',
   visual:            '👁 Visual',
   multiplication:    '✖ Multiplication',
   division:          '➗ Division',
@@ -30,7 +33,7 @@ const isMultiLineRequired = (level, day) => {
 export default function SectionAttemptPage() {
   const { dayNumber, section } = useParams()
   const dayNum = parseInt(dayNumber, 10)
-  const { student } = useAuth()
+  const { student, login } = useAuth()
   const navigate = useNavigate()
 
   const [phase, setPhase] = useState('loading')     // loading|countdown|attempt|submitting|done|error
@@ -121,8 +124,8 @@ export default function SectionAttemptPage() {
           } catch (e) {
             if (e.response?.status === 409) {
               // Already opened and done — redirect back
-              toast('This section is already completed.', { icon: '✓' })
-              navigate(`/challenge/day/${dayNum}/sections`)
+              toast.error(e.response.data.message || 'This section is not available.')
+              navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)
               return
             }
           }
@@ -133,30 +136,51 @@ export default function SectionAttemptPage() {
 
         if (res.data.teacherNotReady) {
           toast("Today's question isn't ready yet.")
-          navigate(`/challenge/day/${dayNum}/sections`)
+          navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)
           return
         }
 
         const rawQs = res.data.questions || []
         const flatQs = []
         rawQs.forEach(q => {
-          if (q.question) {
+          const qContent = q.question || q.question_text || q.questionText;
+          if (qContent) {
             try {
-              const parsed = typeof q.question === 'string' ? JSON.parse(q.question) : q.question
+              const parsed = typeof qContent === 'string' ? JSON.parse(qContent) : qContent
               if (parsed && typeof parsed === 'object') {
                 if (parsed.title) {
-                  setCustomSectionTitle(parsed.title)
+                  const cleaned = parsed.title.startsWith('Daily Challenge - Day') || parsed.title === 'Abacus Daily Challenge'
+                    ? ''
+                    : parsed.title;
+                  setCustomSectionTitle(cleaned)
                 }
-                if (Array.isArray(parsed.items)) {
-                  parsed.items.forEach(item => {
+                if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+                  let itemsToRender = parsed.items;
+                  // Recover from double-encoded JSON corruption in TeacherDashboard fallback
+                  if (itemsToRender.length === 1 && typeof itemsToRender[0].questionText === 'string' && itemsToRender[0].questionText.startsWith('{"title":')) {
+                    try {
+                      const recovered = JSON.parse(itemsToRender[0].questionText);
+                      if (recovered && Array.isArray(recovered.items)) {
+                        itemsToRender = recovered.items;
+                        if (recovered.title) {
+                          const cleanedRec = recovered.title.startsWith('Daily Challenge - Day') || recovered.title === 'Abacus Daily Challenge'
+                            ? ''
+                            : recovered.title;
+                          setCustomSectionTitle(cleanedRec);
+                        }
+                      }
+                    } catch(e) {}
+                  }
+
+                  itemsToRender.forEach(item => {
                     if (item.type === 'question') {
                       flatQs.push({
                         id: item.id,
                         dbQuestionId: q.id,
                         virtualType: 'teacher_custom',
-                        questionType: item.questionType,
-                        questionText: item.questionText,
-                        image: item.image,
+                        questionType: item.questionType || 'short_answer',
+                        questionText: item.questionText || '',
+                        image: item.image || '',
                         options: item.options || [],
                         correctAnswer: item.correctAnswer,
                       })
@@ -166,25 +190,58 @@ export default function SectionAttemptPage() {
                         dbQuestionId: q.id,
                         virtualType: 'image_only',
                         questionText: item.description || '',
-                        image: item.image,
+                        image: item.image || '',
                         options: [],
                         correctAnswer: null,
                       })
                     }
+                    // skip section_header items — they are not answerable
                   })
+                  return // successfully parsed, skip raw push
                 }
+                // Has parsed object but no items array — treat as single question
+                if (parsed.title && !parsed.items) {
+                  flatQs.push({
+                    id: q.id,
+                    dbQuestionId: q.id,
+                    virtualType: 'teacher_custom',
+                    questionType: 'short_answer',
+                    questionText: parsed.title || '',
+                    image: '',
+                    options: [],
+                    correctAnswer: q.answer || '',
+                  })
+                  return
+                }
+              }
+            } catch (e) {
+              // JSON parse failed — q.question is a plain string, use as-is
+              if (String(q.question).trim().startsWith('{') || String(q.question).trim().startsWith('[')) {
+                // Looks like broken JSON — show as a teacher custom question with plain text
+                flatQs.push({
+                  id: q.id,
+                  dbQuestionId: q.id,
+                  virtualType: 'teacher_custom',
+                  questionType: 'short_answer',
+                  questionText: q.question_text || q.display_text || 'Teacher Question',
+                  image: '',
+                  options: [],
+                  correctAnswer: q.answer_text || q.answer || '',
+                })
                 return
               }
-            } catch (e) {}
+            }
           }
+          // Raw DB question (abacus, mul/div, etc.) — push as-is
           flatQs.push(q)
         })
+
 
         setQuestions(flatQs)
         setPhase('countdown')
       } catch (err) {
         toast.error(err.response?.data?.message || 'Could not load questions.')
-        navigate(`/challenge/day/${dayNum}/sections`)
+        navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)
       }
     }
     init()
@@ -218,9 +275,10 @@ export default function SectionAttemptPage() {
 
   let isGoogleForm = false
   let parsedForm = null
-  if (currentQ && currentQ.question) {
+  const currentQContent = currentQ?.question || currentQ?.question_text || currentQ?.questionText;
+  if (currentQContent) {
     try {
-      const parsed = typeof currentQ.question === 'string' ? JSON.parse(currentQ.question) : currentQ.question
+      const parsed = typeof currentQContent === 'string' ? JSON.parse(currentQContent) : currentQContent
       if (parsed && typeof parsed === 'object' && parsed.items) {
         isGoogleForm = true
         parsedForm = parsed
@@ -493,6 +551,7 @@ export default function SectionAttemptPage() {
       } else {
         isCorrect = checkAnswer(answer, correctAns, qType)
         setFeedback(isCorrect ? 'correct' : 'incorrect')
+        if (isCorrect) playCorrectChime(); else playIncorrectBuzzer();
         xp = isCorrect ? 10 : 0
       }
     }
@@ -533,18 +592,17 @@ export default function SectionAttemptPage() {
 
   const submitSection = async (finalResponses) => {
     setPhase('submitting')
-    // Demo day (day 0) — skip saving to backend; just show confetti
-    if (dayNum === 0) {
-      confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } })
-      setPhase('done')
-      return
-    }
     try {
-      await api.post(`/students/${student.id}/progress/${dayNum}/sections/${section}/submit`, {
+      const res = await api.post(`/students/${student.id}/progress/${dayNum}/sections/${section}/submit`, {
         responses: finalResponses,
         timeTakenSeconds: sectionSeconds,
       })
+      if (res.data && res.data.xpEarned) {
+        // Update global context with new XP
+        login({ ...student, xp_total: (student.xp_total || 0) + res.data.xpEarned })
+      }
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } })
+      playFanfare()
       setPhase('done')
     } catch (err) {
       toast.error('Could not save section. Please try again.')
@@ -626,7 +684,7 @@ export default function SectionAttemptPage() {
 
           <button
             className="btn btn-primary btn-block"
-            onClick={() => navigate(`/challenge/day/${dayNum}/sections`)}
+            onClick={() => navigate('/courses', { state: isDemo ? { openDemoDay: true } : { openDayNum: dayNum } })}
           >
             {isDemo ? 'Back to Demo →' : 'Back to Paper →'}
           </button>
@@ -644,8 +702,8 @@ export default function SectionAttemptPage() {
           <p style={{ color: 'var(--text-muted)', margin: '1rem 0 1.5rem' }}>
             Could not save your responses.
           </p>
-          <button className="btn btn-primary" onClick={() => navigate(`/challenge/day/${dayNum}/sections`)}>
-            Back to Paper
+          <button className="btn btn-primary" onClick={() => navigate('/courses', { state: isDemo ? { openDemoDay: true } : { openDayNum: dayNum } })}>
+            {isDemo ? 'Back to Demo' : 'Back to Paper'}
           </button>
         </div>
       </div>
@@ -762,7 +820,7 @@ export default function SectionAttemptPage() {
                 )}
               </div>
             )}
-            <div className="mul-card animate-pop" style={{ width: '100%' }}>
+            <div className="mul-card card-3d animate-pop" style={{ width: '100%' }}>
               <span className="mul-card__operand">{currentQ.operand1}</span>
               <span className="mul-card__operator">{currentQ.operator}</span>
               <span className="mul-card__operand">{currentQ.operand2}</span>
@@ -784,7 +842,7 @@ export default function SectionAttemptPage() {
 
         {/* Virtual Custom Card display */}
         {isVirtualCustom && (
-          <div className="mul-card animate-pop" style={{
+          <div className="mul-card card-3d animate-pop" style={{
             width: '100%',
             maxWidth: 680,
             flexDirection: 'column',
@@ -797,9 +855,19 @@ export default function SectionAttemptPage() {
           }}>
             {/* Question Header & Badge */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 600, fontSize: '1.25rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+              <div style={{ 
+                fontWeight: 600, 
+                fontSize: '1.25rem', 
+                color: 'var(--text-primary)', 
+                whiteSpace: 'pre-wrap',
+                fontFamily: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'var(--font-mono)' : 'inherit',
+                textAlign: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'right' : 'left',
+                display: 'inline-block',
+                minWidth: '3rem',
+                margin: currentQ.questionText && String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? '0 auto' : '0'
+              }}>
                 {currentQ.questionText}
-              </span>
+              </div>
               {!(currentQ.questionType === 'checkbox' ? (Array.isArray(currentQ.correctAnswer) && currentQ.correctAnswer.length > 0) : (currentQ.correctAnswer && String(currentQ.correctAnswer).trim() !== '')) && (
                 <span className="badge badge-warning" style={{ fontSize: '0.75rem' }}>⚠️ To be checked by teacher</span>
               )}
@@ -988,7 +1056,7 @@ export default function SectionAttemptPage() {
 
         {/* Virtual Image Only Card display */}
         {isVirtualImageOnly && (
-          <div className="mul-card animate-pop" style={{
+          <div className="mul-card card-3d animate-pop" style={{
             width: '100%',
             maxWidth: 680,
             flexDirection: 'column',

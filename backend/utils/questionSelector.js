@@ -7,8 +7,8 @@ import pool from '../db.js'
 
 // ── Section definitions per level ─────────────────────────────────────────────
 export const LEVEL_SECTIONS = {
-  beginner: ['abacus'],
-  l1: ['abacus'],
+  beginner: ['abacus', 'bead_fun', 'activity'],
+  l1: ['abacus', 'bead_fun', 'activity'],
   l2: ['abacus', 'visual', 'tables'],
   l3: ['abacus', 'visual', 'multiplication', 'two_steps'],
   l4: ['abacus', 'visual', 'multiplication', 'division', 'form_the_question'],
@@ -22,7 +22,7 @@ export const LEVEL_SECTIONS = {
 
 // Teacher-input sections that come from teacher_questions table, not question_bank
 export const TEACHER_INPUT_SECTIONS = new Set([
-  'form_the_question', 'cracking', 'bodmas', 'power_exercise'
+  'form_the_question', 'cracking', 'bodmas', 'power_exercise', 'bead_fun', 'activity'
 ])
 
 // ── Every-5th-day check ────────────────────────────────────────────────────────
@@ -52,9 +52,7 @@ export async function selectQuestionsForDay(level, section, dayNumber, count = Q
   // Modular rotation: day N slot i → index ((N-1)*count + i) % total
   const selected = []
   for (let i = 0; i < count; i++) {
-    // Math.max(1, dayNumber) so day 0 uses the same questions as day 1
-    const safeDay = Math.max(1, dayNumber)
-    const idx = ((safeDay - 1) * count + i) % allQs.length
+    const idx = (dayNumber * count + i) % allQs.length
     selected.push(allQs[idx])
   }
 
@@ -118,6 +116,8 @@ export async function getSectionsForLevelAsync(level, dayNumber) {
 // ── Section display labels ─────────────────────────────────────────────────────
 export const SECTION_LABELS = {
   abacus:            '🧮 Abacus',
+  bead_fun:          '🧮 Bead Fun',
+  activity:          '⚡ Activity',
   visual:            '👁 Visual',
   multiplication:    '✖ Multiplication',
   division:          '➗ Division',

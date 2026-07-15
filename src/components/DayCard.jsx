@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext'
 import './DayCard.css'
 
 const LEVEL_SECTIONS = {
-  l1: ['abacus', 'teacher_input'],
+  beginner: ['abacus', 'bead_fun', 'activity'],
+  l1: ['abacus', 'bead_fun', 'activity'],
   l2: ['abacus', 'visual', 'tables'],
   l3: ['abacus', 'visual', 'multiplication', 'two_steps'],
   l4: ['abacus', 'visual', 'multiplication', 'division', 'form_the_question'],
@@ -14,10 +15,13 @@ const LEVEL_SECTIONS = {
   l7: ['abacus', 'visual', 'multiplication', 'division', 'two_steps'],
   l8: ['abacus', 'visual', 'multiplication', 'division', 'cracking'],
   alumni: ['abacus', 'visual', 'multiplication', 'division', 'cracking'],
+  gm: ['abacus', 'visual', 'multiplication', 'division', 'cracking'],
 }
 
 const SECTION_LABELS = {
   abacus: '🧮 Abacus Section',
+  bead_fun: '🧮 Bead Fun',
+  activity: '⚡ Activity',
   visual: '👁 Visual Mental Math',
   multiplication: '✖ Multiplication sums',
   division: '➗ Division sums',
@@ -33,6 +37,8 @@ const SECTION_LABELS = {
 
 const SECTION_SHORT_LABELS = {
   abacus: '🧮 Abacus',
+  bead_fun: '🧮 Bead Fun',
+  activity: '⚡ Activity',
   visual: '👁 Visual',
   multiplication: '✖ Mul',
   division: '➗ Div',
@@ -67,15 +73,18 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   if (_level !== 'l1' && isDemo) {
     _expectedSecs.push('power_exercise')
   }
-  const _sectionData = dayRecord?.section_data || {}
-  const allSectionsDone = !isDemo && _expectedSecs.length > 0 &&
+  let _sectionData = {}
+  try {
+    _sectionData = typeof dayRecord?.section_data === 'string' ? JSON.parse(dayRecord.section_data) : (dayRecord?.section_data || {})
+  } catch(e) {}
+  const allSectionsDone = _expectedSecs.length > 0 &&
     _expectedSecs.every(s => _sectionData[s]?.status === 'done')
 
   let status = 'future'
-  if (isDemo) {
-    status = 'today'
-  } else if (dayRecord?.completed || allSectionsDone) {
+  if (dayRecord?.completed || allSectionsDone) {
     status = 'completed'
+  } else if (isDemo) {
+    status = 'today'
   } else if (dayRecord?.opened && today) {
     status = 'opened'
   } else if (today) {
@@ -150,7 +159,10 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
       sections.push(sec)
     }
   })
-  const sectionData = dayRecord?.section_data || {}
+  let sectionData = {}
+  try {
+    sectionData = typeof dayRecord?.section_data === 'string' ? JSON.parse(dayRecord.section_data) : (dayRecord?.section_data || {})
+  } catch(e) {}
 
   if (horizontal) {
     return (
@@ -189,7 +201,7 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
         {/* Right Side */}
         <div className="day-card-right" style={{ flex: 2, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontWeight: 600 }}>📋 PRACTICE SECTIONS</h3>
-          <div className="day-card-sections-list" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', flexGrow: 0, marginBottom: 0 }}>
+          <div className="day-card-sections-list" style={{ flexGrow: 0, marginBottom: 0 }}>
             {sections.map((sec, idx) => {
               const secStatus = sectionData[sec]?.status || 'not_started'
               const isSecDone = secStatus === 'done' || dayRecord?.completed
@@ -208,11 +220,12 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
                     {SECTION_LABELS[sec] || sec}
                   </div>
                   <button 
-                    className="btn-solve-section"
+                    className={`btn-solve-section ${isSecDone ? 'completed-btn' : ''}`}
                     onClick={() => handleSolveSection(sec)}
-                    disabled={!clickable}
+                    disabled={!clickable || isSecDone}
+                    style={isSecDone ? { backgroundColor: 'var(--success)', color: 'white', borderColor: 'var(--success)', pointerEvents: 'none' } : {}}
                   >
-                    {isSecDone ? 'Review' : 'Solve Part →'}
+                    {isSecDone ? 'Completed ✓' : 'Solve Part →'}
                   </button>
                 </div>
               )
@@ -266,11 +279,12 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
                 {SECTION_LABELS[sec] || sec}
               </div>
               <button 
-                className="btn-solve-section"
+                className={`btn-solve-section ${isSecDone ? 'completed-btn' : ''}`}
                 onClick={() => handleSolveSection(sec)}
-                disabled={!clickable}
+                disabled={!clickable || isSecDone}
+                style={isSecDone ? { backgroundColor: 'var(--success)', color: 'white', borderColor: 'var(--success)', pointerEvents: 'none' } : {}}
               >
-                {isSecDone ? 'Review' : 'Solve Part →'}
+                {isSecDone ? 'Completed ✓' : 'Solve Part →'}
               </button>
             </div>
           )

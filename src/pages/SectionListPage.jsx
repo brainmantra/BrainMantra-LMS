@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import StudentLayout from '../components/StudentLayout'
 import { isDayToday } from '../utils/dateUtils'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 
 const SECTION_ICONS = {
   abacus:            '🧮',
+  bead_fun:          '🧮',
+  activity:          '⚡',
   visual:            '👁',
   multiplication:    '✖',
   division:          '➗',
@@ -17,6 +20,24 @@ const SECTION_ICONS = {
   two_steps:         '📋',
   cracking:          '✏',
   bodmas:            '🧮',
+  power_exercise:    '⚡',
+}
+
+const SECTION_LABELS = {
+  abacus:            '🧮 Abacus',
+  bead_fun:          '🧮 Bead Fun',
+  activity:          '⚡ Activity',
+  visual:            '👁 Visual',
+  multiplication:    '✖ Multiplication',
+  division:          '➗ Division',
+  tables:            '📋 Tables',
+  form_the_question: '✏ Form The Question',
+  teacher_input:     '👨‍🏫 Teacher Section',
+  teacher_day:       '🌟 Special Day',
+  two_steps:         '📋 Two Steps',
+  cracking:          '✏ Cracking',
+  bodmas:            '🧮 Bodmas',
+  power_exercise:    '⚡ Power Exercise',
 }
 
 const STATUS_CONFIG = {
@@ -28,7 +49,7 @@ const STATUS_CONFIG = {
 export default function SectionListPage() {
   const { dayNumber } = useParams()
   const dayNum = parseInt(dayNumber, 10)
-  const { student } = useAuth()
+  const { student, login } = useAuth()
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
@@ -68,13 +89,17 @@ export default function SectionListPage() {
     return () => { mounted = false }
   }, [dayNum, student, navigate])
 
-  const allDone = data?.sections?.every(s => s.status === 'done')
+  const visibleSections = data.sections?.filter(sec => sec.questionCount > 0) || []
+  const allDone = visibleSections.every(s => s.status === 'done') && visibleSections.length > 0
 
   const handleSubmitPaper = async () => {
     if (!allDone) return
     setSubmitting(true)
     try {
-      await api.post(`/students/${student.id}/progress/${dayNum}/submit`)
+      const res = await api.post(`/students/${student.id}/progress/${dayNum}/submit`)
+      if (res.data && res.data.streakBonus) {
+        login({ ...student, xp_total: (student.xp_total || 0) + res.data.streakBonus })
+      }
       navigate(`/challenge/day/${dayNum}/report`)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not submit paper.')
@@ -109,43 +134,48 @@ export default function SectionListPage() {
   // Paper already completed → show report button
   if (data.paperCompleted) {
     return (
-      <div className="page page-bg-dots" style={{ padding: '2rem' }}>
-        <div className="container-sm" style={{ paddingTop: '4rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-          <h2 className="gradient-text" style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>Day {dayNum} Complete!</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>You've already submitted this paper.</p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" onClick={() => navigate(`/challenge/day/${dayNum}/report`)}>
-              View Report
-            </button>
-            <button className="btn btn-ghost" onClick={() => navigate('/challenge')}>
-              Back to Challenge
-            </button>
+      <StudentLayout>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', width: '100%' }}>
+          <div className="card animate-pop" style={{ maxWidth: 420, width: '100%', margin: '2rem', textAlign: 'center', padding: '2.5rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
+            <h2 className="gradient-text" style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>Day {dayNum} Complete!</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>You've already submitted this paper.</p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="btn btn-primary" onClick={() => navigate(`/challenge/day/${dayNum}/report`)}>
+                View Report
+              </button>
+              <button className="btn btn-ghost" onClick={() => navigate('/challenge')}>
+                Back to Challenge
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </StudentLayout>
     )
   }
 
   const levelLabel = student?.level?.toUpperCase().replace('L', 'Level ')
 
   return (
-    <div className="page page-bg-dots">
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(108,99,255,0.15), rgba(0,212,170,0.1))',
-        borderBottom: '1px solid var(--border)',
-        padding: '2rem',
-      }}>
-        <div className="container-md">
-          <button
-            className="btn btn-ghost btn-sm"
-            style={{ marginBottom: '1rem' }}
-            onClick={() => navigate('/challenge')}
-          >
-            ← Back
-          </button>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+    <StudentLayout>
+      <div className="container-md" style={{ padding: 0, maxWidth: '100%' }}>
+        {/* Header Header Info Panel */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(0,212,170,0.06))',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1.5rem',
+          marginBottom: '1.5rem',
+        }}>
+          <div>
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ marginBottom: '1rem' }}
+              onClick={() => navigate('/challenge')}
+            >
+              ← Back
+            </button>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 className="gradient-text" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>
                 {isDemo ? '🎮 Demo Day' : `Day ${dayNum}`}
@@ -156,7 +186,7 @@ export default function SectionListPage() {
                 </p>
               ) : (
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                  {levelLabel} • {data.sections?.length} section{data.sections?.length !== 1 ? 's' : ''}
+                  {levelLabel} • {visibleSections.length} section{visibleSections.length !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
@@ -185,7 +215,7 @@ export default function SectionListPage() {
         {/* Progress summary */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           {['not_started', 'in_progress', 'done'].map(s => {
-            const count = data.sections?.filter(sec => sec.status === s).length || 0
+            const count = visibleSections.filter(sec => sec.status === s).length || 0
             const cfg = STATUS_CONFIG[s]
             return (
               <span key={s} className={`badge ${cfg.badge}`} style={{ fontSize: '0.8rem', padding: '5px 12px' }}>
@@ -197,7 +227,11 @@ export default function SectionListPage() {
 
         {/* Section list */}
         <div className="section-list" style={{ marginBottom: '2rem' }}>
-          {data.sections?.map((sec) => {
+          {visibleSections.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              No questions are available for this day yet.
+            </div>
+          ) : visibleSections.map((sec) => {
             const isReady = sec.ready !== false
             const statusCfg = isReady ? (STATUS_CONFIG[sec.status] || STATUS_CONFIG.not_started) : { label: 'Teacher preparing...', badge: 'badge-warning', icon: '⏳' }
             const icon = SECTION_ICONS[sec.section] || '📖'
@@ -208,13 +242,13 @@ export default function SectionListPage() {
               <div
                 key={sec.section}
                 className={`section-item${isDone ? ' section-item--done' : ''}`}
-                style={{ cursor: canPlay ? 'pointer' : 'default', opacity: isReady ? 1 : 0.6 }}
-                onClick={() => canPlay && handlePlaySection(sec)}
+                style={{ cursor: canPlay && !isDone ? 'pointer' : 'default', opacity: isReady ? 1 : 0.6 }}
+                onClick={() => canPlay && !isDone && handlePlaySection(sec)}
               >
                 <div className="section-item__left">
                   <div className="section-item__icon">{icon}</div>
                   <div>
-                    <div className="section-item__name">{sec.label}</div>
+                    <div className="section-item__name">{sec.label || SECTION_LABELS[sec.section] || sec.section}</div>
                     <div className="section-item__meta">
                       {isDone
                         ? `✓ ${sec.marks ?? 0} marks · ${sec.timeTaken ?? 0}s`
@@ -227,14 +261,22 @@ export default function SectionListPage() {
                   <span className={`badge ${statusCfg.badge}`}>
                     {statusCfg.label} {isDone ? `(${sec.marks ?? 0} marks)` : ''}
                   </span>
-                  {!isDone && canPlay && (
+                  {!isDone && canPlay ? (
                     <button
                       className="btn btn-primary btn-sm"
                       onClick={e => { e.stopPropagation(); handlePlaySection(sec) }}
                     >
-                      ▶ Play
+                      ▶ Solve Part
                     </button>
-                  )}
+                  ) : isDone ? (
+                    <button
+                      className="btn btn-success btn-sm"
+                      style={{ pointerEvents: 'none' }}
+                      disabled
+                    >
+                      ✓ Completed
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )
@@ -274,7 +316,8 @@ export default function SectionListPage() {
             </button>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </StudentLayout>
   )
 }

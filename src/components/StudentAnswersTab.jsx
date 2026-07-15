@@ -13,6 +13,8 @@ const LEVEL_LABELS = {
 
 const SECTION_LABELS = {
   abacus: '🧮 Abacus',
+  bead_fun: '🧮 Bead Fun',
+  activity: '⚡ Activity',
   visual: '👁 Visual',
   multiplication: '✖ Multiplication',
   division: '➗ Division',
@@ -155,7 +157,7 @@ export default function StudentAnswersTab({ apiInstance, isTeacherPortal = false
 
       const doc = new jsPDF('l', 'mm', 'a4') // Landscape
       doc.setFontSize(16)
-      doc.text('100 Days of Abacus — Student Submissions Report', 14, 15)
+      doc.text('Brain Mantra — Student Submissions Report', 14, 15)
       doc.setFontSize(10)
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22)
 

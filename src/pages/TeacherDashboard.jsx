@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import StudentAnswersTab from '../components/StudentAnswersTab'
 import * as XLSX from 'xlsx'
-
+import { calculateAchievements } from '../utils/achievements'
 
 const LEVELS = ['beginner','l1','l2','l3','l4','l5','l6','l7','l8','alumni','gm']
 const LEVEL_LABELS = {
@@ -151,9 +151,9 @@ const FormPreview = ({ questionJson }) => {
 
 function StatCard({ icon, label, value, color }) {
   return (
-    <div className="stat-card">
+    <div className="stat-card stat-card--teal card-shiny">
       <div className="stat-card__icon">{icon}</div>
-      <div className="stat-card__value" style={{ color: color || 'var(--primary-light)' }}>{value}</div>
+      <div className="stat-card__value">{value}</div>
       <div className="stat-card__label">{label}</div>
     </div>
   )
@@ -314,6 +314,7 @@ export default function TeacherDashboard() {
   const [activity, setActivity] = useState([])
   const [fifthDays, setFifthDays] = useState([])
   const [loading, setLoading] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // Question Editor state
   const [qLevel, setQLevel] = useState('')
@@ -335,6 +336,28 @@ export default function TeacherDashboard() {
 
   const getActiveSections = () => {
     const std = getTeacherSectionsForLevel(qLevel, qDay)
+    
+    // Create a map of saved section titles from savedQuestions
+    const savedTitlesMap = {}
+    savedQuestions.forEach(q => {
+      if (q.level === qLevel && q.day_number === parseInt(qDay, 10)) {
+        try {
+          const parsed = JSON.parse(q.question)
+          if (parsed && parsed.title && !parsed.title.startsWith('Daily Challenge - Day') && parsed.title !== 'Abacus Daily Challenge') {
+            savedTitlesMap[q.section] = parsed.title
+          }
+        } catch(e) {}
+      }
+    })
+
+    // Map std sections to use saved title if exists
+    const stdWithTitles = std.map(s => {
+      return {
+        value: s.value,
+        label: savedTitlesMap[s.value] || s.label
+      }
+    })
+
     const customSecs = []
     
     // Merge database discovered custom sections
@@ -343,13 +366,7 @@ export default function TeacherDashboard() {
         const isStd = std.some(s => s.value === q.section)
         const isAlreadyAdded = customSecs.some(s => s.value === q.section)
         if (!isStd && !isAlreadyAdded) {
-          let label = q.section
-          try {
-            const parsed = JSON.parse(q.question)
-            if (parsed && parsed.title) {
-              label = parsed.title
-            }
-          } catch(e) {}
+          const label = savedTitlesMap[q.section] || q.section
           customSecs.push({ value: q.section, label })
         }
       }
@@ -364,7 +381,7 @@ export default function TeacherDashboard() {
       }
     })
 
-    return [...std, ...customSecs]
+    return [...stdWithTitles, ...customSecs]
   }
 
   const handleRenameSection = async () => {
@@ -493,7 +510,7 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const stored = localStorage.getItem('abacus_teacher')
-    if (!stored) { navigate('/teacher'); return }
+    if (!stored) { navigate('/'); return }
     const t = JSON.parse(stored)
     setTeacher(t)
     if (t.assigned_levels?.length) setQLevel(t.assigned_levels[0])
@@ -513,7 +530,7 @@ export default function TeacherDashboard() {
       setActivity(actRes.data)
       setFifthDays(fifthRes.data)
     } catch (err) {
-      if (err.response?.status === 401) { navigate('/teacher'); return }
+      if (err.response?.status === 401) { navigate('/'); return }
       toast.error('Could not load data.')
     } finally {
       setLoading(false)
@@ -546,23 +563,41 @@ export default function TeacherDashboard() {
       q.day_number === parseInt(qDay, 10) && 
       q.section === qSection
     )
+    const std = getTeacherSectionsForLevel(qLevel, qDay)
+    const stdMatch = std.find(s => s.value === qSection)
+    const defaultTitle = stdMatch ? stdMatch.label : qSection
+
     if (match) {
       setEditQId(match.id)
       setQFormatExample(match.format_example || '')
       try {
-        const parsed = JSON.parse(match.question)
+        const parsed = typeof match.question === 'string' ? JSON.parse(match.question) : match.question
         if (parsed && typeof parsed === 'object' && parsed.items) {
-          setFormTitle(parsed.title || 'Abacus Daily Challenge')
+          let itemsToLoad = parsed.items;
+          // Recover from double-encoded JSON corruption in TeacherDashboard fallback
+          if (itemsToLoad.length === 1 && typeof itemsToLoad[0].questionText === 'string' && itemsToLoad[0].questionText.startsWith('{"title":')) {
+            try {
+              const recovered = JSON.parse(itemsToLoad[0].questionText);
+              if (recovered && Array.isArray(recovered.items)) {
+                itemsToLoad = recovered.items;
+                if (recovered.title) parsed.title = recovered.title;
+                if (recovered.description) parsed.description = recovered.description;
+              }
+            } catch(e) {}
+          }
+
+          const isDefault = parsed.title?.startsWith('Daily Challenge - Day') || parsed.title === 'Abacus Daily Challenge'
+          setFormTitle(isDefault ? defaultTitle : (parsed.title || defaultTitle))
           setFormDescription(parsed.description || '')
-          setFormItems(parsed.items || [])
+          setFormItems(itemsToLoad || [])
         } else {
           const convertedItems = convertLegacyToFormItems(parsed || match.question, match.answer)
-          setFormTitle(`Daily Challenge - Day ${qDay}`)
+          setFormTitle(defaultTitle)
           setFormDescription('')
           setFormItems(convertedItems)
         }
       } catch (e) {
-        setFormTitle(`Daily Challenge - Day ${qDay}`)
+        setFormTitle(defaultTitle)
         setFormDescription('')
         setFormItems([{
           id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -577,7 +612,7 @@ export default function TeacherDashboard() {
     } else {
       setEditQId(null)
       setQFormatExample('')
-      setFormTitle(`Daily Challenge - Day ${qDay}`)
+      setFormTitle(defaultTitle)
       setFormDescription('')
       setFormItems([{
         id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -643,7 +678,7 @@ export default function TeacherDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('abacus_teacher_token')
     localStorage.removeItem('abacus_teacher')
-    navigate('/teacher')
+    navigate('/')
   }
 
   const openStudent = async (s) => {
@@ -678,29 +713,93 @@ export default function TeacherDashboard() {
   ]
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout" data-sidebar={sidebarOpen ? 'open' : 'closed'} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      
+      {/* Sidebar Overlay (Mobile only) */}
+      {sidebarOpen && typeof window !== 'undefined' && window.innerWidth <= 991 && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+            background: 'rgba(0,0,0,0.5)', zIndex: 40, backdropFilter: 'blur(3px)'
+          }} 
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar__logo">
-          <h2 style={{ color: 'var(--teacher-primary)' }}>👨‍🏫 Teacher Portal</h2>
-          <p>{teacher?.name}</p>
-          <p style={{ fontSize: '0.7rem', marginTop: 2 }}>{teacher?.assigned_levels?.map(l => LEVEL_LABELS[l]).join(', ')}</p>
+      <aside className="admin-sidebar" style={{ transition: 'transform 0.3s ease, width 0.3s ease' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflow: 'hidden' }}>
+          <div className="admin-sidebar__logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', width: '100%' }}>
+            <img src="/brand-logo.jpeg" alt="Brain Mantra Logo" style={{ width: 40, height: 40, borderRadius: 10, marginBottom: 4 }} />
+            <h2 style={{ color: 'var(--teacher-primary)', fontSize: '0.95rem' }}>Teacher Portal</h2>
+            <p>{teacher?.name}</p>
+            <p style={{ fontSize: '0.7rem', marginTop: 2 }}>{teacher?.assigned_levels?.map(l => LEVEL_LABELS[l]).join(', ')}</p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', overflowY: 'auto' }}>
+            {NAV.map(n => (
+              <button key={n.id}
+                className={`admin-nav-item teacher-nav-item ${tab === n.id ? 'active' : ''}`}
+                onClick={() => { setTab(n.id); if (window.innerWidth <= 991) setSidebarOpen(false); }}
+              >
+                <span>{n.icon}</span> {n.label}
+              </button>
+            ))}
+          </div>
         </div>
-        {NAV.map(n => (
-          <button key={n.id}
-            className={`admin-nav-item teacher-nav-item ${tab === n.id ? 'active' : ''}`}
-            onClick={() => setTab(n.id)}
-          >
-            <span>{n.icon}</span> {n.label}
-          </button>
-        ))}
-        <div style={{ position: 'absolute', bottom: '1.5rem', width: '100%', padding: '0 1rem' }}>
-          <button className="btn btn-ghost btn-sm btn-block" onClick={handleLogout}>Sign Out</button>
+        <div style={{ width: '100%', padding: '0.5rem 1rem 0' }}>
+          <button className="btn btn-ghost btn-sm btn-block" onClick={handleLogout} style={{ justifyContent: 'center' }}>Sign Out</button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="admin-main">
+      <main className="admin-main" style={{ transition: 'margin-left 0.3s ease', display: 'flex', flexDirection: 'column' }}>
+        {/* Portal Header */}
+        <header style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '2rem',
+          padding: '0.75rem 1rem',
+          background: 'rgba(12,14,21,0.7)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: 16,
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05) inset',
+          position: 'sticky',
+          top: '1rem',
+          zIndex: 30,
+        }}>
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              background: sidebarOpen ? 'rgba(0,180,216,0.12)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${sidebarOpen ? 'rgba(0,180,216,0.3)' : 'rgba(255,255,255,0.08)'}`,
+              color: sidebarOpen ? 'var(--teacher-primary)' : 'var(--text-secondary)',
+              fontSize: '1.1rem', cursor: 'pointer',
+              width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: '10px', transition: 'all 0.2s ease',
+              boxShadow: sidebarOpen ? '0 0 12px rgba(0,180,216,0.2)' : 'none'
+            }}
+          >
+            {sidebarOpen ? '✕' : '☰'}
+          </button>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <span style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              background: 'linear-gradient(135deg, #48cae4, var(--teacher-primary))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 0 8px rgba(0,180,216,0.3))'
+            }}>Brain Mantra Teacher Panel</span>
+          </div>
+        </header>
+
+        <div style={{ flex: 1 }}>
 
         {/* MY LEVELS */}
         {tab === 'levels' && (
@@ -845,6 +944,31 @@ export default function TeacherDashboard() {
             {/* Google Forms Clone Designer */}
             <div style={{ maxWidth: '780px', margin: '0 auto', fontFamily: 'var(--font-sans)' }}>
               
+              {/* Form Title & Description Card */}
+              <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', background: 'var(--bg-card)', borderTop: '8px solid var(--teacher-primary)', borderRadius: '8px', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Section Title (Renames section displayed to student)</label>
+                  <input 
+                    type="text" 
+                    className="input-premium"
+                    value={formTitle}
+                    onChange={e => setFormTitle(e.target.value)}
+                    placeholder="e.g. Bead Fun"
+                    style={{ width: '100%', fontSize: '1.4rem', fontWeight: 'bold', padding: '0.5rem 0.75rem' }}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Section Instructions / Description</label>
+                  <textarea 
+                    rows={2}
+                    className="input-premium"
+                    value={formDescription}
+                    onChange={e => setFormDescription(e.target.value)}
+                    placeholder="Enter description..."
+                    style={{ width: '100%', fontSize: '0.95rem', padding: '0.5rem 0.75rem', resize: 'vertical' }}
+                  />
+                </div>
+              </div>
 
               {/* Format instruction (legacy support) */}
               <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem', background: 'var(--bg-card)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -1443,8 +1567,13 @@ export default function TeacherDashboard() {
         )}
 
         {/* STUDENT PROGRESS */}
-        {tab === 'students' && selectedStudent && (
-          <div className="animate-slide-up">
+        {tab === 'students' && selectedStudent && (() => {
+          const completedCount = selectedDays.filter(d => d.completed).length
+          const achievements = calculateAchievements(completedCount, selectedStudent.streak, selectedStudent.longest_streak || selectedStudent.streak)
+          const earnedBadges = achievements.filter(b => b.earned)
+
+          return (
+            <div className="animate-slide-up">
             <button className="btn btn-ghost btn-sm" style={{ marginBottom: '1.5rem' }} onClick={() => setSelectedStudent(null)}>
               ← Back to All Students
             </button>
@@ -1455,7 +1584,29 @@ export default function TeacherDashboard() {
               <div>
                 <h2 style={{ fontSize: '1.3rem', marginBottom: '0.2rem' }}>{selectedStudent.name}</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  {selectedStudent.mobile} · {LEVEL_LABELS[selectedStudent.level] || selectedStudent.level} · 
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span>{selectedStudent.mobile}</span>
+                    <a
+                      href={`https://wa.me/${(selectedStudent.mobile || '').replace(/\D/g, '').length === 10 ? '91' + (selectedStudent.mobile || '').replace(/\D/g, '') : (selectedStudent.mobile || '').replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Chat on WhatsApp"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#25D366',
+                        transition: 'transform 0.2s ease',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M12.012 2C6.48 2 2 6.48 2 12.012c0 1.765.46 3.42 1.258 4.908L2 22.012l5.244-1.374A9.957 9.957 0 0012.012 22c5.532 0 10.012-4.48 10.012-10.012S17.544 2 12.012 2zm0 18.024c-1.616 0-3.136-.42-4.464-1.152l-.324-.192-3.324.87.882-3.216-.216-.348a8.03 8.03 0 01-1.224-4.29A8.025 8.025 0 0112.012 4c4.422 0 8.022 3.6 8.022 8.022s-3.6 8.022-8.022 8.022z"/>
+                        <path d="M15.93 13.914c-.216-.108-1.272-.624-1.47-.702-.198-.078-.342-.114-.486.108-.144.216-.558.702-.684.846-.126.138-.252.156-.468.048a5.9 5.9 0 01-1.74-1.074 6.51 6.51 0 01-1.206-1.5c-.126-.216-.012-.336.096-.444.096-.096.216-.252.324-.378.108-.126.144-.216.216-.36.072-.144.036-.27-.018-.378-.054-.108-.486-1.17-.666-1.602-.174-.426-.354-.366-.486-.372-.126-.006-.27-.006-.414-.006-.144 0-.378.054-.576.27-.198.216-.756.738-.756 1.794s.774 2.076.882 2.22c.108.144 1.524 2.328 3.69 3.264.516.222.918.354 1.23.456.522.162.996.138 1.374.084.42-.06 1.272-.522 1.452-1.02.18-.498.18-.924.126-1.02-.054-.096-.198-.156-.414-.264z"/>
+                      </svg>
+                    </a>
+                  </span> · {LEVEL_LABELS[selectedStudent.level] || selectedStudent.level} · 
                   🔥 {selectedStudent.streak} streak · ⚡ {selectedStudent.xp_total} XP
                 </p>
               </div>
@@ -1506,10 +1657,36 @@ export default function TeacherDashboard() {
                 ) : (
                   <p style={{ color: 'var(--text-muted)' }}>No completed days yet for a growth chart.</p>
                 )}
+                
+                {/* Earned Badges */}
+                {earnedBadges.length > 0 && (
+                  <div style={{ marginTop: '2rem' }}>
+                    <h3 style={{ marginBottom: '1rem', fontSize: '1rem', color: 'var(--text-secondary)' }}>🏆 Earned Badges ({earnedBadges.length})</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      {earnedBadges.map(b => (
+                        <div
+                          key={b.id}
+                          title={b.desc}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            background: 'rgba(255,122,0,0.06)', border: '1px solid rgba(255,122,0,0.25)',
+                            borderRadius: 12, padding: '0.5rem 0.9rem',
+                            boxShadow: '0 4px 16px rgba(255,122,0,0.1)',
+                          }}
+                        >
+                          <span style={{ fontSize: '1.3rem', filter: 'drop-shadow(0 0 6px rgba(255,122,0,0.5))' }}>{b.icon}</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary-bright)' }}>{b.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
           </div>
-        )}
+          )
+        })()}
 
         {tab === 'students' && !selectedStudent && (
           <div className="animate-slide-up">
@@ -1522,7 +1699,12 @@ export default function TeacherDashboard() {
                 <tbody>
                   {students.map(s => (
                     <tr key={s.id}>
-                      <td style={{ fontWeight: 600 }}>{s.name}</td>
+                      <td style={{ fontWeight: 600 }}>
+                        {s.name}
+                        {s.is_struggling && (
+                          <span title={s.struggling_reason} style={{ marginLeft: '0.5rem', cursor: 'help' }}>⚠️</span>
+                        )}
+                      </td>
                       <td><span className="badge badge-info">{LEVEL_LABELS[s.level] || s.level}</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }} title={`${s.days_completed || 0}/100 Days Completed`}>
@@ -1608,6 +1790,7 @@ export default function TeacherDashboard() {
             onClose={() => setPreviewingSection(null)} 
           />
         )}
+        </div>
       </main>
     </div>
   )
@@ -1758,7 +1941,12 @@ const StudentPreviewModal = ({ sectionData, onClose }) => {
                   lineHeight: 1.6, 
                   marginBottom: '1.5rem',
                   whiteSpace: 'pre-wrap',
-                  color: 'var(--text-primary)'
+                  color: 'var(--text-primary)',
+                  fontFamily: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'var(--font-mono)' : 'inherit',
+                  textAlign: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? 'right' : 'left',
+                  display: 'inline-block',
+                  minWidth: '3rem',
+                  margin: String(currentQ.questionText).match(/^[\d\s\n+\-*/=xX]+$/) ? '0 auto 1.5rem auto' : '0 0 1.5rem 0'
                 }}>
                   {currentQ.questionText}
                 </div>

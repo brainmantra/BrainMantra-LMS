@@ -1,4 +1,4 @@
-# 100 Days of Abacus
+# Brain Mantra
 
 A web app for running a 100-day abacus mental-math challenge: students register with name,
 mobile number, and skill level; each day unlocks a one-time Google Form questionnaire matched

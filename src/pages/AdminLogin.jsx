@@ -40,7 +40,7 @@ export default function AdminLogin() {
             🛡️
           </div>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Admin Login</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>100 Days of Abacus</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Brain Mantra</p>
         </div>
 
         <form onSubmit={handleSubmit}>

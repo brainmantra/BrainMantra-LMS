@@ -243,7 +243,19 @@ export default function DayModal() {
         xpEarned: finalXp,
         accuracy
       })
+      
+      if (window.confetti) {
+         window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } })
+      } else {
+         import('canvas-confetti').then(confetti => confetti.default({ particleCount: 150, spread: 80, origin: { y: 0.6 } }))
+      }
+      try {
+        import('../utils/sound.js').then(s => s.playFanfare())
+      } catch(e) {}
+      
+      setEarnedXp(finalXp)
       setPhase('summary')
+      fetchProgress() // refresh challenge map
     } catch (err) {
       toast.error('Could not submit test. Please try again.')
       setPhase('error')

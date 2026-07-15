@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  background: linear-gradient(135deg, #2a1810, #3d2412);
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
   padding: 18px 22px;
   position: relative;
@@ -10,12 +10,13 @@
 }
 
 .streak-active {
-  background: linear-gradient(135deg, #ff5722, #ff9800);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
   box-shadow: 0 6px 24px rgba(255, 87, 34, 0.45);
 }
 
 .streak-broken {
-  background: linear-gradient(135deg, #2a2f3d, #1f2333);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
 }
 
 .streak-flame {
@@ -38,12 +39,12 @@
   font-family: var(--font-display);
   font-size: 1.9rem;
   font-weight: 800;
-  color: var(--white);
+  color: var(--text-primary);
 }
 
 .streak-label {
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -51,7 +52,7 @@
 .streak-best {
   margin-left: auto;
   font-size: 0.78rem;
-  color: rgba(255,255,255,0.55);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 

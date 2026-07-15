@@ -1,24 +1,24 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import StudentLayout from '../components/StudentLayout'
 import { getChallengeDay } from '../utils/dateUtils'
 import { LEVELS } from '../utils/formsConfig'
 import api from '../utils/api'
 import DayCard from '../components/DayCard'
 import StreakCorner from '../components/StreakCorner'
 import toast from 'react-hot-toast'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Joyride, STATUS } from 'react-joyride'
+import { calculateAchievements } from '../utils/achievements'
 import './ChallengePage.css'
 
 export default function ChallengePage() {
-  const { student, logout } = useAuth()
-  const navigate = useNavigate()
-  const [days, setDays] = useState([]) // array of day records from backend
+  const { student } = useAuth()
+  const [days, setDays] = useState([])
   const [streak, setStreak] = useState(0)
   const [longestStreak, setLongestStreak] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('map') // 'map' or 'dashboard'
+  const [selectedBadge, setSelectedBadge] = useState(null)
+
+  const achievements = useMemo(() => calculateAchievements(days, streak, longestStreak), [days, streak, longestStreak])
 
   const LEVEL_LABELS = {
     beginner: 'Beginner',
@@ -27,63 +27,32 @@ export default function ChallengePage() {
     alumni: 'Alumni', gm: 'Grand Master (GM)'
   }
 
-  const [{ run, steps }, setTourState] = useState({
-    run: false,
-    steps: [
-      {
-        target: '.tour-step-progress',
-        content: 'This shows your overall completion out of 100 days. Keep going!',
-        disableBeacon: true,
-      },
-      {
-        target: '.tour-step-streak',
-        content: 'Here you can see your current streak. Solve everyday to keep it going!',
-      },
-      {
-        target: '.tour-step-demo',
-        content: 'This is the Demo Day. You can practice here as many times as you like without affecting your streak!',
-      },
-      {
-        target: '.tour-step-dashboard',
-        content: 'Click here to switch to your dashboard and view your performance statistics.',
-      }
-    ]
-  })
-
-  // Start tour automatically if not seen
-  useEffect(() => {
-    if (student?.id) {
-      const hasSeenTour = localStorage.getItem(`tour_seen_${student.id}`)
-      if (!hasSeenTour) {
-        // slight delay to let elements render
-        setTimeout(() => setTourState(prev => ({ ...prev, run: true })), 500)
-      }
-    }
-  }, [student])
-
-  const handleJoyrideCallback = (data) => {
-    const { status } = data
-    const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED]
-    if (finishedStatuses.includes(status)) {
-      localStorage.setItem(`tour_seen_${student.id}`, 'true')
-      setTourState(prev => ({ ...prev, run: false }))
-    }
-  }
-
-  const startTourManually = () => {
-    setTourState(prev => ({ ...prev, run: true }))
-  }
-
   const currentDay = useMemo(() => getChallengeDay(student?.first_login_date || student?.registration_date), [student])
   const clampedCurrentDay = Math.min(currentDay, 100)
   const maxRenderDay = Math.min(currentDay, 100)
 
   const stats = useMemo(() => {
-    const completedDaysList = days.filter(d => d.completed)
-    const totalAccuracy = completedDaysList.reduce((acc, d) => acc + parseFloat(d.accuracy || 0), 0)
-    const avgAccuracy = completedDaysList.length > 0 ? Math.round(totalAccuracy / completedDaysList.length) : 0
-    
-    const totalTime = completedDaysList.reduce((acc, d) => acc + (d.time_taken_seconds || 0), 0)
+    let totalTime = 0
+    let totalQs = 0
+    let totalCorrect = 0
+
+    days.forEach(d => {
+      if (d.section_data) {
+        try {
+          const sd = typeof d.section_data === 'string' ? JSON.parse(d.section_data) : d.section_data
+          Object.values(sd).forEach(sec => {
+            if (sec && sec.status === 'done') {
+              totalTime += (sec.timeTaken || 0)
+              totalCorrect += (sec.correct || 0)
+              totalQs += (sec.questionCount || 0)
+            }
+          })
+        } catch (e) {}
+      }
+    })
+
+    const completedDaysList = days.filter(d => d.completed && d.day_number > 0)
+    const avgAccuracy = totalQs > 0 ? Math.round((totalCorrect / totalQs) * 100) : 0
     const avgTime = completedDaysList.length > 0 ? Math.round(totalTime / completedDaysList.length) : 0
 
     return {
@@ -94,15 +63,7 @@ export default function ChallengePage() {
     }
   }, [days])
 
-  const chartData = useMemo(() => {
-    return days
-      .filter(d => d.completed)
-      .map(d => ({
-        day: `Day ${d.day_number}`,
-        Accuracy: parseFloat(d.accuracy || 0),
-        Time: Math.round((d.time_taken_seconds || 0) / 60 * 10) / 10, // in minutes
-      }))
-  }, [days])
+
 
   useEffect(() => {
     let mounted = true
@@ -119,9 +80,13 @@ export default function ChallengePage() {
         if (mounted) setLoading(false)
       }
     }
-    if (student?.id) load()
+    if (student?.id) {
+      load()
+    }
     return () => { mounted = false }
   }, [student])
+
+
 
   const dayMap = useMemo(() => {
     const m = {}
@@ -143,259 +108,278 @@ export default function ChallengePage() {
   }
 
   return (
-    <div className="page-wrapper">
-      <Joyride
-        callback={handleJoyrideCallback}
-        continuous
-        hideCloseButton
-        run={run}
-        scrollToFirstStep
-        showProgress
-        showSkipButton
-        steps={steps}
-        styles={{
-          options: {
-            primaryColor: '#f5a623',
-            zIndex: 10000,
-          }
-        }}
-      />
-      <header className="challenge-header">
-        <div className="container challenge-header-inner">
-          <div className="challenge-brand">
-            <svg width="32" height="32" viewBox="0 0 52 52" fill="none">
-              <rect width="52" height="52" rx="14" fill="#f5a623"/>
-              <circle cx="19" cy="15.5" r="5" fill="#1a2340"/>
-              <circle cx="29" cy="26" r="5" fill="#1a2340"/>
-              <circle cx="22" cy="36.5" r="5" fill="#1a2340"/>
-            </svg>
-            <span className="challenge-brand-text">100 Days of Abacus</span>
-          </div>
-          <nav className="challenge-nav">
-            <button
-              className="btn btn-ghost"
-              onClick={startTourManually}
-              title="Replay page tour"
-              style={{ marginRight: '0.5rem' }}
-            >
-              ℹ️ Help
-            </button>
-            <button className="btn btn-ghost" onClick={() => { logout(); navigate('/') }}>Log out</button>
-          </nav>
-        </div>
-      </header>
+    <StudentLayout>
 
-      <div className="container challenge-body">
-        <section className="challenge-intro animate-fade">
+      <div className="container challenge-body" style={{ padding: 0, maxWidth: '100%' }}>
+        <section className="dash-hero animate-fade" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
-            <h1 className="challenge-title">Hey {student.name.split(' ')[0]} 👋</h1>
-            <p className="challenge-subtitle">
-              <span className="badge badge-amber">{LEVEL_LABELS[student?.level] || student?.level}</span>
-              {' '}You're on Day <strong>{clampedCurrentDay}</strong> of 100.
+            <h1 className="challenge-title" style={{ fontSize: '2.2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+              Hey {student.name.split(' ')[0]} 👋
+            </h1>
+            <p className="challenge-subtitle" style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span className="badge badge-primary badge-3d">{LEVEL_LABELS[student?.level] || student?.level}</span>
+              <span style={{ color: 'var(--text-secondary)' }}>You're on Day <strong>{clampedCurrentDay}</strong> of 100.</span>
             </p>
           </div>
-          <div className="challenge-progress-ring tour-step-progress">
-            <svg width="74" height="74" viewBox="0 0 74 74">
-              <circle cx="37" cy="37" r="32" fill="none" stroke="var(--ivory-dark)" strokeWidth="7" />
+          <div className="challenge-progress-ring" style={{ position: 'relative' }}>
+            <svg width="74" height="74" viewBox="0 0 74 74" style={{ filter: 'drop-shadow(0 4px 12px rgba(255,122,0,0.25))' }}>
+              <circle cx="37" cy="37" r="32" fill="none" stroke="var(--border)" strokeWidth="6" />
               <circle
-                cx="37" cy="37" r="32" fill="none" stroke="var(--amber)" strokeWidth="7"
+                cx="37" cy="37" r="32" fill="none" stroke="var(--primary)" strokeWidth="6"
                 strokeDasharray={2 * Math.PI * 32}
                 strokeDashoffset={2 * Math.PI * 32 * (1 - completedCount / 100)}
                 strokeLinecap="round"
                 transform="rotate(-90 37 37)"
               />
             </svg>
-            <span className="challenge-progress-label">{completedCount}/100</span>
+            <span className="challenge-progress-label" style={{ fontWeight: 800, color: 'var(--text-primary)', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{completedCount}/100</span>
           </div>
         </section>
 
-        {/* Tab Switcher */}
-        <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', paddingBottom: '0.5rem' }}>
-          <button 
-            className={`btn ${activeTab === 'map' ? 'btn-primary' : 'btn-ghost'}`} 
-            style={{ fontSize: '0.9rem', padding: '0.4rem 1rem' }}
-            onClick={() => setActiveTab('map')}
-          >
-            🗺️ Challenge Map
-          </button>
-          <button 
-            className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-ghost'} tour-step-dashboard`} 
-            style={{ fontSize: '0.9rem', padding: '0.4rem 1rem' }}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            📊 My Dashboard
-          </button>
-        </div>
+        {/* Streak Counter Header */}
+        <section className="animate-fade" style={{ marginBottom: '2rem' }}>
+          <StreakCorner streak={streak} longestStreak={longestStreak} />
+        </section>
 
-        {activeTab === 'map' ? (
-          <>
-            <section className="animate-fade tour-step-streak" style={{ animationDelay: '0.05s', marginBottom: 28 }}>
-              <StreakCorner streak={streak} longestStreak={longestStreak} />
-            </section>
-
-            {loading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-                <div className="spinner" />
-              </div>
-            ) : (
-              <>
-                {/* Horizontal Demo Day Card */}
-                <div className="demo-day-horizontal-card-container tour-step-demo" style={{ marginBottom: '2.5rem' }}>
-                  <DayCard
-                    dayNumber={0}
-                    registrationDate={student.first_login_date || student.registration_date}
-                    dayRecord={null}
-                    isDemo={true}
-                    horizontal={true}
-                  />
-                  <div style={{ 
-                    fontSize: '0.85rem', 
-                    marginTop: '0.75rem', 
-                    textAlign: 'center', 
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                    background: 'rgba(108, 99, 255, 0.05)',
-                    padding: '0.6rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(108, 99, 255, 0.15)',
-                    color: 'var(--primary-light)'
-                  }}>
-                    <span>🗓️</span> Your challenge starts from 15th July 2026
-                  </div>
-                </div>
-
-                {/* Challenge Day Grid */}
-                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 600 }}>🗺️ CHALLENGE MAP</h3>
-                <section className="day-grid animate-fade" style={{ animationDelay: '0.1s' }}>
-                  {Array.from({ length: maxRenderDay }, (_, i) => i + 1).map((dayNum, index) => (
-                    <div key={dayNum}>
-                      <DayCard
-                        dayNumber={dayNum}
-                        registrationDate={student.first_login_date || student.registration_date}
-                        dayRecord={dayMap[dayNum]}
-                        isDemo={false}
-                      />
-                    </div>
-                  ))}
-                </section>
-              </>
-            )}
-          </>
-        ) : (
-          <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {/* Stats Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>⚡</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>{student?.xp_total || 0} XP</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total XP</div>
-              </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>✅</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--success)' }}>{stats.completedCount}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Days Completed</div>
-              </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🔥</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff5722' }}>{streak} Days</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Current Streak</div>
-              </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🎯</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary-light)' }}>{stats.avgAccuracy}%</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Avg Accuracy</div>
-              </div>
-              <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>⏱</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent-teal)' }}>{Math.round(stats.totalTime / 60)} m</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total Time Spent</div>
-              </div>
+        <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Stats Row - responsive to sidebar state */}
+          <div className="stats-grid">
+            <style>{`
+              /* Sidebar open: 3 cols then 2 cols (5 cards) */
+              [data-sidebar='open'] .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+              }
+              /* Sidebar closed: single row of 5 */
+              [data-sidebar='closed'] .stats-grid {
+                grid-template-columns: repeat(5, 1fr);
+              }
+              /* Default fallback (auto) */
+              .stats-grid {
+                display: grid;
+                gap: 1rem;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+              }
+              @media (max-width: 991px) {
+                [data-sidebar='open'] .stats-grid,
+                [data-sidebar='closed'] .stats-grid {
+                  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                }
+              }
+            `}</style>
+            <div className="stat-card stat-card--gold card-shiny">
+              <div className="stat-card__icon">⚡</div>
+              <div className="stat-card__value">{student?.xp_total || 0} XP</div>
+              <div className="stat-card__label">Total XP</div>
             </div>
-
-            {/* Charts Row */}
-            {chartData.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-                  <h3 style={{ marginBottom: '1rem', fontSize: '1rem', color: 'var(--text-primary)' }}>Accuracy Trend (%)</h3>
-                  <div style={{ width: '100%', height: 220 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="day" stroke="var(--text-secondary)" fontSize={10} />
-                        <YAxis domain={[0, 100]} stroke="var(--text-secondary)" fontSize={10} />
-                        <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-                        <Line type="monotone" dataKey="Accuracy" stroke="var(--primary-light)" strokeWidth={2} activeDot={{ r: 6 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-                  <h3 style={{ marginBottom: '1rem', fontSize: '1rem', color: 'var(--text-primary)' }}>Time Spent Trend (Minutes)</h3>
-                  <div style={{ width: '100%', height: 220 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="day" stroke="var(--text-secondary)" fontSize={10} />
-                        <YAxis stroke="var(--text-secondary)" fontSize={10} />
-                        <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-                        <Line type="monotone" dataKey="Time" stroke="var(--success)" strokeWidth={2} activeDot={{ r: 6 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                Complete days to populate dashboard charts!
-              </div>
-            )}
-
-            {/* Recent Day Completions Table */}
-            <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Completed Days History</h3>
-              {days.filter(d => d.completed).length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No completed days yet.</p>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                        <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Day</th>
-                        <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Accuracy</th>
-                        <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>XP Earned</th>
-                        <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Marks</th>
-                        <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Time Spent</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {days.filter(d => d.completed).map(d => (
-                        <tr key={d.day_number} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={{ fontWeight: 'bold', padding: '0.75rem 1rem' }}>Day {d.day_number}</td>
-                          <td style={{ padding: '0.75rem 1rem' }}>
-                            <span style={{ 
-                              color: d.accuracy >= 90 ? 'var(--success)' : d.accuracy >= 70 ? 'var(--accent-gold)' : 'var(--error)',
-                              fontWeight: '600'
-                            }}>
-                              {d.accuracy}%
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.75rem 1rem' }}>+{d.xp_earned} XP</td>
-                          <td style={{ padding: '0.75rem 1rem' }}>{d.total_marks} marks</td>
-                          <td style={{ padding: '0.75rem 1rem' }}>{Math.floor(d.time_taken_seconds / 60)}m {d.time_taken_seconds % 60}s</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+            <div className="stat-card stat-card--success card-shiny">
+              <div className="stat-card__icon">✅</div>
+              <div className="stat-card__value">{stats.completedCount}</div>
+              <div className="stat-card__label">Days Completed</div>
+            </div>
+            <div className="stat-card card-shiny" style={{ '--primary-glow': 'rgba(255,87,34,0.3)' }}>
+              <div className="stat-card__icon">🔥</div>
+              <div className="stat-card__value" style={{ background: 'linear-gradient(135deg, #ff8a65, #ff5722)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', filter: 'drop-shadow(0 0 8px rgba(255,87,34,0.3))' }}>{streak} Days</div>
+              <div className="stat-card__label">Current Streak</div>
+            </div>
+            <div className="stat-card card-shiny" style={{ '--primary-glow': 'var(--primary-glow)' }}>
+              <div className="stat-card__icon">🎯</div>
+              <div className="stat-card__value">{stats.avgAccuracy}%</div>
+              <div className="stat-card__label">Avg Accuracy</div>
+            </div>
+            <div className="stat-card stat-card--teal card-shiny">
+              <div className="stat-card__icon">⏱</div>
+              <div className="stat-card__value">{Math.round(stats.totalTime / 60)} m</div>
+              <div className="stat-card__label">Total Time Spent</div>
             </div>
           </div>
-        )}
+
+
+
+          {/* Badges & Achievements Section */}
+          <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', marginBottom: '1.5rem' }}>
+            <h3 style={{ marginBottom: '0.25rem', fontSize: '1.1rem', color: 'var(--text-primary)', fontWeight: 600 }}>🏆 Badges & Achievements</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Track your milestones, unlock dynamic abacus badges, and share achievements with friends!</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+              {achievements.map(badge => {
+                const percent = Math.min((badge.current / badge.target) * 100, 100)
+                return (
+                  <div 
+                    key={badge.id} 
+                    className="card-3d"
+                    onClick={() => badge.earned && setSelectedBadge(badge)}
+                    style={{
+                      background: badge.earned ? 'rgba(255,122,0,0.04)' : 'var(--bg-surface)',
+                      border: badge.earned ? '1px solid rgba(255,122,0,0.3)' : '1px solid var(--border)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      opacity: badge.earned ? 1 : 0.65,
+                      cursor: badge.earned ? 'pointer' : 'default',
+                      position: 'relative',
+                      boxShadow: badge.earned ? '0 8px 24px rgba(255,122,0,0.15)' : 'none',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {/* Badge Icon */}
+                    <div style={{
+                      fontSize: '2.5rem',
+                      marginBottom: '0.75rem',
+                      filter: badge.earned ? 'drop-shadow(0 0 10px rgba(255,122,0,0.5))' : 'grayscale(100%)',
+                      transform: badge.earned ? 'scale(1.05)' : 'scale(0.95)'
+                    }}>
+                      {badge.icon}
+                    </div>
+                    
+                    {/* Badge Info */}
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.25rem', color: badge.earned ? 'var(--primary-bright)' : 'var(--text-secondary)' }}>
+                      {badge.title}
+                    </h4>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 0.75rem', minHeight: '34px' }}>
+                      {badge.desc}
+                    </p>
+                    
+                    {/* Badge Progress bar */}
+                    <div style={{ width: '100%', marginTop: 'auto' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <span>Progress</span>
+                        <span>{Math.round(badge.current)} / {badge.target} {badge.unit}</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{
+                          width: `${percent}%`,
+                          height: '100%',
+                          background: badge.earned 
+                            ? 'linear-gradient(90deg, var(--primary), var(--primary-bright))' 
+                            : 'var(--text-muted)',
+                          borderRadius: '3px',
+                          boxShadow: badge.earned ? '0 0 8px var(--primary)' : 'none'
+                        }} />
+                      </div>
+                    </div>
+                    
+                    {/* Earned Banner Ribbon */}
+                    {badge.earned && (
+                      <span style={{
+                        position: 'absolute', top: '8px', right: '8px',
+                        fontSize: '0.65rem', fontWeight: 800, color: 'var(--success)',
+                        background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: '4px'
+                      }}>
+                        EARNED
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Selected Badge Share Modal */}
+          {selectedBadge && (
+            <div 
+              className="modal-overlay" 
+              onClick={() => setSelectedBadge(null)}
+              style={{ zIndex: 1000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <div 
+                className="card animate-pop" 
+                onClick={e => e.stopPropagation()} 
+                style={{ maxWidth: '440px', width: '100%', margin: '1.5rem', padding: '2.5rem', textAlign: 'center', background: 'rgba(15,20,32,0.95)', border: '1px solid rgba(255,122,0,0.3)', borderRadius: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}
+              >
+                <div style={{ fontSize: '4.5rem', marginBottom: '1rem' }}>
+                  {selectedBadge.icon}
+                </div>
+                <h2 style={{ fontSize: '1.6rem', color: 'var(--primary-bright)', marginBottom: '0.25rem' }}>
+                  {selectedBadge.title} Badge!
+                </h2>
+                <span className="badge badge-success" style={{ marginBottom: '1.5rem' }}>🏆 Milestone Earned</span>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.95rem' }}>
+                  "{selectedBadge.desc}"
+                </p>
+
+                {/* Sharing Block */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                      `🎉 I just unlocked the "${selectedBadge.title}" ${selectedBadge.icon} badge in the 100 Days of Abacus Challenge! 🧮 Learn mental math with me at Brain Mantra! @brainmantra`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-whatsapp"
+                    style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', height: '48px', fontSize: '0.95rem' }}
+                  >
+                    💬 Share on WhatsApp
+                  </a>
+                  
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `I just unlocked the "${selectedBadge.title}" ${selectedBadge.icon} badge in the 100 Days of Abacus Challenge! 🧮 Join me @brainmantra`
+                      )
+                      toast.success('Instagram tag text copied! Share your story & tag @brainmantra.')
+                    }}
+                    className="btn btn-ghost"
+                    style={{ border: '1.5px solid rgba(255,255,255,0.1)', height: '48px', fontSize: '0.95rem', justifyContent: 'center' }}
+                  >
+                    📸 Copy Instagram Tag
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedBadge(null)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}
+                  >
+                    Close Dialog
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Day Completions Table */}
+          <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+            <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Completed Days History</h3>
+            {days.filter(d => d.completed).length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No completed days yet.</p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Day</th>
+                      <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Accuracy</th>
+                      <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>XP Earned</th>
+                      <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Marks</th>
+                      <th style={{ textAlign: 'left', padding: '0.75rem 1rem' }}>Time Spent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {days.filter(d => d.completed).map(d => (
+                      <tr key={d.day_number} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ fontWeight: 'bold', padding: '0.75rem 1rem' }}>Day {d.day_number}</td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <span style={{ 
+                            color: d.accuracy >= 90 ? 'var(--success)' : d.accuracy >= 70 ? 'var(--accent-gold)' : 'var(--error)',
+                            fontWeight: '600'
+                          }}>
+                            {d.accuracy}%
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>+{d.xp_earned} XP</td>
+                        <td style={{ padding: '0.75rem 1rem' }}>{d.total_marks} marks</td>
+                        <td style={{ padding: '0.75rem 1rem' }}>{Math.floor(d.time_taken_seconds / 60)}m {d.time_taken_seconds % 60}s</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </StudentLayout>
   )
 }
