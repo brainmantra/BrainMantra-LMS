@@ -1052,8 +1052,6 @@ router.delete('/students/:id/progress/:dayNum/reset', requireAdmin, async (req, 
 
     if (dayRows.length > 0) {
       const xp_earned = dayRows[0].xp_earned || 0;
-      
-      await pool.query(`DELETE FROM student_responses WHERE student_id = $1 AND day_number = $2`, [student_id, day_number]);
       await pool.query(`DELETE FROM day_records WHERE student_id = $1 AND day_number = $2`, [student_id, day_number]);
 
       const { rows: studentRows } = await pool.query(
@@ -1067,7 +1065,7 @@ router.delete('/students/:id/progress/:dayNum/reset', requireAdmin, async (req, 
       }
     }
     
-    logActivity('admin', req.user?.id, 'reset_paper', `Reset paper for student ${student_id} day ${day_number}`);
+    await logActivity({ userType: 'admin', userId: req.admin?.id, action: 'reset_paper', req, metadata: { student_id, day_number } });
     res.json({ success: true, message: `Day ${day_number} reset successfully.` });
   } catch (err) {
     console.error('[reset_day]', err);

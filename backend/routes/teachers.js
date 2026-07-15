@@ -621,7 +621,7 @@ router.delete('/students/:id/progress/:dayNum/reset', requireTeacher, async (req
     // Verify the student belongs to this teacher
     const { rows: stRows } = await pool.query(
       `SELECT id FROM students WHERE id = $1 AND teacher_id = $2`,
-      [student_id, req.user.id]
+      [student_id, req.teacher.id]
     );
     if (stRows.length === 0) {
       return res.status(403).json({ message: 'Student not found or access denied.' });
@@ -634,8 +634,6 @@ router.delete('/students/:id/progress/:dayNum/reset', requireTeacher, async (req
 
     if (dayRows.length > 0) {
       const xp_earned = dayRows[0].xp_earned || 0;
-      
-      await pool.query(`DELETE FROM student_responses WHERE student_id = $1 AND day_number = $2`, [student_id, day_number]);
       await pool.query(`DELETE FROM day_records WHERE student_id = $1 AND day_number = $2`, [student_id, day_number]);
 
       const { rows: studentRows } = await pool.query(
@@ -649,7 +647,7 @@ router.delete('/students/:id/progress/:dayNum/reset', requireTeacher, async (req
       }
     }
     
-    logActivity('teacher', req.user.id, 'reset_paper', `Reset paper for student ${student_id} day ${day_number}`);
+    await logActivity({ userType: 'teacher', userId: req.teacher?.id, action: 'reset_paper', req, metadata: { student_id, day_number } });
     res.json({ success: true, message: `Day ${day_number} reset successfully.` });
   } catch (err) {
     console.error('[reset_day]', err);
