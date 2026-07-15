@@ -184,7 +184,7 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
         <div className="day-card-left" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '1px solid var(--border)', paddingRight: '2rem' }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 className="day-card-title" style={{ fontSize: '1.8rem' }}>Demo Day</h2>
+              <h2 className="day-card-title" style={{ fontSize: '1.8rem' }}>{isDemo ? 'Demo Day' : `Day ${dayNumber}`}</h2>
               <span className={`day-card-badge badge-${status}`}>
                 {cfg.badge}
               </span>

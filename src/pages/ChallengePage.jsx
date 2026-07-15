@@ -262,9 +262,7 @@ export default function ChallengePage() {
                         <div style={{
                           width: `${percent}%`,
                           height: '100%',
-                          background: badge.earned 
-                            ? 'linear-gradient(90deg, var(--primary), var(--primary-bright))' 
-                            : 'var(--text-muted)',
+                          background: 'linear-gradient(90deg, var(--primary), var(--primary-light))',
                           borderRadius: '3px',
                           boxShadow: badge.earned ? '0 0 8px var(--primary)' : 'none'
                         }} />

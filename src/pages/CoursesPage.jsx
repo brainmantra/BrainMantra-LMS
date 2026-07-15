@@ -287,9 +287,9 @@ export default function CoursesPage() {
     return m
   }, [days])
 
-  // Fetch student progress for map mapping
+  // Fetch student progress for map mapping and progress bar
   useEffect(() => {
-    if (activeCourse === '100-days-of-abacus') {
+    if (student?.id) {
       setLoading(true)
       api.get(`/students/${student.id}/progress`)
         .then(res => {
@@ -302,7 +302,7 @@ export default function CoursesPage() {
           setLoading(false)
         })
     }
-  }, [activeCourse, student])
+  }, [student])
 
   if (activeCourse === '100-days-of-abacus') {
     if (loading) {

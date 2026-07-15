@@ -1,6 +1,9 @@
 /* global Intl */
-function getISTMidnightUTC(d = new Date()) {
-  const date = new Date(d)
+function getISTMidnightUTC(d) {
+  let date = new Date(d)
+  if (isNaN(date.getTime())) {
+    date = new Date() // Fallback to now if date is invalid
+  }
   const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'numeric', day: 'numeric' }
   const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(date)
   const p = {}
