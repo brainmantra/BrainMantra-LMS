@@ -66,8 +66,9 @@ export async function getTeacherQuestion(level, dayNumber, section = 'teacher_da
   
   const { rows } = await pool.query(
     `SELECT * FROM teacher_questions
-     WHERE level = $1 AND day_number = $2 AND section = $3`,
-    [targetLevel, dayNumber, section]
+     WHERE level = $1 AND day_number = $2 
+     AND LOWER(REPLACE(section, ' ', '_')) = $3`,
+    [targetLevel, dayNumber, section.toLowerCase()]
   )
   return rows[0] || null
 }
@@ -99,7 +100,7 @@ export async function getSectionsForLevelAsync(level, dayNumber) {
        WHERE level = $1 AND day_number = $2 AND section != 'teacher_day'`,
       [targetLevel, dayNumber]
     )
-    const teacherSections = tRows.map(r => r.section)
+    const teacherSections = tRows.map(r => r.section.toLowerCase().replace(/ /g, '_'))
     const combined = [...defaultSections]
     for (const sec of teacherSections) {
       if (!combined.includes(sec)) {

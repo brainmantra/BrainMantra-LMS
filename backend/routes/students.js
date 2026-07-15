@@ -229,28 +229,39 @@ router.get('/:id/progress', async (req, res) => {
 
     const level = normalizeStudentLevel(student.level) || student.level
     const targetLevel = level === 'gm' ? 'alumni' : level
-    const [{ rows: days }, streakResult, { rows: qbRows }] = await Promise.all([
+    const [{ rows: days }, streakResult] = await Promise.all([
       pool.query(
         `SELECT day_number, opened, opened_at, completed, completed_at,
                 accuracy, time_taken_seconds, xp_earned, total_marks, section_data
          FROM day_records WHERE student_id = $1 ORDER BY day_number`,
         [studentId]
       ),
-      recalculateStreak(studentId, student.first_login_date || student.registration_date),
-      pool.query(
-        `SELECT DISTINCT section FROM question_bank WHERE level = $1`,
-        [targetLevel]
-      )
+      recalculateStreak(studentId, student.first_login_date || student.registration_date)
     ])
     
-    const validBankSections = qbRows.map(r => r.section)
+    const { rows: qbRows } = await pool.query(
+      `SELECT DISTINCT section FROM question_bank WHERE level = $1`,
+      [targetLevel]
+    )
+    let validSections = qbRows.map(r => r.section)
+    
+    const { rows: tRows } = await pool.query(
+      `SELECT DISTINCT section FROM teacher_questions WHERE level = $1`,
+      [targetLevel]
+    )
+    const tSecs = tRows.map(r => r.section.toLowerCase().replace(/ /g, '_'))
+    for (const s of tSecs) {
+      if (!validSections.includes(s)) {
+        validSections.push(s)
+      }
+    }
 
     res.json({
       days,
       streak: streakResult.streak,
       longestStreak: streakResult.longestStreak,
       currentDay: getChallengeDay(student.first_login_date || student.registration_date),
-      validSections: validBankSections,
+      validSections: validSections,
     })
   } catch (err) {
     console.error('[progress]', err)
@@ -353,31 +364,32 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
         } else {
           countVal = 10
         }
-      } else if (isTeacherInput) {
-        ready = !!tq
-        if (!ready) {
-          countVal = 0
-        } else {
-          countVal = 0 // Assume 0 until proven otherwise
-          if (tq && tq.question) {
-            try {
-              const parsed = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
-              if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
-                const qItems = parsed.items.filter(item => {
-                  if (item.type !== 'question') return false
-                  const text = (item.questionText || '').trim()
-                  const img = (item.image || '').trim()
-                  return text !== '' || img !== ''
-                })
-                countVal = qItems.length
-              } else if (parsed && parsed.title && !parsed.items) {
-                if (parsed.title.trim() !== '') countVal = 1
-              }
-            } catch (e) {
-              if (String(tq.question).trim() !== '') countVal = 1
+      } else if (tq) {
+        // If a teacher question exists for THIS section (even abacus), use it
+        ready = true
+        countVal = 0 // Assume 0 until proven otherwise
+        if (tq.question) {
+          try {
+            const parsed = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
+            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+              const qItems = parsed.items.filter(item => {
+                if (item.type !== 'question') return false
+                const text = (item.questionText || '').trim()
+                const img = (item.image || '').trim()
+                return text !== '' || img !== ''
+              })
+              countVal = qItems.length
+            } else if (parsed && parsed.title && !parsed.items) {
+              if (parsed.title.trim() !== '') countVal = 1
             }
+          } catch (e) {
+            if (String(tq.question).trim() !== '') countVal = 1
           }
         }
+      } else if (isTeacherInput) {
+        // Teacher input section but no tq found
+        ready = false
+        countVal = 0
       } else {
         // Standard question_bank sections
         const qs = await selectQuestionsForDay(level, sec, dayNumber)
