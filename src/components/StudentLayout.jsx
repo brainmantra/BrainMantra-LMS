@@ -73,7 +73,12 @@ export default function StudentLayout({ children }) {
   const handleInstall = async () => {
     setSettingsOpen(false)
     if (!deferredPrompt) {
-      toast.success('App is already installed or PWA is not supported by your browser.')
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+      if (isIOS) {
+        toast('To install on iOS: tap the Share button (square with arrow) and select "Add to Home Screen".', { duration: 6000, icon: '📲' })
+      } else {
+        toast.success('App is already installed or PWA is not supported by your browser.')
+      }
       return
     }
     deferredPrompt.prompt()

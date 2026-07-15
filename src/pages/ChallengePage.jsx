@@ -236,12 +236,20 @@ export default function ChallengePage() {
                   >
                     {/* Badge Icon */}
                     <div style={{
-                      fontSize: '2.5rem',
+                      width: '80px',
+                      height: '80px',
                       marginBottom: '0.75rem',
-                      filter: badge.earned ? 'drop-shadow(0 0 10px rgba(255,122,0,0.5))' : 'grayscale(100%)',
-                      transform: badge.earned ? 'scale(1.05)' : 'scale(0.95)'
+                      filter: badge.earned ? 'drop-shadow(0 0 10px rgba(255,122,0,0.5))' : 'grayscale(100%) opacity(0.5)',
+                      transform: badge.earned ? 'scale(1.05)' : 'scale(0.95)',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(0,0,0,0.5)',
+                      border: badge.earned ? '2px solid rgba(255,215,0,0.6)' : '2px solid rgba(255,255,255,0.1)'
                     }}>
-                      {badge.icon}
+                      <img src={badge.image} alt={badge.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                     
                     {/* Badge Info */}
@@ -297,8 +305,8 @@ export default function ChallengePage() {
                 onClick={e => e.stopPropagation()} 
                 style={{ maxWidth: '440px', width: '100%', margin: '1.5rem', padding: '2.5rem', textAlign: 'center', background: 'rgba(15,20,32,0.95)', border: '1px solid rgba(255,122,0,0.3)', borderRadius: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.8)' }}
               >
-                <div style={{ fontSize: '4.5rem', marginBottom: '1rem' }}>
-                  {selectedBadge.icon}
+                <div style={{ width: '140px', height: '140px', margin: '0 auto 1.5rem', borderRadius: '50%', overflow: 'hidden', border: '3px solid rgba(255,215,0,0.8)', boxShadow: '0 0 30px rgba(255,215,0,0.4)' }}>
+                  <img src={selectedBadge.image} alt={selectedBadge.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <h2 style={{ fontSize: '1.6rem', color: 'var(--primary-bright)', marginBottom: '0.25rem' }}>
                   {selectedBadge.title} Badge!
@@ -312,7 +320,7 @@ export default function ChallengePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <a
                     href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                      `🎉 I just unlocked the "${selectedBadge.title}" ${selectedBadge.icon} badge in the 100 Days of Abacus Challenge! 🧮 Learn mental math with me at Brain Mantra! @brainmantra`
+                      `🎉 I just unlocked the "${selectedBadge.title}" badge in the 100 Days of Abacus Challenge! 🧮 Learn mental math with me at Brain Mantra! @brainmantra`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
@@ -325,7 +333,7 @@ export default function ChallengePage() {
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(
-                        `I just unlocked the "${selectedBadge.title}" ${selectedBadge.icon} badge in the 100 Days of Abacus Challenge! 🧮 Join me @brainmantra`
+                        `I just unlocked the "${selectedBadge.title}" badge in the 100 Days of Abacus Challenge! 🧮 Join me @brainmantra`
                       )
                       toast.success('Instagram tag text copied! Share your story & tag @brainmantra.')
                     }}

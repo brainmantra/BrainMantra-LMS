@@ -43,19 +43,19 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
   
   const badgeDefinitions = [
     {
-      id: 'demo_explorer',
-      title: 'Demo Explorer',
-      icon: '🎮',
-      desc: 'Complete Demo Day practice session',
-      target: 1,
-      current: demoCompleted ? 1 : 0,
-      unit: '',
-      earned: demoCompleted
+      id: 'abacus_master',
+      title: 'Abacus Master',
+      image: '/badges/abacus_master.jpg',
+      desc: 'Perfect score on 10 consecutive tests',
+      target: 10,
+      current: perfectDays,
+      unit: 'days',
+      earned: perfectDays >= 10
     },
     {
       id: 'first_step',
       title: 'First Step',
-      icon: '🌱',
+      image: '/badges/first_step.jpg',
       desc: 'Complete Day 1 challenge paper',
       target: 1,
       current: day1Completed ? 1 : 0,
@@ -65,7 +65,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'streak_5',
       title: '5-Day Streak',
-      icon: '🔥',
+      image: '/badges/streak_5.jpg',
       desc: 'Maintain a 5-day streak of consecutive completion',
       target: 5,
       current: Math.max(streak, longestStreak),
@@ -75,7 +75,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'streak_15',
       title: '15-Day Streak',
-      icon: '⚡',
+      image: '/badges/streak_15.jpg',
       desc: 'Maintain a 15-day streak of consecutive completion',
       target: 15,
       current: Math.max(streak, longestStreak),
@@ -85,7 +85,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'streak_30',
       title: '30-Day Streak',
-      icon: '☄️',
+      image: '/badges/streak_30.jpg',
       desc: 'Maintain a 30-day streak of consecutive completion',
       target: 30,
       current: Math.max(streak, longestStreak),
@@ -95,7 +95,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'streak_50',
       title: '50-Day Milestone',
-      icon: '👑',
+      image: '/badges/streak_50.jpg',
       desc: 'Complete 50 days in a row (50-day streak)',
       target: 50,
       current: Math.max(streak, longestStreak),
@@ -105,7 +105,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'correct_50',
       title: 'Apprentice (50 Correct)',
-      icon: '🎯',
+      image: '/badges/correct_50.jpg',
       desc: 'Get 50 correct answers in total',
       target: 50,
       current: totalCorrect,
@@ -115,7 +115,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'correct_100',
       title: 'Specialist (100 Correct)',
-      icon: '🎖️',
+      image: '/badges/correct_100.jpg',
       desc: 'Get 100 correct answers in total',
       target: 100,
       current: totalCorrect,
@@ -125,7 +125,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'correct_200',
       title: 'Artisan (200 Correct)',
-      icon: '🔮',
+      image: '/badges/correct_200.jpg',
       desc: 'Get 200 correct answers in total',
       target: 200,
       current: totalCorrect,
@@ -135,7 +135,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'correct_400',
       title: 'Grand Master (400 Correct)',
-      icon: '🏆',
+      image: '/badges/correct_400.jpg',
       desc: 'Get 400 correct answers in total',
       target: 400,
       current: totalCorrect,
@@ -145,7 +145,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'perfect_day',
       title: 'Perfect Day',
-      icon: '💎',
+      image: '/badges/perfect_day.jpg',
       desc: 'Complete any day with 100% accuracy',
       target: 1,
       current: perfectDays,
@@ -155,7 +155,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'sharpshooter',
       title: 'Sharpshooter',
-      icon: '🏹',
+      image: '/badges/sharpshooter.jpg',
       desc: 'Complete 5 days with >= 90% accuracy',
       target: 5,
       current: highAccuracyDays,
@@ -165,7 +165,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'halfway_hero',
       title: 'Halfway Hero',
-      icon: '🏔️',
+      image: '/badges/halfway_hero.jpg',
       desc: 'Complete 50 days of the challenge',
       target: 50,
       current: completedCount,
@@ -175,7 +175,7 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
     {
       id: 'centurion',
       title: 'Centurion',
-      icon: '🌌',
+      image: '/badges/centurion.jpg',
       desc: 'Complete all 100 days of the challenge',
       target: 100,
       current: completedCount,

@@ -11,6 +11,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notFound, setNotFound] = useState(false)
 
@@ -132,14 +133,34 @@ export default function LoginPage() {
 
             <div className="form-group" style={{ marginTop: '1rem' }}>
               <label className="form-label" htmlFor="password">Password</label>
-              <input
-                id="password"
-                className="input-premium"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  className="input-premium"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  style={{ width: '100%', paddingRight: '2.5rem', boxSizing: 'border-box' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '1.2rem',
+                    opacity: 0.6
+                  }}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
 
             {notFound && (
