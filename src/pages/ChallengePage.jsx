@@ -35,6 +35,8 @@ export default function ChallengePage() {
     let totalTime = 0
     let totalQs = 0
     let totalCorrect = 0
+    let sumAccuracies = 0
+    let sectionCount = 0
 
     days.forEach(d => {
       if (d.section_data) {
@@ -45,6 +47,14 @@ export default function ChallengePage() {
               totalTime += (sec.timeTaken || 0)
               totalCorrect += (sec.correct || 0)
               totalQs += (sec.questionCount || 0)
+              
+              if (sec.accuracy !== undefined) {
+                 sumAccuracies += sec.accuracy
+                 sectionCount++
+              } else if (sec.questionCount > 0) {
+                 sumAccuracies += (sec.correct / sec.questionCount) * 100
+                 sectionCount++
+              }
             }
           })
         } catch (e) {}
@@ -52,7 +62,7 @@ export default function ChallengePage() {
     })
 
     const completedDaysList = days.filter(d => d.completed && d.day_number > 0)
-    const avgAccuracy = totalQs > 0 ? Math.round((totalCorrect / totalQs) * 100) : 0
+    const avgAccuracy = sectionCount > 0 ? Math.round(sumAccuracies / sectionCount) : 0
     const avgTime = completedDaysList.length > 0 ? Math.round(totalTime / completedDaysList.length) : 0
 
     return {

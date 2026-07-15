@@ -85,11 +85,34 @@ export default function StudentProfilePage() {
 
   // Stats
   const stats = useMemo(() => {
+    let sumAccuracies = 0
+    let sectionCount = 0
+    let totalTime = 0
+    
+    days.forEach(d => {
+      if (d.section_data) {
+        try {
+          const sd = typeof d.section_data === 'string' ? JSON.parse(d.section_data) : d.section_data
+          Object.values(sd).forEach(sec => {
+            if (sec && sec.status === 'done') {
+              totalTime += (sec.timeTaken || 0)
+              if (sec.accuracy !== undefined) {
+                 sumAccuracies += sec.accuracy
+                 sectionCount++
+              } else if (sec.questionCount > 0) {
+                 sumAccuracies += (sec.correct / sec.questionCount) * 100
+                 sectionCount++
+              }
+            }
+          })
+        } catch (e) {}
+      }
+    })
+
     const completed = days.filter(d => d.completed)
-    const totalAcc  = completed.reduce((s, d) => s + parseFloat(d.accuracy || 0), 0)
-    const avgAcc    = completed.length ? Math.round(totalAcc / completed.length) : 0
-    const totalTime = completed.reduce((s, d) => s + (d.time_taken_seconds || 0), 0)
-    const totalXp   = completed.reduce((s, d) => s + (d.xp_earned || 0), 0)
+    const avgAcc = sectionCount > 0 ? Math.round(sumAccuracies / sectionCount) : 0
+    const totalXp = completed.reduce((s, d) => s + (d.xp_earned || 0), 0)
+    
     return { count: completed.length, avgAcc, totalTime, totalXp }
   }, [days])
 

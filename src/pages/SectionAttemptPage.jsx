@@ -75,9 +75,10 @@ export default function SectionAttemptPage() {
 
     try {
       // 1. Submit current section
+      const actualSolveTime = responsesRef.current.reduce((sum, r) => sum + (r.time_taken_seconds || 0), 0)
       await api.post(`/students/${student.id}/progress/${dayNum}/sections/${section}/submit`, {
         responses: responsesRef.current,
-        timeTakenSeconds: sectionSecondsRef.current,
+        timeTakenSeconds: parseFloat(actualSolveTime.toFixed(2)),
       })
     } catch (e) {
       console.error('Cheating submit section error:', e)
@@ -592,10 +593,11 @@ export default function SectionAttemptPage() {
 
   const submitSection = async (finalResponses) => {
     setPhase('submitting')
+    const actualSolveTime = finalResponses.reduce((sum, r) => sum + (r.time_taken_seconds || 0), 0)
     try {
       const res = await api.post(`/students/${student.id}/progress/${dayNum}/sections/${section}/submit`, {
         responses: finalResponses,
-        timeTakenSeconds: sectionSeconds,
+        timeTakenSeconds: parseFloat(actualSolveTime.toFixed(2)),
       })
       if (res.data && res.data.xpEarned) {
         // Update global context with new XP
