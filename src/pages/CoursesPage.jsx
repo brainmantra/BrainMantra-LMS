@@ -207,10 +207,10 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
             background: 'rgba(0,0,0,0.82)',
             backdropFilter: 'blur(10px)',
             display: 'flex',
-            alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            padding: '1.5rem'
+            padding: '1.5rem',
+            overflowY: 'auto'
           }}
         >
           <div 
@@ -226,8 +226,7 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
               boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
               background: 'var(--bg-elevated)',
               textAlign: 'left',
-              maxHeight: '90vh',
-              overflowY: 'auto'
+              margin: 'auto'
             }}
           >
             {/* Close Button */}
