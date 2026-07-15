@@ -225,7 +225,9 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
               border: '1px solid var(--border-orange)',
               boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
               background: 'var(--bg-elevated)',
-              textAlign: 'left'
+              textAlign: 'left',
+              maxHeight: '90vh',
+              overflowY: 'auto'
             }}
           >
             {/* Close Button */}

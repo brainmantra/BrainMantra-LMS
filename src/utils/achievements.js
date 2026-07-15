@@ -12,6 +12,17 @@ export function calculateAchievements(days = [], streak = 0, longestStreak = 0) 
       if (dayN === 1) day1Completed = true
       if (parseFloat(d.accuracy || 0) === 100) perfectDays++
       if (parseFloat(d.accuracy || 0) >= 90) highAccuracyDays++
+    } else {
+      // Demo Day (0) doesn't have a full submit, check section_data manually
+      if (dayN === 0 && d.section_data) {
+        try {
+          const sd = typeof d.section_data === 'string' ? JSON.parse(d.section_data) : d.section_data;
+          const secKeys = Object.keys(sd);
+          if (secKeys.length >= 1 && secKeys.every(k => sd[k].status === 'done')) {
+            demoCompleted = true;
+          }
+        } catch(e) {}
+      }
     }
     
     if (d.section_data) {
