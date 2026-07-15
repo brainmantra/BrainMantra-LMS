@@ -290,7 +290,7 @@ router.get('/students/:id', requireTeacher, async (req, res) => {
     // Fetch all day records for the student
     const { rows } = await pool.query(
       `SELECT day_number, opened, opened_at, completed, completed_at,
-              total_marks, accuracy, time_taken_seconds, xp_earned
+              total_marks, accuracy, time_taken_seconds, xp_earned, section_data
        FROM day_records
        WHERE student_id = $1
        ORDER BY day_number`,
@@ -300,6 +300,36 @@ router.get('/students/:id', requireTeacher, async (req, res) => {
     res.json({ days: rows })
   } catch (err) {
     console.error('[teachers/student-details]', err)
+    res.status(500).json({ message: 'Server error.' })
+  }
+})
+
+// ── GET /api/teachers/students/:id/day/:dayNum/responses ─────────────────────
+router.get('/students/:id/day/:dayNum/responses', requireTeacher, async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id)
+    const dayNum = parseInt(req.params.dayNum)
+    const levels = req.teacher.levels || []
+
+    const { rows: student } = await pool.query('SELECT level FROM students WHERE id = $1 AND level = ANY($2)', [studentId, levels])
+    if (!student[0]) return res.status(404).json({ message: 'Student not found or access denied.' })
+
+    const level = student[0].level
+    let tableName = `responses_l${level.replace('l', '')}`
+    if (level === 'alumni') tableName = 'responses_alumni'
+    else if (level === 'beginner') tableName = 'responses_beginner'
+    else if (level === 'gm') tableName = 'responses_gm'
+
+    const { rows } = await pool.query(
+      `SELECT * FROM ${tableName}
+       WHERE student_id = $1 AND day_number = $2
+       ORDER BY section_name, id`,
+      [studentId, dayNum]
+    )
+
+    res.json(rows)
+  } catch (err) {
+    console.error('[teachers/students/responses]', err)
     res.status(500).json({ message: 'Server error.' })
   }
 })

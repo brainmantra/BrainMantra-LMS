@@ -463,9 +463,47 @@ function StudentsTab() {
             {/* Stats */}
             <div className="stat-grid">
               <StatCard icon="✓" label="Days Completed" value={selectedDays.filter(d => d.completed).length} color="var(--success)" />
-              <StatCard icon="🎯" label="Avg Accuracy" value={selectedDays.filter(d => d.accuracy).length > 0 ? Math.round(selectedDays.filter(d=>d.accuracy).reduce((s,d)=>s+parseFloat(d.accuracy),0)/selectedDays.filter(d=>d.accuracy).length)+'%' : '—'} />
+              <StatCard icon="🎯" label="Avg Accuracy" value={(() => {
+                let sumAcc = 0;
+                let count = 0;
+                selectedDays.forEach(d => {
+                  if (d.section_data) {
+                    try {
+                      const sd = typeof d.section_data === 'string' ? JSON.parse(d.section_data) : d.section_data;
+                      Object.values(sd).forEach(sec => {
+                        if (sec && sec.status === 'done') {
+                          if (sec.accuracy !== undefined) {
+                            sumAcc += sec.accuracy;
+                            count++;
+                          } else if (sec.questionCount > 0) {
+                            sumAcc += (sec.correct / sec.questionCount) * 100;
+                            count++;
+                          }
+                        }
+                      });
+                    } catch(e) {}
+                  }
+                });
+                return count > 0 ? Math.round(sumAcc / count) + '%' : '—';
+              })()} />
               <StatCard icon="⚡" label="Total XP" value={selected.xp_total} color="var(--accent-gold)" />
-              <StatCard icon="🔥" label="Best Streak" value={selected.longest_streak} color="var(--warning)" />
+              <StatCard icon="⏱" label="Total Time Spent" value={(() => {
+                let totalSecs = 0;
+                selectedDays.forEach(d => {
+                  if (d.section_data) {
+                    try {
+                      const sd = typeof d.section_data === 'string' ? JSON.parse(d.section_data) : d.section_data;
+                      Object.values(sd).forEach(sec => {
+                        if (sec.timeTaken) totalSecs += parseInt(sec.timeTaken, 10) || 0;
+                      });
+                    } catch(e) {}
+                  }
+                });
+                const hrs = Math.floor(totalSecs / 3600);
+                const mins = Math.floor((totalSecs % 3600) / 60);
+                return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+              })()} />
+              <StatCard icon="🔥" label="Best Streak" value={selected.longest_streak || selected.streak} color="var(--warning)" />
             </div>
 
             {/* Growth Chart */}
