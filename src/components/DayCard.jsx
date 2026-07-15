@@ -160,7 +160,6 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   }
   const studentLevel = normalizeLevel(student?.level)
   const baseSecs = [...(LEVEL_SECTIONS[studentLevel] || ['abacus'])]
-  const teacherInputSecs = ['form_the_question', 'cracking', 'bodmas', 'power_exercise', 'bead_fun', 'activity', 'teacher_input', 'teacher_day']
   
   const defaultSecs = validSections 
     ? baseSecs.filter(s => validSections.includes(s) || teacherInputSecs.includes(s))
