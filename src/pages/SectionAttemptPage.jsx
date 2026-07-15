@@ -33,7 +33,7 @@ const isMultiLineRequired = (level, day) => {
 export default function SectionAttemptPage() {
   const { dayNumber, section } = useParams()
   const dayNum = parseInt(dayNumber, 10)
-  const { student } = useAuth()
+  const { student, login } = useAuth()
   const navigate = useNavigate()
 
   const [phase, setPhase] = useState('loading')     // loading|countdown|attempt|submitting|done|error

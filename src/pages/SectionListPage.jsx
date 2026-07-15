@@ -49,7 +49,7 @@ const STATUS_CONFIG = {
 export default function SectionListPage() {
   const { dayNumber } = useParams()
   const dayNum = parseInt(dayNumber, 10)
-  const { student } = useAuth()
+  const { student, login } = useAuth()
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
