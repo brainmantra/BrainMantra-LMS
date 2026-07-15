@@ -593,10 +593,14 @@ export default function SectionAttemptPage() {
   const submitSection = async (finalResponses) => {
     setPhase('submitting')
     try {
-      await api.post(`/students/${student.id}/progress/${dayNum}/sections/${section}/submit`, {
+      const res = await api.post(`/students/${student.id}/progress/${dayNum}/sections/${section}/submit`, {
         responses: finalResponses,
         timeTakenSeconds: sectionSeconds,
       })
+      if (res.data && res.data.xpEarned) {
+        // Update global context with new XP
+        login({ ...student, xp_total: (student.xp_total || 0) + res.data.xpEarned })
+      }
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } })
       playFanfare()
       setPhase('done')
@@ -680,7 +684,7 @@ export default function SectionAttemptPage() {
 
           <button
             className="btn btn-primary btn-block"
-            onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)}
+            onClick={() => navigate('/courses', { state: isDemo ? { openDemoDay: true } : { openDayNum: dayNum } })}
           >
             {isDemo ? 'Back to Demo →' : 'Back to Paper →'}
           </button>
@@ -698,7 +702,7 @@ export default function SectionAttemptPage() {
           <p style={{ color: 'var(--text-muted)', margin: '1rem 0 1.5rem' }}>
             Could not save your responses.
           </p>
-          <button className="btn btn-primary" onClick={() => navigate(isDemo ? '/courses' : `/challenge/day/${dayNum}/sections`, isDemo ? { state: { openDemoDay: true } } : undefined)}>
+          <button className="btn btn-primary" onClick={() => navigate('/courses', { state: isDemo ? { openDemoDay: true } : { openDayNum: dayNum } })}>
             {isDemo ? 'Back to Demo' : 'Back to Paper'}
           </button>
         </div>

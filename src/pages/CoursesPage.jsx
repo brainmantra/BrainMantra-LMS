@@ -27,9 +27,21 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
   }
 
   const getStatus = (dayNum) => {
-    if (dayNum === 0) return 'demo'
     const record = dayMap[dayNum]
     if (record?.completed) return 'completed'
+    if (record?.section_data) {
+      try {
+        const sd = typeof record.section_data === 'string' ? JSON.parse(record.section_data) : record.section_data;
+        const secKeys = Object.keys(sd);
+        // Assuming a minimum of 3 sections for a day to be considered fully attempted
+        if (secKeys.length >= 1 && secKeys.every(k => sd[k].status === 'done')) {
+          // For Demo Day, we can mark it as completed if they did the sections
+          // For regular days, we still require 'completed' flag from full submit, but this handles edge cases
+          if (dayNum === 0 || secKeys.length >= 3) return 'completed'
+        }
+      } catch (e) {}
+    }
+    if (dayNum === 0) return 'demo'
     if (dayNum === currentDay) return 'today'
     if (record?.opened) return 'opened'
     if (dayNum < currentDay) return 'missed'
@@ -261,7 +273,7 @@ export default function CoursesPage() {
   const navigate = useNavigate()
   const location = useLocation()
   
-  const [activeCourse, setActiveCourse] = useState(location.state?.openDemoDay ? '100-days-of-abacus' : null)
+  const [activeCourse, setActiveCourse] = useState(location.state?.openDemoDay || location.state?.openDayNum !== undefined ? '100-days-of-abacus' : null)
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(false)
 
@@ -309,7 +321,7 @@ export default function CoursesPage() {
             currentDay={currentDay} 
             student={student} 
             onBack={() => setActiveCourse(null)} 
-            defaultDayNum={location.state?.openDemoDay ? 0 : null}
+            defaultDayNum={location.state?.openDemoDay ? 0 : location.state?.openDayNum !== undefined ? location.state.openDayNum : null}
           />
       </StudentLayout>
     )
@@ -376,13 +388,49 @@ export default function CoursesPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                 <span>Course Progress</span>
                 <span style={{ fontWeight: 700, color: 'var(--primary-light)' }}>
-                  {student?.days_completed || 0}% Complete
+                  {(() => {
+                    let totalProgress = 0;
+                    days.forEach(d => {
+                      if (d.completed) {
+                        totalProgress += 1;
+                      } else if (d.section_data) {
+                        try {
+                          const sd = typeof d.section_data === 'string' ? JSON.parse(d.section_data) : d.section_data;
+                          const secKeys = Object.keys(sd);
+                          let completedSecs = 0;
+                          secKeys.forEach(k => { if (sd[k].status === 'done') completedSecs++; });
+                          if (secKeys.length > 0) {
+                            totalProgress += completedSecs / secKeys.length;
+                          }
+                        } catch (e) {}
+                      }
+                    });
+                    return Math.min(100, Math.floor(totalProgress));
+                  })()}% Complete
                 </span>
               </div>
               
               {/* Progress bar */}
               <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '1.25rem' }}>
-                <div style={{ width: `${student?.days_completed || 0}%`, height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, var(--primary), var(--primary-light))' }} />
+                <div style={{ width: `${(() => {
+                  let totalProgress = 0;
+                  days.forEach(d => {
+                    if (d.completed) {
+                      totalProgress += 1;
+                    } else if (d.section_data) {
+                      try {
+                        const sd = typeof d.section_data === 'string' ? JSON.parse(d.section_data) : d.section_data;
+                        const secKeys = Object.keys(sd);
+                        let completedSecs = 0;
+                        secKeys.forEach(k => { if (sd[k].status === 'done') completedSecs++; });
+                        if (secKeys.length > 0) {
+                          totalProgress += completedSecs / secKeys.length;
+                        }
+                      } catch (e) {}
+                    }
+                  });
+                  return Math.min(100, Math.floor(totalProgress));
+                })()}%`, height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, var(--primary), var(--primary-light))' }} />
               </div>
 
               <button 

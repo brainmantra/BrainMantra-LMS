@@ -214,11 +214,12 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
                     {SECTION_LABELS[sec] || sec}
                   </div>
                   <button 
-                    className="btn-solve-section"
+                    className={`btn-solve-section ${isSecDone ? 'completed-btn' : ''}`}
                     onClick={() => handleSolveSection(sec)}
-                    disabled={!clickable}
+                    disabled={!clickable || isSecDone}
+                    style={isSecDone ? { backgroundColor: 'var(--success)', color: 'white', borderColor: 'var(--success)', pointerEvents: 'none' } : {}}
                   >
-                    {isSecDone ? 'Review' : 'Solve Part →'}
+                    {isSecDone ? 'Completed ✓' : 'Solve Part →'}
                   </button>
                 </div>
               )
@@ -272,11 +273,12 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
                 {SECTION_LABELS[sec] || sec}
               </div>
               <button 
-                className="btn-solve-section"
+                className={`btn-solve-section ${isSecDone ? 'completed-btn' : ''}`}
                 onClick={() => handleSolveSection(sec)}
-                disabled={!clickable}
+                disabled={!clickable || isSecDone}
+                style={isSecDone ? { backgroundColor: 'var(--success)', color: 'white', borderColor: 'var(--success)', pointerEvents: 'none' } : {}}
               >
-                {isSecDone ? 'Review' : 'Solve Part →'}
+                {isSecDone ? 'Completed ✓' : 'Solve Part →'}
               </button>
             </div>
           )

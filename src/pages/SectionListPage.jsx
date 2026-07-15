@@ -96,7 +96,10 @@ export default function SectionListPage() {
     if (!allDone) return
     setSubmitting(true)
     try {
-      await api.post(`/students/${student.id}/progress/${dayNum}/submit`)
+      const res = await api.post(`/students/${student.id}/progress/${dayNum}/submit`)
+      if (res.data && res.data.streakBonus) {
+        login({ ...student, xp_total: (student.xp_total || 0) + res.data.streakBonus })
+      }
       navigate(`/challenge/day/${dayNum}/report`)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not submit paper.')
@@ -239,8 +242,8 @@ export default function SectionListPage() {
               <div
                 key={sec.section}
                 className={`section-item${isDone ? ' section-item--done' : ''}`}
-                style={{ cursor: canPlay ? 'pointer' : 'default', opacity: isReady ? 1 : 0.6 }}
-                onClick={() => canPlay && handlePlaySection(sec)}
+                style={{ cursor: canPlay && !isDone ? 'pointer' : 'default', opacity: isReady ? 1 : 0.6 }}
+                onClick={() => canPlay && !isDone && handlePlaySection(sec)}
               >
                 <div className="section-item__left">
                   <div className="section-item__icon">{icon}</div>
@@ -258,14 +261,22 @@ export default function SectionListPage() {
                   <span className={`badge ${statusCfg.badge}`}>
                     {statusCfg.label} {isDone ? `(${sec.marks ?? 0} marks)` : ''}
                   </span>
-                  {!isDone && canPlay && (
+                  {!isDone && canPlay ? (
                     <button
                       className="btn btn-primary btn-sm"
                       onClick={e => { e.stopPropagation(); handlePlaySection(sec) }}
                     >
-                      ▶ Play
+                      ▶ Solve Part
                     </button>
-                  )}
+                  ) : isDone ? (
+                    <button
+                      className="btn btn-success btn-sm"
+                      style={{ pointerEvents: 'none' }}
+                      disabled
+                    >
+                      ✓ Completed
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )

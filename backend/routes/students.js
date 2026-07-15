@@ -660,6 +660,12 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
       [JSON.stringify(sectionData), studentId, dayNumber]
     )
 
+    // Progressively update student's global XP
+    await pool.query(
+      `UPDATE students SET xp_total = xp_total + $1, updated_at = NOW() WHERE id = $2`,
+      [xpEarned, studentId]
+    )
+
     res.json({ success: true, marks, xpEarned, accuracy, correct, total: responses.length })
   } catch (err) {
     console.error('[section/submit]', err)
@@ -754,11 +760,11 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
       [totalMarks, accuracy, totalTime, totalXp, JSON.stringify(studentResponses), studentId, dayNumber, JSON.stringify(sectionData)]
     )
 
-    // Update student's cumulative XP and streak
+    // Update student's cumulative XP (only streak bonus, as section XP is added progressively) and streak
     await pool.query(
       `UPDATE students SET xp_total = xp_total + $1, streak = $2, longest_streak = GREATEST(longest_streak, $3), updated_at = NOW()
        WHERE id = $4`,
-      [totalXp, streakResult.streak, streakResult.longestStreak, studentId]
+      [streakBonus, streakResult.streak, streakResult.longestStreak, studentId]
     )
 
     await logActivity({ userType: 'student', userId: studentId, userLabel: student.name, action: 'day_complete', req, metadata: { day: dayNumber, accuracy, totalMarks, totalXp } })
