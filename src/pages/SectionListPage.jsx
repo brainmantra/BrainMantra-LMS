@@ -89,7 +89,7 @@ export default function SectionListPage() {
     return () => { mounted = false }
   }, [dayNum, student, navigate])
 
-  const visibleSections = data.sections?.filter(sec => sec.questionCount > 0) || []
+  const visibleSections = data?.sections?.filter(sec => sec.questionCount > 0) || []
   const allDone = visibleSections.every(s => s.status === 'done') && visibleSections.length > 0
 
   const handleSubmitPaper = async () => {
