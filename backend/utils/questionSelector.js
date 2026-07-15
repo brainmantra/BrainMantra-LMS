@@ -94,19 +94,31 @@ export async function getSectionsForLevelAsync(level, dayNumber) {
   const targetLevel = level === 'gm' ? 'alumni' : level;
 
   try {
-    const { rows } = await pool.query(
+    const { rows: tRows } = await pool.query(
       `SELECT DISTINCT section FROM teacher_questions 
        WHERE level = $1 AND day_number = $2 AND section != 'teacher_day'`,
       [targetLevel, dayNumber]
     )
-    const teacherSections = rows.map(r => r.section)
+    const teacherSections = tRows.map(r => r.section)
     const combined = [...defaultSections]
     for (const sec of teacherSections) {
       if (!combined.includes(sec)) {
         combined.push(sec)
       }
     }
-    return combined
+
+    const { rows: qbRows } = await pool.query(
+      `SELECT DISTINCT section FROM question_bank WHERE level = $1`,
+      [targetLevel]
+    )
+    const validBankSections = new Set(qbRows.map(r => r.section))
+
+    return combined.filter(sec => 
+      TEACHER_INPUT_SECTIONS.has(sec) || 
+      validBankSections.has(sec) || 
+      sec === 'power_exercise' ||
+      teacherSections.includes(sec)
+    )
   } catch (err) {
     console.error('[getSectionsForLevelAsync]', err)
     return defaultSections

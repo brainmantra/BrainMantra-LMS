@@ -52,9 +52,14 @@ const SECTION_SHORT_LABELS = {
   power_exercise: '⚡ Power',
 }
 
-export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo, horizontal }) {
+export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo, validSections, horizontal = true }) {
   const navigate = useNavigate()
-  const { student } = useAuth()
+  const { student, login } = useAuth()
+  
+  const [timeLeft, setTimeLeft] = useState(0)
+  const [status, setStatus] = useState('locked') // locked, future, today, opened, opened-past, completed, missed
+  const [clickable, setClickable] = useState(false)
+  
   const dayDate = getDayDate(registrationDate, dayNumber)
   const today = isDayToday(registrationDate, dayNumber)
   const past = isDayPast(registrationDate, dayNumber)
@@ -69,9 +74,14 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
     return map[low] || 'l1'
   }
   const _level = normalizeLevel0(student?.level)
-  const _expectedSecs = (LEVEL_SECTIONS[_level] || ['abacus']).filter(s => s !== 'teacher_input')
+  const _expectedBase = (LEVEL_SECTIONS[_level] || ['abacus']).filter(s => s !== 'teacher_input')
+  const _expectedSecs = validSections 
+    ? _expectedBase.filter(s => validSections.includes(s) || s === 'power_exercise')
+    : _expectedBase
   if (_level !== 'l1' && isDemo) {
-    _expectedSecs.push('power_exercise')
+    if (!_expectedSecs.includes('power_exercise')) {
+      _expectedSecs.push('power_exercise')
+    }
   }
   let _sectionData = {}
   try {
@@ -148,10 +158,17 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
     return map[low] || 'l1'
   }
   const studentLevel = normalizeLevel(student?.level)
-  const defaultSecs = [...(LEVEL_SECTIONS[studentLevel] || ['abacus'])]
+  const baseSecs = [...(LEVEL_SECTIONS[studentLevel] || ['abacus'])]
+  const defaultSecs = validSections 
+    ? baseSecs.filter(s => validSections.includes(s) || s === 'teacher_input' || s === 'power_exercise')
+    : baseSecs
+    
   if (studentLevel !== 'l1' && isDemo) {
-    defaultSecs.push('power_exercise')
+    if (!defaultSecs.includes('power_exercise')) {
+      defaultSecs.push('power_exercise')
+    }
   }
+  
   const recordedSecs = dayRecord?.section_data ? Object.keys(dayRecord.section_data) : []
   const sections = [...defaultSecs]
   recordedSecs.forEach(sec => {

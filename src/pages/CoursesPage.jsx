@@ -260,6 +260,7 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
               registrationDate={student.first_login_date || student.registration_date}
               dayRecord={dayMap[selectedDayNum]}
               isDemo={selectedDayNum === 0}
+              validSections={validSections}
             />
           </div>
         </div>
@@ -275,6 +276,7 @@ export default function CoursesPage() {
   
   const [activeCourse, setActiveCourse] = useState(location.state?.openDemoDay || location.state?.openDayNum !== undefined ? '100-days-of-abacus' : null)
   const [days, setDays] = useState([])
+  const [validSections, setValidSections] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const currentDay = useMemo(() => getChallengeDay(student?.first_login_date || student?.registration_date), [student])
@@ -292,6 +294,7 @@ export default function CoursesPage() {
       api.get(`/students/${student.id}/progress`)
         .then(res => {
           setDays(res.data.days || [])
+          setValidSections(res.data.validSections || null)
           setLoading(false)
         })
         .catch(() => {

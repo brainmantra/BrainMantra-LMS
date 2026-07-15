@@ -227,7 +227,9 @@ router.get('/:id/progress', async (req, res) => {
     const student = await getStudentById(studentId)
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
-    const [{ rows: days }, streakResult] = await Promise.all([
+    const level = normalizeStudentLevel(student.level) || student.level
+    const targetLevel = level === 'gm' ? 'alumni' : level
+    const [{ rows: days }, streakResult, { rows: qbRows }] = await Promise.all([
       pool.query(
         `SELECT day_number, opened, opened_at, completed, completed_at,
                 accuracy, time_taken_seconds, xp_earned, total_marks, section_data
@@ -235,13 +237,20 @@ router.get('/:id/progress', async (req, res) => {
         [studentId]
       ),
       recalculateStreak(studentId, student.first_login_date || student.registration_date),
+      pool.query(
+        `SELECT DISTINCT section FROM question_bank WHERE level = $1`,
+        [targetLevel]
+      )
     ])
+    
+    const validBankSections = qbRows.map(r => r.section)
 
     res.json({
       days,
       streak: streakResult.streak,
       longestStreak: streakResult.longestStreak,
       currentDay: getChallengeDay(student.first_login_date || student.registration_date),
+      validSections: validBankSections,
     })
   } catch (err) {
     console.error('[progress]', err)
