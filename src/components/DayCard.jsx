@@ -71,8 +71,9 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   }
   const _level = normalizeLevel0(student?.level)
   const _expectedBase = (LEVEL_SECTIONS[_level] || ['abacus']).filter(s => s !== 'teacher_input')
+  const teacherInputSecs = ['form_the_question', 'cracking', 'bodmas', 'power_exercise', 'bead_fun', 'activity', 'teacher_input', 'teacher_day']
   const _expectedSecs = validSections 
-    ? _expectedBase.filter(s => validSections.includes(s) || s === 'power_exercise')
+    ? _expectedBase.filter(s => validSections.includes(s) || teacherInputSecs.includes(s))
     : _expectedBase
   if (_level !== 'l1' && isDemo) {
     if (!_expectedSecs.includes('power_exercise')) {
@@ -159,22 +160,32 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   }
   const studentLevel = normalizeLevel(student?.level)
   const baseSecs = [...(LEVEL_SECTIONS[studentLevel] || ['abacus'])]
+  const teacherInputSecs = ['form_the_question', 'cracking', 'bodmas', 'power_exercise', 'bead_fun', 'activity', 'teacher_input', 'teacher_day']
+  
   const defaultSecs = validSections 
-    ? baseSecs.filter(s => validSections.includes(s) || s === 'teacher_input' || s === 'power_exercise')
+    ? baseSecs.filter(s => validSections.includes(s) || teacherInputSecs.includes(s))
     : baseSecs
     
-  if (studentLevel !== 'l1' && isDemo) {
+  if (studentLevel !== 'l1' && studentLevel !== 'beginner' && isDemo) {
     if (!defaultSecs.includes('power_exercise')) {
       defaultSecs.push('power_exercise')
     }
   }
   
   const recordedSecs = _sectionData ? Object.keys(_sectionData) : []
-  const sections = [...defaultSecs]
+  let sections = [...defaultSecs]
   recordedSecs.forEach(sec => {
     if (!sections.includes(sec)) {
       sections.push(sec)
     }
+  })
+
+  // Filter out any sections that are explicitly known to have 0 questions
+  sections = sections.filter(sec => {
+    if (_sectionData && _sectionData[sec] && _sectionData[sec].questionCount === 0) {
+      return false
+    }
+    return true
   })
 
 

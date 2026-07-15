@@ -333,7 +333,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
     const sectionData = dayRows[0]?.section_data || {}
     const paperCompleted = dayRows[0]?.completed || false
 
-    // Map each section and check if teacher questions are ready for teacher-input sections
+    // Map each section and check if questions are ready
     const result = []
     for (const sec of sections) {
       const isCustom = !LEVEL_SECTIONS[level]?.includes(sec) && sec !== 'power_exercise'
@@ -341,27 +341,56 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
 
       let ready = true
       let countVal = 5;
+      let labelVal = null
+      
+      const tq = await getTeacherQuestion(level, dayNumber, sec)
+      
+      // Determine countVal based on section type and actual question content
       if (sec === 'power_exercise') {
-        countVal = 10;
-      } else if (isTeacherInput) {
-        countVal = 1;
-        const tq = await getTeacherQuestion(level, dayNumber, sec)
-        ready = !!tq
-        if (tq && tq.question) {
-          try {
-            const parsed = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
-            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
-              const qItems = parsed.items.filter(item => item.type === 'question')
-              if (qItems.length > 0) {
-                countVal = qItems.length
-              }
-            }
-          } catch (e) {}
+        if (dayNumber !== 0 && !tq) {
+          ready = false
+          countVal = 0
+        } else {
+          countVal = 10
         }
+      } else if (isTeacherInput) {
+        ready = !!tq
+        if (!ready) {
+          countVal = 0
+        } else {
+          countVal = 0 // Assume 0 until proven otherwise
+          if (tq && tq.question) {
+            try {
+              const parsed = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
+              if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+                const qItems = parsed.items.filter(item => {
+                  if (item.type !== 'question') return false
+                  const text = (item.questionText || '').trim()
+                  const img = (item.image || '').trim()
+                  return text !== '' || img !== ''
+                })
+                countVal = qItems.length
+              } else if (parsed && parsed.title && !parsed.items) {
+                if (parsed.title.trim() !== '') countVal = 1
+              }
+            } catch (e) {
+              if (String(tq.question).trim() !== '') countVal = 1
+            }
+          }
+        }
+      } else {
+        // Standard question_bank sections
+        const qs = await selectQuestionsForDay(level, sec, dayNumber)
+        let validQs = 0
+        for (const q of qs) {
+          const qText = (q.question || q.question_text || q.questionText || '').trim()
+          const img = (q.image || '').trim()
+          if (qText !== '' || img !== '') validQs++
+        }
+        countVal = validQs
       }
 
-      let labelVal = null
-      const tq = await getTeacherQuestion(level, dayNumber, sec)
+      // Determine Label
       if (tq && tq.question) {
         try {
           const parsed = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
