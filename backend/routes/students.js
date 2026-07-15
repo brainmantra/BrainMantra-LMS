@@ -655,9 +655,11 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
     }
 
     await pool.query(
-      `UPDATE day_records SET section_data = $1, updated_at = NOW()
-       WHERE student_id = $2 AND day_number = $3`,
-      [JSON.stringify(sectionData), studentId, dayNumber]
+      `INSERT INTO day_records (student_id, day_number, section_data, opened, opened_at, updated_at)
+       VALUES ($1, $2, $3, TRUE, NOW(), NOW())
+       ON CONFLICT (student_id, day_number)
+       DO UPDATE SET section_data = $3, updated_at = NOW()`,
+      [studentId, dayNumber, JSON.stringify(sectionData)]
     )
 
     // Progressively update student's global XP
@@ -753,10 +755,20 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
 
     // Mark paper complete and update student XP
     await pool.query(
-      `UPDATE day_records
-       SET completed = TRUE, completed_at = NOW(), total_marks = $1, accuracy = $2,
-           time_taken_seconds = $3, xp_earned = $4, answers = $5, section_data = $8, updated_at = NOW()
-       WHERE student_id = $6 AND day_number = $7`,
+      `INSERT INTO day_records (student_id, day_number, opened, opened_at, completed, completed_at, total_marks, accuracy, time_taken_seconds, xp_earned, answers, section_data, updated_at)
+       VALUES ($6, $7, TRUE, NOW(), TRUE, NOW(), $1, $2, $3, $4, $5, $8, NOW())
+       ON CONFLICT (student_id, day_number)
+       DO UPDATE SET 
+         opened = TRUE,
+         completed = TRUE, 
+         completed_at = NOW(), 
+         total_marks = $1, 
+         accuracy = $2,
+         time_taken_seconds = $3, 
+         xp_earned = $4, 
+         answers = $5, 
+         section_data = $8, 
+         updated_at = NOW()`,
       [totalMarks, accuracy, totalTime, totalXp, JSON.stringify(studentResponses), studentId, dayNumber, JSON.stringify(sectionData)]
     )
 

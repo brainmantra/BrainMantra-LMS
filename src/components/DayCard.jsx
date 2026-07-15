@@ -73,7 +73,10 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   if (_level !== 'l1' && isDemo) {
     _expectedSecs.push('power_exercise')
   }
-  const _sectionData = dayRecord?.section_data || {}
+  let _sectionData = {}
+  try {
+    _sectionData = typeof dayRecord?.section_data === 'string' ? JSON.parse(dayRecord.section_data) : (dayRecord?.section_data || {})
+  } catch(e) {}
   const allSectionsDone = _expectedSecs.length > 0 &&
     _expectedSecs.every(s => _sectionData[s]?.status === 'done')
 
@@ -156,7 +159,10 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
       sections.push(sec)
     }
   })
-  const sectionData = dayRecord?.section_data || {}
+  let sectionData = {}
+  try {
+    sectionData = typeof dayRecord?.section_data === 'string' ? JSON.parse(dayRecord.section_data) : (dayRecord?.section_data || {})
+  } catch(e) {}
 
   if (horizontal) {
     return (
