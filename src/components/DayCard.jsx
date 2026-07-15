@@ -165,17 +165,14 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
     }
   }
   
-  const recordedSecs = dayRecord?.section_data ? Object.keys(dayRecord.section_data) : []
+  const recordedSecs = _sectionData ? Object.keys(_sectionData) : []
   const sections = [...defaultSecs]
   recordedSecs.forEach(sec => {
     if (!sections.includes(sec)) {
       sections.push(sec)
     }
   })
-  let sectionData = {}
-  try {
-    sectionData = typeof dayRecord?.section_data === 'string' ? JSON.parse(dayRecord.section_data) : (dayRecord?.section_data || {})
-  } catch(e) {}
+
 
   if (horizontal) {
     return (
@@ -216,7 +213,7 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
           <h3 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontWeight: 600 }}>📋 PRACTICE SECTIONS</h3>
           <div className="day-card-sections-list" style={{ flexGrow: 0, marginBottom: 0 }}>
             {sections.map((sec, idx) => {
-              const secStatus = sectionData[sec]?.status || 'not_started'
+              const secStatus = _sectionData[sec]?.status || 'not_started'
               const isSecDone = secStatus === 'done' || dayRecord?.completed
               
               return (
@@ -275,7 +272,7 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
       {/* Questions/Sections List */}
       <div className="day-card-sections-list">
         {sections.map((sec, idx) => {
-          const secStatus = sectionData[sec]?.status || 'not_started'
+          const secStatus = _sectionData[sec]?.status || 'not_started'
           const isSecDone = secStatus === 'done' || dayRecord?.completed
           
           return (
@@ -284,7 +281,7 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
                 <span className="day-card-section-index">Part {idx + 1}</span>
                 {isSecDone && (
                   <span className="day-card-section-badge done">
-                    DONE {sectionData[sec]?.marks !== undefined ? `(${sectionData[sec].marks} marks)` : ''}
+                    DONE {_sectionData[sec]?.marks !== undefined ? `(${_sectionData[sec].marks} marks)` : ''}
                   </span>
                 )}
               </div>
