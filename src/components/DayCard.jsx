@@ -56,10 +56,6 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   const navigate = useNavigate()
   const { student, login } = useAuth()
   
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [status, setStatus] = useState('locked') // locked, future, today, opened, opened-past, completed, missed
-  const [clickable, setClickable] = useState(false)
-  
   const dayDate = getDayDate(registrationDate, dayNumber)
   const today = isDayToday(registrationDate, dayNumber)
   const past = isDayPast(registrationDate, dayNumber)
