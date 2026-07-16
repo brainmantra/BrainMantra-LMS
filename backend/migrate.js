@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS responses_l1 (
   student_id       INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   day_number       INTEGER NOT NULL,
   section_name     VARCHAR(50) NOT NULL,
-  question_id      INTEGER REFERENCES question_bank(id),
+  question_id      INTEGER,
   question_snapshot TEXT NOT NULL,
   correct_answer   TEXT NOT NULL,
   student_answer   TEXT,
