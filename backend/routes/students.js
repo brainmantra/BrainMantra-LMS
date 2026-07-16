@@ -356,11 +356,12 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
 
     // Fetch completion metadata from day_records.section_data
     const { rows: dayRows } = await pool.query(
-      `SELECT section_data, completed FROM day_records WHERE student_id = $1 AND day_number = $2`,
+      `SELECT section_data, completed, reset_at FROM day_records WHERE student_id = $1 AND day_number = $2`,
       [studentId, dayNumber]
     )
     const sectionData = dayRows[0]?.section_data || {}
     const paperCompleted = dayRows[0]?.completed || false
+    const resetAt = dayRows[0]?.reset_at || null
 
     // Map each section and check if questions are ready
     const result = []
@@ -447,6 +448,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
     res.json({
       sections: result,
       paperCompleted,
+      resetAt,
       isTeacherDay: isTeacherDay(dayNumber),
       teacherDayReady: true,
       level,

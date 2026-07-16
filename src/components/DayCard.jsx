@@ -91,11 +91,22 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   const allSectionsDone = _expectedSecs.length > 0 &&
     _expectedSecs.every(s => _sectionData?.[s]?.status === 'done')
 
+  let isResetActive = false;
+  if (dayRecord?.reset_at) {
+    const resetTime = new Date(dayRecord.reset_at).getTime();
+    const now = new Date().getTime();
+    if (now - resetTime <= 24 * 60 * 60 * 1000) {
+      isResetActive = true;
+    }
+  }
+
   let status = 'future'
   if (dayRecord?.completed || allSectionsDone) {
     status = 'completed'
   } else if (isDemo) {
     status = 'today'
+  } else if (isResetActive) {
+    status = dayRecord?.opened ? 'opened' : 'today'
   } else if (dayRecord?.opened && today) {
     status = 'opened'
   } else if (today) {
@@ -215,10 +226,11 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
           <button 
             className={`day-card-footer ${cfg.btnClass}`}
             onClick={handleStartResume}
+            disabled={status === 'future' || status === 'missed' || status === 'opened-past'}
             style={{ marginTop: '2rem', padding: '0.8rem' }}
           >
             <span className="footer-icon">{cfg.icon}</span>
-            Start Practice
+            {cfg.btn}
           </button>
         </div>
 

@@ -56,8 +56,18 @@ export default function SectionListPage() {
   const [data, setData] = useState(null)          // { sections, paperCompleted, isTeacherDay, teacherDayReady }
   const [submitting, setSubmitting] = useState(false)
 
-  const isToday = dayNum === 0 || (student ? isDayToday(student.registration_date, dayNum) : false)
   const isDemo = dayNum === 0
+  
+  let isResetActive = false;
+  if (data?.resetAt) {
+    const resetTime = new Date(data.resetAt).getTime();
+    const now = new Date().getTime();
+    if (now - resetTime <= 24 * 60 * 60 * 1000) {
+      isResetActive = true;
+    }
+  }
+
+  const isToday = isDemo || isResetActive || (student ? isDayToday(student.registration_date, dayNum) : false)
 
   // Open day record first, then fetch sections
   useEffect(() => {
