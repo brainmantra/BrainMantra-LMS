@@ -974,9 +974,9 @@ export default function SectionAttemptPage() {
                     <input
                       type="radio"
                       name={currentQ.id}
-                      checked={answer === opt.text}
+                      checked={answer === (opt.id || opt.text)}
                       disabled={!!feedback}
-                      onChange={() => setAnswer(opt.text)}
+                      onChange={() => setAnswer(opt.id || opt.text)}
                       style={{ 
                         accentColor: 'var(--primary)', 
                         transform: 'scale(1.25)', 
@@ -1006,7 +1006,8 @@ export default function SectionAttemptPage() {
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {currentQ.options.map(opt => {
-                    const isChecked = currentVal.includes(opt.text)
+                    const optionValue = opt.id || opt.text
+                    const isChecked = currentVal.includes(optionValue)
                     return (
                       <label key={opt.id} style={{
                         display: 'flex',
@@ -1026,9 +1027,9 @@ export default function SectionAttemptPage() {
                           onChange={(e) => {
                             let nextVal = [...currentVal]
                             if (e.target.checked) {
-                              nextVal.push(opt.text)
+                              nextVal.push(optionValue)
                             } else {
-                              nextVal = nextVal.filter(v => v !== opt.text)
+                              nextVal = nextVal.filter(v => v !== optionValue)
                             }
                             setAnswer(JSON.stringify(nextVal))
                           }}
@@ -1183,8 +1184,8 @@ export default function SectionAttemptPage() {
                                   <input
                                     type="radio"
                                     name={item.id}
-                                    checked={formAnswers[item.id] === opt.text}
-                                    onChange={() => setFormAnswers({ ...formAnswers, [item.id]: opt.text })}
+                                    checked={formAnswers[item.id] === (opt.id || opt.text)}
+                                    onChange={() => setFormAnswers({ ...formAnswers, [item.id]: (opt.id || opt.text) })}
                                     style={{ transform: 'scale(1.25)', cursor: 'pointer' }}
                                   />
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1202,7 +1203,8 @@ export default function SectionAttemptPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                               {item.options.map(opt => {
                                 const currentVal = Array.isArray(formAnswers[item.id]) ? formAnswers[item.id] : []
-                                const isChecked = currentVal.includes(opt.text)
+                                const optionValue = opt.id || opt.text
+                                const isChecked = currentVal.includes(optionValue)
                                 return (
                                   <label key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', padding: '0.3rem 0' }}>
                                     <input
@@ -1211,9 +1213,9 @@ export default function SectionAttemptPage() {
                                       onChange={(e) => {
                                         let nextVal = [...currentVal]
                                         if (e.target.checked) {
-                                          nextVal.push(opt.text)
+                                          nextVal.push(optionValue)
                                         } else {
-                                          nextVal = nextVal.filter(v => v !== opt.text)
+                                          nextVal = nextVal.filter(v => v !== optionValue)
                                         }
                                         setFormAnswers({ ...formAnswers, [item.id]: nextVal })
                                       }}
