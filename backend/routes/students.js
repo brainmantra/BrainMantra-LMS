@@ -741,44 +741,13 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
       [xpEarned, studentId]
     )
 
-    res.json({ success: true, marks, xpEarned, accuracy, correct, total: responses.length })
-  } catch (err) {
-    console.error('[section/submit]', err)
-    res.status(500).json({ message: 'Server error.' })
-  }
-})
-
-// ── POST /api/students/:id/progress/:dayNumber/submit — submit full paper ──────
-router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
-  try {
-    const studentId = parseInt(req.params.id, 10)
-    const dayNumber = parseInt(req.params.dayNumber, 10)
-    const student = await getStudentById(studentId)
-    if (!student) return res.status(404).json({ message: 'Student not found.' })
-
-    const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
-    const isActive = await checkDayActive(studentId, dayNumber, currentDay)
-    if (!isActive) {
-      return res.status(403).json({ message: 'This day is not currently active.' })
-    }
-
-    const { force } = req.body || {}
-    const { rows: dayRows } = await pool.query(
-      `SELECT section_data FROM day_records WHERE student_id = $1 AND day_number = $2`,
-      [studentId, dayNumber]
-    )
-
-    const sectionData = dayRows[0]?.section_data || {}
-    const level = normalizeStudentLevel(student.level) || student.level
+    // CHECK IF PAPER IS FULLY COMPLETED
     const sections = await getSectionsForLevelAsync(level, dayNumber)
-
-    // Filter sections that actually have questions
     const validSections = []
     for (const sec of sections) {
       if (TEACHER_INPUT_SECTIONS.has(sec)) {
         const tq = await getTeacherQuestion(level, dayNumber, sec)
         if (!tq || !tq.question) continue
-        
         let validQs = 0
         let qs = []
         if (typeof tq.question === 'string') {
@@ -788,7 +757,6 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
         }
         if (!Array.isArray(qs)) qs = [qs]
         if (qs.length === 1 && qs[0].questions) qs = qs[0].questions
-        
         for (const q of qs) {
           const qText = (q.question || q.question_text || q.questionText || '').trim()
           const img = (q.image || '').trim()
@@ -799,105 +767,61 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
       validSections.push(sec)
     }
 
-    // Verify all valid sections are done
     const allDone = validSections.every(sec => sectionData[sec]?.status === 'done')
-    if (!allDone) {
-      if (force) {
-        // Automatically populate remaining sections with 0 marks
-        for (const sec of validSections) {
-          if (sectionData[sec]?.status !== 'done') {
-            sectionData[sec] = {
-              status: 'done',
-              questionCount: sec === 'power_exercise' ? 10 : (TEACHER_INPUT_SECTIONS.has(sec) || (!LEVEL_SECTIONS[level]?.includes(sec) && sec !== 'power_exercise') ? 1 : 5),
-              correct: 0,
-              marks: 0,
-              xpEarned: 0,
-              accuracy: 0,
-              timeTaken: 0,
-            }
-          }
-        }
-      } else {
-        return res.status(400).json({ message: 'Not all sections are completed yet.' })
+    let paperCompleted = false
+    
+    if (allDone) {
+      paperCompleted = true
+      let totalMarks = 0, totalXp = 0, totalTime = 0, totalCorrect = 0, totalQs = 0
+
+      for (const sec of validSections) {
+        const sd = sectionData[sec] || {}
+        totalMarks += sd.marks || 0
+        totalXp += sd.xpEarned || 0
+        totalTime += sd.timeTaken || 0
+        totalCorrect += sd.correct || 0
+        totalQs += sd.questionCount || 0
       }
+
+      const paperAccuracy = totalQs > 0 ? Math.round((totalCorrect / totalQs) * 100) : 0
+
+      const streakResult = await recalculateStreak(studentId, student.first_login_date || student.registration_date)
+      const streakBonus = streakResult.streak * 5
+      totalXp += streakBonus
+
+      const { rows: studentResponses } = await pool.query(
+        `SELECT section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, xp_earned, answered_at 
+         FROM ${tableName} 
+         WHERE student_id = $1 AND day_number = $2
+         ORDER BY answered_at ASC`,
+        [studentId, dayNumber]
+      )
+
+      await pool.query(
+        `UPDATE day_records
+         SET completed = TRUE, completed_at = NOW(), total_marks = $1, accuracy = $2,
+             time_taken_seconds = $3, xp_earned = $4, answers = $5
+         WHERE student_id = $6 AND day_number = $7`,
+        [totalMarks, paperAccuracy, totalTime, totalXp, JSON.stringify(studentResponses), studentId, dayNumber]
+      )
+
+      await pool.query(
+        `UPDATE students SET xp_total = xp_total + $1, streak = $2, longest_streak = GREATEST(longest_streak, $3), updated_at = NOW()
+         WHERE id = $4`,
+        [streakBonus, streakResult.streak, streakResult.longestStreak, studentId]
+      )
+
+      await logActivity({ userType: 'student', userId: studentId, userLabel: student.name, action: 'day_complete', req, metadata: { day: dayNumber, accuracy: paperAccuracy, totalMarks, totalXp } })
     }
 
-    // Aggregate totals
-    let totalMarks = 0, totalXp = 0, totalTime = 0, totalCorrect = 0, totalQs = 0
-
-    for (const sec of validSections) {
-      const sd = sectionData[sec] || {}
-      totalMarks += sd.marks || 0
-      totalXp += sd.xpEarned || 0
-      totalTime += sd.timeTaken || 0
-      totalCorrect += sd.correct || 0
-      totalQs += sd.questionCount || 0
-    }
-
-    const accuracy = totalQs > 0 ? Math.round((totalCorrect / totalQs) * 100) : 0
-
-    // Streak bonus: +5 XP per active consecutive day
-    const streakResult = await recalculateStreak(studentId, student.first_login_date || student.registration_date)
-    const streakBonus = streakResult.streak * 5
-    totalXp += streakBonus
-
-    // Query all student responses from the per-level table
-    let tableName = `responses_l${level.replace('l', '')}`
-    if (level === 'alumni') tableName = 'responses_alumni'
-    else if (level === 'beginner') tableName = 'responses_beginner'
-    else if (level === 'gm') tableName = 'responses_gm'
-    const { rows: studentResponses } = await pool.query(
-      `SELECT section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, xp_earned, answered_at 
-       FROM ${tableName} 
-       WHERE student_id = $1 AND day_number = $2
-       ORDER BY answered_at ASC`,
-      [studentId, dayNumber]
-    )
-
-    // Mark paper complete and update student XP
-    await pool.query(
-      `INSERT INTO day_records (student_id, day_number, opened, opened_at, completed, completed_at, total_marks, accuracy, time_taken_seconds, xp_earned, answers, section_data, updated_at)
-       VALUES ($6, $7, TRUE, NOW(), TRUE, NOW(), $1, $2, $3, $4, $5, $8, NOW())
-       ON CONFLICT (student_id, day_number)
-       DO UPDATE SET 
-         opened = TRUE,
-         completed = TRUE, 
-         completed_at = NOW(), 
-         total_marks = $1, 
-         accuracy = $2,
-         time_taken_seconds = $3, 
-         xp_earned = $4, 
-         answers = $5, 
-         section_data = $8, 
-         updated_at = NOW()`,
-      [totalMarks, accuracy, totalTime, totalXp, JSON.stringify(studentResponses), studentId, dayNumber, JSON.stringify(sectionData)]
-    )
-
-    // Update student's cumulative XP (only streak bonus, as section XP is added progressively) and streak
-    await pool.query(
-      `UPDATE students SET xp_total = xp_total + $1, streak = $2, longest_streak = GREATEST(longest_streak, $3), updated_at = NOW()
-       WHERE id = $4`,
-      [streakBonus, streakResult.streak, streakResult.longestStreak, studentId]
-    )
-
-    await logActivity({ userType: 'student', userId: studentId, userLabel: student.name, action: 'day_complete', req, metadata: { day: dayNumber, accuracy, totalMarks, totalXp } })
-
-    res.json({
-      success: true,
-      totalMarks,
-      totalXp,
-      streakBonus,
-      accuracy,
-      totalTime,
-      totalCorrect,
-      totalQs,
-      sectionData,
-    })
+    res.json({ success: true, marks, xpEarned, accuracy, correct, total: responses.length, paperCompleted })
   } catch (err) {
-    console.error('[paper/submit]', err)
+    console.error('[section/submit]', err)
     res.status(500).json({ message: 'Server error.' })
   }
 })
+
+
 
 // ── GET /api/students/:id/progress/:dayNumber/report ──────────────────────────
 router.get('/:id/progress/:dayNumber/report', async (req, res) => {

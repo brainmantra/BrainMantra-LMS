@@ -102,22 +102,6 @@ export default function SectionListPage() {
   const visibleSections = data?.sections?.filter(sec => sec.questionCount > 0) || []
   const allDone = visibleSections.every(s => s.status === 'done') && visibleSections.length > 0
 
-  const handleSubmitPaper = async () => {
-    if (!allDone) return
-    setSubmitting(true)
-    try {
-      const res = await api.post(`/students/${student.id}/progress/${dayNum}/submit`)
-      if (res.data && res.data.streakBonus) {
-        login({ ...student, xp_total: (student.xp_total || 0) + res.data.streakBonus })
-      }
-      navigate(`/challenge/day/${dayNum}/report`)
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not submit paper.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   const handlePlaySection = (sec) => {
     if (sec.status === 'done' && !isDemo) {
       toast('This section is already completed.', { icon: '✓' })
@@ -293,29 +277,6 @@ export default function SectionListPage() {
           })}
         </div>
 
-        {/* Submit Paper - hide for demo */}
-        {!isDemo && (
-          <div className="card" style={{ textAlign: 'center', padding: '1.5rem 2rem' }}>
-            {allDone ? (
-              <>
-                <p style={{ color: 'var(--success)', fontWeight: 600, marginBottom: '1rem' }}>
-                  🎉 All sections completed! Submit your paper to see your score.
-                </p>
-                <button
-                  className="btn btn-success btn-lg"
-                  onClick={handleSubmitPaper}
-                  disabled={submitting}
-                >
-                  {submitting ? <><div className="spinner spinner-sm" /> Submitting...</> : '📝 Submit Paper'}
-                </button>
-              </>
-            ) : (
-              <p style={{ color: 'var(--text-muted)' }}>
-                Complete all sections to unlock paper submission.
-              </p>
-            )}
-          </div>
-        )}
         {isDemo && allDone && (
           <div className="card" style={{ textAlign: 'center', padding: '1.5rem 2rem', borderColor: 'var(--success)' }}>
             <p style={{ color: 'var(--success)', fontWeight: 600, marginBottom: '1rem' }}>

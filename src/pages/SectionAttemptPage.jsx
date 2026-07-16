@@ -54,6 +54,7 @@ export default function SectionAttemptPage() {
   const [formAnswers, setFormAnswers] = useState({})
   const [zoomedImage, setZoomedImage] = useState(null)
   const [customSectionTitle, setCustomSectionTitle] = useState('')
+  const [paperCompleted, setPaperCompleted] = useState(false)
 
   const responsesRef = useRef(responses)
   const sectionSecondsRef = useRef(sectionSeconds)
@@ -597,6 +598,9 @@ export default function SectionAttemptPage() {
         // Update global context with new XP
         login({ ...student, xp_total: (student.xp_total || 0) + res.data.xpEarned })
       }
+      if (res.data && res.data.paperCompleted) {
+        setPaperCompleted(true)
+      }
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } })
       playFanfare()
       setPhase('done')
@@ -679,9 +683,9 @@ export default function SectionAttemptPage() {
 
           <button
             className="btn btn-primary btn-block"
-            onClick={() => navigate('/courses', { state: isDemo ? { openDemoDay: true } : { openDayNum: dayNum } })}
+            onClick={() => navigate(paperCompleted ? `/challenge/day/${dayNum}/report` : '/courses', { state: isDemo ? { openDemoDay: true } : { openDayNum: dayNum } })}
           >
-            {isDemo ? 'Back to Demo →' : 'Back to Paper →'}
+            {isDemo ? 'Back to Demo →' : (paperCompleted ? 'View Final Report →' : 'Back to Paper →')}
           </button>
         </div>
       </div>
