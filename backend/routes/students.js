@@ -40,6 +40,23 @@ async function getStudentById(id) {
   return rows[0] ?? null
 }
 
+async function checkDayActive(studentId, dayNumber, currentDay) {
+  if (dayNumber === currentDay || dayNumber === 0) return true;
+  
+  const { rows } = await pool.query(
+    `SELECT reset_at FROM day_records WHERE student_id = $1 AND day_number = $2`,
+    [studentId, dayNumber]
+  );
+  if (rows.length > 0 && rows[0].reset_at) {
+    const resetTime = new Date(rows[0].reset_at).getTime();
+    const now = new Date().getTime();
+    if (now - resetTime <= 24 * 60 * 60 * 1000) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function normalizeStudentLevel(raw) {
   if (!raw) return null
   const s = raw.toLowerCase().trim()
@@ -231,7 +248,7 @@ router.get('/:id/progress', async (req, res) => {
     const targetLevel = level === 'gm' ? 'alumni' : level
     const [{ rows: days }, streakResult] = await Promise.all([
       pool.query(
-        `SELECT day_number, opened, opened_at, completed, completed_at,
+        `SELECT day_number, opened, opened_at, completed, completed_at, reset_at,
                 accuracy, time_taken_seconds, xp_earned, total_marks, section_data
          FROM day_records WHERE student_id = $1 ORDER BY day_number`,
         [studentId]
@@ -291,7 +308,8 @@ router.post('/:id/progress/:dayNumber/open', async (req, res) => {
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
-    if (dayNumber !== currentDay && dayNumber !== 0) {
+    const isActive = await checkDayActive(studentId, dayNumber, currentDay)
+    if (!isActive) {
       return res.status(403).json({ message: 'This day is not currently active.' })
     }
 
@@ -453,7 +471,8 @@ router.post('/:id/progress/:dayNumber/sections/:section/open', async (req, res) 
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
-    if (dayNumber !== currentDay && dayNumber !== 0) {
+    const isActive = await checkDayActive(studentId, dayNumber, currentDay)
+    if (!isActive) {
       return res.status(403).json({ message: 'This day is not currently active.' })
     }
 
@@ -498,7 +517,8 @@ router.get('/:id/progress/:dayNumber/sections/:section/questions', async (req, r
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
-    if (dayNumber !== currentDay && dayNumber !== 0) {
+    const isActive = await checkDayActive(studentId, dayNumber, currentDay)
+    if (!isActive) {
       return res.status(403).json({ message: 'This day is not currently active.' })
     }
 
@@ -603,7 +623,8 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
-    if (dayNumber !== currentDay && dayNumber !== 0) {
+    const isActive = await checkDayActive(studentId, dayNumber, currentDay)
+    if (!isActive) {
       return res.status(403).json({ message: 'This day is not currently active.' })
     }
 
@@ -734,7 +755,8 @@ router.post('/:id/progress/:dayNumber/submit', async (req, res) => {
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const currentDay = getChallengeDay(student.first_login_date || student.registration_date)
-    if (dayNumber !== currentDay && dayNumber !== 0) {
+    const isActive = await checkDayActive(studentId, dayNumber, currentDay)
+    if (!isActive) {
       return res.status(403).json({ message: 'This day is not currently active.' })
     }
 

@@ -41,6 +41,15 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
         }
       } catch (e) {}
     }
+    
+    if (record?.reset_at) {
+      const resetTime = new Date(record.reset_at).getTime();
+      const now = new Date().getTime();
+      if (now - resetTime <= 24 * 60 * 60 * 1000) {
+        return 'today'
+      }
+    }
+
     if (dayNum === 0) return 'demo'
     if (dayNum === currentDay) return 'today'
     if (record?.opened) return 'opened'

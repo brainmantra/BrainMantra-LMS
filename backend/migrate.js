@@ -79,6 +79,7 @@ ALTER TABLE day_records ADD COLUMN IF NOT EXISTS xp_earned      INTEGER NOT NULL
 ALTER TABLE day_records ADD COLUMN IF NOT EXISTS question_times JSONB;
 ALTER TABLE day_records ADD COLUMN IF NOT EXISTS answers        JSONB;
 ALTER TABLE day_records ADD COLUMN IF NOT EXISTS section_data   JSONB;
+ALTER TABLE day_records ADD COLUMN IF NOT EXISTS reset_at       TIMESTAMPTZ;
 
 -- ── Legacy questions table (kept for backward compat) ─────────────────────────
 CREATE TABLE IF NOT EXISTS questions (

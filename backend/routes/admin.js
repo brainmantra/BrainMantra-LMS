@@ -1052,7 +1052,13 @@ router.delete('/students/:id/progress/:dayNum/reset', requireAdmin, async (req, 
 
     if (dayRows.length > 0) {
       const xp_earned = dayRows[0].xp_earned || 0;
-      await pool.query(`DELETE FROM day_records WHERE student_id = $1 AND day_number = $2`, [student_id, day_number]);
+      await pool.query(
+        `UPDATE day_records 
+         SET completed = FALSE, completed_at = NULL, opened = TRUE, opened_at = NOW(), reset_at = NOW(),
+             total_marks = 0, accuracy = 0, time_taken_seconds = 0, xp_earned = 0, answers = '{}', section_data = '{}'
+         WHERE student_id = $1 AND day_number = $2`, 
+        [student_id, day_number]
+      );
 
       const { rows: studentRows } = await pool.query(
         `UPDATE students SET xp_total = GREATEST(0, xp_total - $1) WHERE id = $2 RETURNING registration_date, first_login_date`,
