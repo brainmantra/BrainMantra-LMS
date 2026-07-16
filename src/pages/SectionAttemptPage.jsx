@@ -337,10 +337,10 @@ export default function SectionAttemptPage() {
       if (hasCorrectAnswer) {
         if (item.questionType === 'multiple_choice') {
           const correctOpt = item.options.find(o => o.id === item.correctAnswer)
-          correctAnsStr = correctOpt ? correctOpt.text : String(item.correctAnswer)
+          correctAnsStr = correctOpt ? (correctOpt.id || correctOpt.text) : String(item.correctAnswer)
           isCorrect = correctAnsStr.toLowerCase().trim() === studentAns.toLowerCase().trim()
         } else if (item.questionType === 'checkbox') {
-          const correctOpts = item.options.filter(o => item.correctAnswer.includes(o.id)).map(o => o.text)
+          const correctOpts = item.options.filter(o => item.correctAnswer.includes(o.id)).map(o => o.id || o.text)
           correctAnsStr = JSON.stringify(correctOpts)
           const studentOpts = ans || []
           isCorrect = correctOpts.length === studentOpts.length && correctOpts.every(o => studentOpts.includes(o))
@@ -491,10 +491,10 @@ export default function SectionAttemptPage() {
         if (hasCorrectAnswer) {
           if (currentQ.questionType === 'multiple_choice') {
             const correctOpt = currentQ.options.find(o => o.id === currentQ.correctAnswer)
-            correctAnsStr = correctOpt ? correctOpt.text : String(currentQ.correctAnswer)
+            correctAnsStr = correctOpt ? (correctOpt.id || correctOpt.text) : String(currentQ.correctAnswer)
             isCorrect = correctAnsStr.toLowerCase().trim() === answer.toLowerCase().trim()
           } else if (currentQ.questionType === 'checkbox') {
-            const correctOpts = currentQ.options.filter(o => currentQ.correctAnswer.includes(o.id)).map(o => o.text)
+            const correctOpts = currentQ.options.filter(o => currentQ.correctAnswer.includes(o.id)).map(o => o.id || o.text)
             correctAnsStr = JSON.stringify(correctOpts)
             let studentOpts = []
             try { studentOpts = JSON.parse(answer) || [] } catch (e) {}
