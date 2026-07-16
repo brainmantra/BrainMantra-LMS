@@ -643,12 +643,29 @@ router.delete('/students/:id/progress/:dayNum/reset', requireTeacher, async (req
       );
 
       const { rows: studentRows } = await pool.query(
-        `UPDATE students SET xp_total = GREATEST(0, xp_total - $1) WHERE id = $2 RETURNING registration_date, first_login_date`,
+        `UPDATE students SET xp_total = GREATEST(0, xp_total - $1) WHERE id = $2 RETURNING registration_date, first_login_date, level`,
         [xp_earned, student_id]
       );
 
       if (studentRows.length > 0) {
         const student = studentRows[0];
+
+        const level = student.level ? student.level.toLowerCase() : 'l1';
+        let tableName = `responses_l${level.replace('l', '')}`;
+        if (level === 'alumni') tableName = 'responses_alumni';
+        else if (level === 'beginner') tableName = 'responses_beginner';
+        else if (level === 'gm') tableName = 'responses_gm';
+
+        const allowedTables = [
+          'responses_l1', 'responses_l2', 'responses_l3', 'responses_l4', 
+          'responses_l5', 'responses_l6', 'responses_l7', 'responses_l8', 
+          'responses_beginner', 'responses_alumni', 'responses_gm'
+        ];
+        
+        if (allowedTables.includes(tableName)) {
+          await pool.query(`DELETE FROM ${tableName} WHERE student_id = $1 AND day_number = $2`, [student_id, day_number]);
+        }
+
         await recalculateStreak(student_id, student.first_login_date || student.registration_date);
       }
     }
