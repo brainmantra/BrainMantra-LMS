@@ -720,8 +720,13 @@ export default function SectionAttemptPage() {
   const isMulDiv = (qType === 'mul_x' || qType === 'mul_div' || qType === 'two_steps') && !isVirtual
   const isTeacher = qType === 'teacher' && !isVirtual
 
+  let parsedQ = currentQ;
+  try {
+    parsedQ = typeof currentQ.question === 'string' ? JSON.parse(currentQ.question) : currentQ.question;
+  } catch(e) {}
+
   const addends = isAddType
-    ? (Array.isArray(currentQ.addends) ? currentQ.addends : JSON.parse(currentQ.addends || '[]'))
+    ? (Array.isArray(parsedQ?.addends) ? parsedQ.addends : JSON.parse(parsedQ?.addends || '[]'))
     : []
 
   return (
@@ -812,7 +817,7 @@ export default function SectionAttemptPage() {
               }}>
                 <strong>EXAMPLE Answer Format:</strong>
                 <br />
-                {currentQ.operand2 > 9 ? (
+                {parsedQ?.operand2 > 9 ? (
                   <>Question: 13 x 44 = <br /> Answer: 0520 + 052</>
                 ) : (
                   <>Question: 13 x 4 = <br /> Answer: 040 + 12</>
@@ -820,9 +825,9 @@ export default function SectionAttemptPage() {
               </div>
             )}
             <div className="mul-card card-3d animate-pop" style={{ width: '100%' }}>
-              <span className="mul-card__operand">{currentQ.operand1}</span>
-              <span className="mul-card__operator">{currentQ.operator}</span>
-              <span className="mul-card__operand">{currentQ.operand2}</span>
+              <span className="mul-card__operand">{parsedQ?.operand1}</span>
+              <span className="mul-card__operator">{parsedQ?.operator}</span>
+              <span className="mul-card__operand">{parsedQ?.operand2}</span>
               <span className="mul-card__eq">=</span>
               <input
                 className={`mul-card__input${feedback ? ` ${feedback}` : ''}`}
