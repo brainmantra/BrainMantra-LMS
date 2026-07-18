@@ -722,7 +722,9 @@ export default function SectionAttemptPage() {
 
   let parsedQ = currentQ;
   try {
-    parsedQ = typeof currentQ.question === 'string' ? JSON.parse(currentQ.question) : currentQ.question;
+    if (currentQ.question) {
+      parsedQ = typeof currentQ.question === 'string' ? JSON.parse(currentQ.question) : currentQ.question;
+    }
   } catch(e) {}
 
   const addends = isAddType
