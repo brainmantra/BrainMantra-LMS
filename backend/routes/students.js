@@ -754,15 +754,12 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
       if (TEACHER_INPUT_SECTIONS.has(sec)) {
         const tq = await getTeacherQuestion(level, dayNumber, sec)
         if (!tq || !tq.question) continue
-        let validQs = 0
-        let qs = []
-        if (typeof tq.question === 'string') {
-          try { qs = JSON.parse(tq.question) } catch(e){}
-        } else {
-          qs = tq.question
-        }
+        let qs = typeof tq.question === 'string' ? JSON.parse(tq.question) : tq.question
         if (!Array.isArray(qs)) qs = [qs]
         if (qs.length === 1 && qs[0].questions) qs = qs[0].questions
+        else if (qs.length === 1 && qs[0].items) qs = qs[0].items
+        
+        let validQs = 0
         for (const q of qs) {
           const qText = (q.question || q.question_text || q.questionText || '').trim()
           const img = (q.image || '').trim()
