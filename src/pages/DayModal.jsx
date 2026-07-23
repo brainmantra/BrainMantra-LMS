@@ -547,7 +547,14 @@ export default function DayModal() {
           <p className="day-modal-text">
             Excellent work! Come back tomorrow for Day {dayNum + 1}.
           </p>
-          <button className="btn btn-primary" onClick={handleClose}>Back to Challenge</button>
+          <div className="day-modal-actions" style={{ flexDirection: 'column', gap: '0.75rem' }}>
+            <button className="btn btn-primary" onClick={() => navigate(`/challenge/day/${dayNum}/report`)} style={{ width: '100%' }}>
+              View Final Report
+            </button>
+            <button className="btn btn-ghost" onClick={handleClose} style={{ width: '100%' }}>
+              Back to Challenge
+            </button>
+          </div>
         </div>
       </div>
     )

@@ -165,7 +165,7 @@ export default function PerformanceReportPage() {
       ctx.fillText('"Every bead is a step towards greatness"', 400, 445)
 
       // Convert to image URL
-      setShareImageUrl(canvas.toDataURL('image/png'))
+      setShareImageUrl(canvas.toDataURL('image/jpeg', 0.95))
     }
   }, [report, dayNum, student])
 
@@ -427,28 +427,43 @@ export default function PerformanceReportPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `I just completed Day ${dayNum} of the 100 Days Abacus Challenge with ${accuracy}% accuracy! 🧮 Tagging @brainmantra`
-                    )
-                    toast.success('Instagram tag text copied! Share your story & tag @brainmantra.')
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(shareImageUrl);
+                      const blob = await res.blob();
+                      const file = new File([blob], 'certificate.jpg', { type: 'image/jpeg' });
+                      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          files: [file],
+                          title: 'My Abacus Progress',
+                          text: 'I just completed another day of the 100 Days Abacus Challenge! Tag Us: @brainmantraadacemy'
+                        });
+                      } else {
+                        toast.error('Direct Instagram sharing is not supported on this browser. Please save the image and share manually.');
+                      }
+                    } catch (error) {
+                      toast.error('Failed to share.');
+                    }
                   }}
                   className="btn btn-ghost"
                   style={{ border: '1.5px solid rgba(255,255,255,0.1)', height: '44px', fontSize: '0.85rem', justifyContent: 'center', borderRadius: '10px' }}
                 >
-                  📸 Copy Instagram Tag
+                  📸 Share on Instagram
                 </button>
 
                 {shareImageUrl && (
                   <a
                     href={shareImageUrl}
-                    download={`BrainMantra_Day_${dayNum}_Progress.png`}
+                    download={`BrainMantra_Day_${dayNum}_Progress.jpg`}
                     className="btn btn-ghost"
                     style={{ textDecoration: 'none', border: '1.5px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '44px', fontSize: '0.85rem', color: 'var(--text-primary)', borderRadius: '10px' }}
                   >
                     📥 Save to Device
                   </a>
                 )}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                Tag Us: <strong>@brainmantraadacemy</strong>
               </div>
 
               <button
