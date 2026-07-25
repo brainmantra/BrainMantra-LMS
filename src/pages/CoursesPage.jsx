@@ -365,7 +365,7 @@ export default function CoursesPage() {
                 </div>
                 <h2 className="day-modal-title">Action Required!</h2>
                 <p className="day-modal-text" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-                  Some of your past days were missing sections and have been reset for <strong>24 hours</strong>. 
+                  Some of your past days had unattempted sections and have been reset for <strong>24 hours</strong>. 
                   Please complete them now to restore your streak!
                 </p>
                 <div style={{ background: 'var(--bg-elevated)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>
@@ -511,7 +511,7 @@ export default function CoursesPage() {
             </div>
             <h2 className="day-modal-title">Action Required!</h2>
             <p className="day-modal-text" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-              Some of your past days were missing sections and have been reset for <strong>24 hours</strong>. 
+              Some of your past days had unattempted sections and have been reset for <strong>24 hours</strong>. 
               Please complete them now to restore your streak!
             </p>
             <div style={{ background: 'var(--bg-elevated)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>
