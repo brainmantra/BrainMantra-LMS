@@ -286,6 +286,8 @@ export default function CoursesPage() {
   const [days, setDays] = useState([])
   const [validSections, setValidSections] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetDaysList, setResetDaysList] = useState([])
 
   const currentDay = useMemo(() => getChallengeDay(student?.first_login_date || student?.registration_date), [student])
 
@@ -303,6 +305,25 @@ export default function CoursesPage() {
         .then(res => {
           setDays(res.data.days || [])
           setValidSections(res.data.validSections || null)
+          
+          if (res.data.days) {
+            const now = new Date().getTime();
+            const resetDays = res.data.days.filter(d => {
+              if (d.completed) return false;
+              if (d.day_number >= res.data.currentDay) return false;
+              if (d.reset_at) {
+                const resetTime = new Date(d.reset_at).getTime();
+                if (now - resetTime <= 24 * 60 * 60 * 1000) return true;
+              }
+              return false;
+            }).map(d => d.day_number);
+            
+            if (resetDays.length > 0) {
+              setResetDaysList(resetDays);
+              setShowResetModal(true);
+            }
+          }
+          
           setLoading(false)
         })
         .catch(() => {
@@ -335,6 +356,27 @@ export default function CoursesPage() {
             defaultDayNum={location.state?.openDemoDay ? 0 : location.state?.openDayNum !== undefined ? location.state.openDayNum : null}
             validSections={validSections}
           />
+
+          {showResetModal && (
+            <div className="day-modal-overlay" onClick={() => setShowResetModal(false)} style={{ zIndex: 1000 }}>
+              <div className="day-modal-card animate-pop" onClick={e => e.stopPropagation()}>
+                <div className="day-modal-icon" style={{ background: 'rgba(255,122,0,0.1)', color: 'var(--primary)', borderColor: 'rgba(255,122,0,0.3)' }}>
+                  ⚠️
+                </div>
+                <h2 className="day-modal-title">Action Required!</h2>
+                <p className="day-modal-text" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+                  Some of your past days were missing sections and have been reset for <strong>24 hours</strong>. 
+                  Please complete them now to restore your streak!
+                </p>
+                <div style={{ background: 'var(--bg-elevated)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>
+                  <strong>Reset Days:</strong> {resetDaysList.join(', ')}
+                </div>
+                <button className="btn btn-primary" onClick={() => setShowResetModal(false)} style={{ width: '100%' }}>
+                  Got it, I'll complete them!
+                </button>
+              </div>
+            </div>
+          )}
       </StudentLayout>
     )
   }
@@ -459,8 +501,28 @@ export default function CoursesPage() {
 
           </div>
         </div>
-
       </div>
+
+      {showResetModal && (
+        <div className="day-modal-overlay" onClick={() => setShowResetModal(false)} style={{ zIndex: 1000 }}>
+          <div className="day-modal-card animate-pop" onClick={e => e.stopPropagation()}>
+            <div className="day-modal-icon" style={{ background: 'rgba(255,122,0,0.1)', color: 'var(--primary)', borderColor: 'rgba(255,122,0,0.3)' }}>
+              ⚠️
+            </div>
+            <h2 className="day-modal-title">Action Required!</h2>
+            <p className="day-modal-text" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Some of your past days were missing sections and have been reset for <strong>24 hours</strong>. 
+              Please complete them now to restore your streak!
+            </p>
+            <div style={{ background: 'var(--bg-elevated)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', border: '1px solid var(--border)', textAlign: 'center' }}>
+              <strong>Reset Days:</strong> {resetDaysList.join(', ')}
+            </div>
+            <button className="btn btn-primary" onClick={() => setShowResetModal(false)} style={{ width: '100%' }}>
+              Got it, I'll complete them!
+            </button>
+          </div>
+        </div>
+      )}
     </StudentLayout>
   )
 }
