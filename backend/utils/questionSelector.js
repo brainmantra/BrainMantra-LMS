@@ -75,19 +75,24 @@ export async function getTeacherQuestion(level, dayNumber, section = 'teacher_da
 
 // ── Get section list for a level on a specific day ─────────────────────────────
 export function getSectionsForLevel(level, dayNumber) {
+  let defaultSections = [...(LEVEL_SECTIONS[level] || ['abacus'])]
   if (level !== 'l1' && level !== 'beginner' && dayNumber > 0 && dayNumber % 5 === 0) {
-    return ['power_exercise']
+    if (!defaultSections.includes('power_exercise')) {
+      defaultSections.push('power_exercise')
+    }
   }
-  return LEVEL_SECTIONS[level] || ['abacus']
+  return defaultSections
 }
 
 export async function getSectionsForLevelAsync(level, dayNumber) {
-  let defaultSections = []
+  let defaultSections = [...(LEVEL_SECTIONS[level] || ['abacus'])]
   if (level !== 'l1' && level !== 'beginner' && dayNumber > 0 && dayNumber % 5 === 0) {
-    defaultSections = ['power_exercise']
-  } else {
-    defaultSections = [...(LEVEL_SECTIONS[level] || ['abacus'])]
-    if (level !== 'l1' && level !== 'beginner' && dayNumber === 0) {
+    if (!defaultSections.includes('power_exercise')) {
+      defaultSections.push('power_exercise')
+    }
+  }
+  if (level !== 'l1' && level !== 'beginner' && dayNumber === 0) {
+    if (!defaultSections.includes('power_exercise')) {
       defaultSections.push('power_exercise')
     }
   }
