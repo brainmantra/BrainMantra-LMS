@@ -49,7 +49,7 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
     }
 
     if (dayNum === 0) return 'demo'
-    if (dayNum === currentDay) return 'today'
+    if (dayNum === currentDay || dayNum === currentDay - 1) return 'today'
     if (record?.opened) return 'opened'
     if (dayNum < currentDay) return 'missed'
     return 'locked'
