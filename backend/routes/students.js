@@ -769,19 +769,7 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
       } else {
         const { selectQuestionsForDay } = await import('../utils/questionSelector.js')
         const qsArr = await selectQuestionsForDay(level, sec, dayNumber)
-        let validQs = 0
-        for (const q of qsArr) {
-          let hasContent = false
-          try {
-            const raw = typeof q.question === 'string' ? JSON.parse(q.question) : q.question
-            if (raw && typeof raw === 'object' && Object.keys(raw).length > 0) hasContent = true
-          } catch(e) {}
-          
-          const qText = typeof q.question === 'string' ? q.question.trim() : (q.question_text || q.questionText || '').trim()
-          const img = (q.image || '').trim()
-          if (qText !== '' || img !== '' || hasContent) validQs++
-        }
-        if (validQs === 0) continue
+        if (qsArr.length === 0) continue
       }
       validSections.push(sec)
     }
