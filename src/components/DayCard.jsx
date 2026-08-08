@@ -75,7 +75,8 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   const _expectedSecs = validSections 
     ? _expectedBase.filter(s => validSections.includes(s) || teacherInputSecs.includes(s))
     : _expectedBase
-  if (_level !== 'l1' && isDemo) {
+  const _isPowerExerciseDay = isDemo || (dayNumber > 0 && dayNumber % 5 === 0);
+  if (_level !== 'l1' && _level !== 'beginner' && _isPowerExerciseDay) {
     if (!_expectedSecs.includes('power_exercise')) {
       _expectedSecs.push('power_exercise')
     }
@@ -176,7 +177,8 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
     ? baseSecs.filter(s => validSections.includes(s) || teacherInputSecs.includes(s))
     : baseSecs
     
-  if (studentLevel !== 'l1' && studentLevel !== 'beginner' && isDemo) {
+  const isPowerExerciseDay = isDemo || (dayNumber > 0 && dayNumber % 5 === 0);
+  if (studentLevel !== 'l1' && studentLevel !== 'beginner' && isPowerExerciseDay) {
     if (!defaultSecs.includes('power_exercise')) {
       defaultSecs.push('power_exercise')
     }
