@@ -412,19 +412,7 @@ router.get('/:id/progress/:dayNumber/sections', async (req, res) => {
       } else {
         // Standard question_bank sections
         const qs = await selectQuestionsForDay(level, sec, dayNumber)
-        let validQs = 0
-        for (const q of qs) {
-          let hasContent = false
-          try {
-            const raw = typeof q.question === 'string' ? JSON.parse(q.question) : q.question
-            if (raw && typeof raw === 'object' && Object.keys(raw).length > 0) hasContent = true
-          } catch(e) {}
-          
-          const qText = typeof q.question === 'string' ? q.question.trim() : (q.question_text || q.questionText || '').trim()
-          const img = (q.image || '').trim()
-          if (qText !== '' || img !== '' || hasContent) validQs++
-        }
-        countVal = validQs
+        countVal = qs.length
       }
 
       // Determine Label
