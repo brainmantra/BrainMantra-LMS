@@ -16,11 +16,16 @@ import LeaderboardPage     from './pages/LeaderboardPage'
 import NotFoundPage        from './pages/NotFoundPage'
 import StudentProfilePage  from './pages/StudentProfilePage'
 
+import MaintenancePage     from './pages/MaintenancePage'
+
 // Staff pages
 import AdminLogin          from './pages/AdminLogin'
 import AdminDashboard      from './pages/AdminDashboard'
 import TeacherLogin        from './pages/TeacherLogin'
 import TeacherDashboard    from './pages/TeacherDashboard'
+
+// Set to true to display the Maintenance Screen to students
+export const MAINTENANCE_MODE = true
 
 function ProtectedRoute({ children }) {
   const { student, loading } = useAuth()
@@ -36,6 +41,17 @@ function ProtectedRoute({ children }) {
 }
 
 function AppRoutes() {
+  if (MAINTENANCE_MODE) {
+    return (
+      <Routes>
+        {/* Allow Admin access during maintenance if needed */}
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        {/* All other routes show the Maintenance Page */}
+        <Route path="*" element={<MaintenancePage />} />
+      </Routes>
+    )
+  }
+
   return (
     <Routes>
       {/* Student */}
