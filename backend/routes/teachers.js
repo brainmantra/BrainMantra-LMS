@@ -171,20 +171,6 @@ router.post('/questions', requireTeacher, async (req, res) => {
       [level, day_number, section, question, answer, format_example || null, teacherId]
     )
 
-    // Activity log
-    await pool.query(
-      `INSERT INTO teacher_activity_log
-       (teacher_id, action, level, day_number, section, old_value, new_value)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        teacherId,
-        existing[0] ? 'edit_question' : 'create_question',
-        level, day_number, section,
-        existing[0] ? existing[0].question : null,
-        question,
-      ]
-    )
-
     res.json(rows[0])
   } catch (err) {
     console.error('[teachers/questions POST]', err)
@@ -206,13 +192,6 @@ router.delete('/questions', requireTeacher, async (req, res) => {
     await pool.query(
       `DELETE FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
       [level, parseInt(day_number, 10), section]
-    )
-
-    // Activity log
-    await pool.query(
-      `INSERT INTO teacher_activity_log (teacher_id, action, level, day_number, section, old_value, new_value)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [teacherId, 'delete_question', level, parseInt(day_number, 10), section, section, null]
     )
 
     res.json({ success: true })
@@ -357,18 +336,9 @@ router.get('/fifth-days', requireTeacher, async (req, res) => {
   }
 })
 
-// ── GET /api/teachers/activity — my own activity log ─────────────────────────
+// ── GET /api/teachers/activity — activity log (disabled) ─────────────────────
 router.get('/activity', requireTeacher, async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      `SELECT * FROM teacher_activity_log
-       WHERE teacher_id = $1 ORDER BY timestamp DESC LIMIT 200`,
-      [req.teacher.id]
-    )
-    res.json(rows)
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' })
-  }
+  res.json([])
 })
 
 // ── GET /api/teachers/responses ───────────────────────────────────────────────

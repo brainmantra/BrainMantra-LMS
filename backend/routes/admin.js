@@ -471,12 +471,6 @@ router.post('/teachers', requireAdmin, async (req, res) => {
       [name, email, hash, assigned_levels]
     )
 
-    // Log activity
-    await pool.query(
-      `INSERT INTO teacher_activity_log (teacher_id, action, new_value) VALUES (NULL, 'create_teacher', $1)`,
-      [email]
-    )
-
     res.status(201).json(rows[0])
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ message: 'Email already exists.' })
@@ -508,11 +502,6 @@ router.put('/teachers/:id', requireAdmin, async (req, res) => {
     )
 
     if (!rows[0]) return res.status(404).json({ message: 'Teacher not found.' })
-
-    await pool.query(
-      `INSERT INTO teacher_activity_log (teacher_id, action) VALUES ($1, 'teacher_updated')`,
-      [teacherId]
-    )
 
     res.json(rows[0])
   } catch (err) {
@@ -650,86 +639,9 @@ router.delete('/teacher-questions', requireAdmin, async (req, res) => {
   }
 })
 
-// ── GET /api/admin/performance ────────────────────────────────────────────────
-router.get('/performance', requireAdmin, async (req, res) => {
-  try {
-    const [accuracyDist, completionRate, xpLeaderboard, levelComparison] = await Promise.all([
-      // Accuracy distribution (buckets of 10%)
-      pool.query(`
-        SELECT
-          FLOOR(accuracy / 10) * 10 AS bucket,
-          COUNT(*) AS count
-        FROM day_records
-        WHERE accuracy IS NOT NULL
-        GROUP BY bucket ORDER BY bucket
-      `),
-
-      // Completion rate per day (% of students who completed each day)
-      pool.query(`
-        SELECT
-          dr.day_number,
-          COUNT(CASE WHEN dr.completed THEN 1 END)::float / COUNT(DISTINCT s.id) * 100 AS completion_pct
-        FROM students s
-        LEFT JOIN day_records dr ON dr.student_id = s.id
-        GROUP BY dr.day_number
-        ORDER BY dr.day_number
-      `),
-
-      // Top 20 XP all time
-      pool.query(`
-        SELECT id, name, level, xp_total, streak
-        FROM students ORDER BY xp_total DESC LIMIT 20
-      `),
-
-      // Average accuracy per level
-      pool.query(`
-        SELECT s.level, AVG(dr.accuracy) AS avg_accuracy, AVG(dr.time_taken_seconds) AS avg_time
-        FROM students s
-        JOIN day_records dr ON dr.student_id = s.id
-        WHERE dr.completed = TRUE
-        GROUP BY s.level ORDER BY s.level
-      `),
-    ])
-
-    res.json({
-      accuracyDistribution: accuracyDist.rows,
-      completionRate: completionRate.rows,
-      xpLeaderboard: xpLeaderboard.rows,
-      levelComparison: levelComparison.rows,
-    })
-  } catch (err) {
-    console.error('[admin/performance]', err)
-    res.status(500).json({ message: 'Server error.' })
-  }
-})
-
-// ── GET /api/admin/activity-log ───────────────────────────────────────────────
+// ── GET /api/admin/performance ─────────────────────────────────────// ── GET /api/admin/activity-log ───────────────────────────────────────────────
 router.get('/activity-log', requireAdmin, async (req, res) => {
-  try {
-    const { teacher_id, level, from, to, page = 1, limit = 100 } = req.query
-    const offset = (parseInt(page) - 1) * parseInt(limit)
-    const params = []
-    let where = 'WHERE 1=1'
-
-    if (teacher_id) { params.push(parseInt(teacher_id)); where += ` AND tal.teacher_id = $${params.length}` }
-    if (level) { params.push(level); where += ` AND tal.level = $${params.length}` }
-    if (from) { params.push(from); where += ` AND tal.timestamp >= $${params.length}` }
-    if (to) { params.push(to); where += ` AND tal.timestamp <= $${params.length}` }
-
-    params.push(parseInt(limit), offset)
-
-    const { rows } = await pool.query(
-      `SELECT tal.*, t.name as teacher_name
-       FROM teacher_activity_log tal
-       LEFT JOIN teachers t ON t.id = tal.teacher_id
-       ${where} ORDER BY tal.timestamp DESC
-       LIMIT $${params.length - 1} OFFSET $${params.length}`,
-      params
-    )
-    res.json(rows)
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' })
-  }
+  res.json([])
 })
 
 // ── GET /api/admin/questions/:level/:day ──────────────────────────────────────
@@ -787,29 +699,7 @@ router.put('/questions/:level/:day', requireAdmin, async (req, res) => {
 
 // ── GET /api/admin/login-logs ──────────────────────────────────────────────────
 router.get('/login-logs', requireAdmin, async (req, res) => {
-  try {
-    const { userType, limit = 100 } = req.query
-
-    let query = `
-      SELECT id, user_type, user_id, user_label, action, ip_address, metadata, created_at
-      FROM activity_logs
-    `
-    const params = []
-
-    if (userType && userType !== 'all') {
-      params.push(userType)
-      query += ` WHERE user_type = $1 `
-    }
-
-    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`
-    params.push(parseInt(limit, 10))
-
-    const { rows } = await pool.query(query, params)
-    res.json({ logs: rows })
-  } catch (err) {
-    console.error('[admin/login-logs]', err)
-    res.status(500).json({ message: 'Server error' })
-  }
+  res.json({ logs: [] })
 })
 
 // ── GET /api/admin/responses ──────────────────────────────────────────────────
