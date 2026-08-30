@@ -18,7 +18,7 @@ router.post('/login', async (req, res) => {
     const identifier = String(loginId).trim().toLowerCase()
 
     // 1. Check Admin Table
-    const { rows: adminRows } = await pool.query('SELECT * FROM admin WHERE LOWER(TRIM(email)) = $1', [identifier])
+    const { rows: adminRows } = await pool.query('SELECT id, email, password_hash FROM admin WHERE LOWER(TRIM(email)) = $1', [identifier])
     const admin = adminRows[0]
     if (admin) {
       const valid = await bcrypt.compare(password, admin.password_hash)
@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 2. Check Teacher Table
-    const { rows: teacherRows } = await pool.query('SELECT * FROM teachers WHERE LOWER(TRIM(email)) = $1 AND is_active = TRUE', [identifier])
+    const { rows: teacherRows } = await pool.query('SELECT id, name, email, password_hash, assigned_levels, is_active FROM teachers WHERE LOWER(TRIM(email)) = $1 AND is_active = TRUE', [identifier])
     const teacher = teacherRows[0]
     if (teacher) {
       const valid = await bcrypt.compare(password, teacher.password_hash)
@@ -61,7 +61,10 @@ router.post('/login', async (req, res) => {
     }
 
     // 3. Check Student Table
-    const { rows: studentRows } = await pool.query('SELECT * FROM students WHERE LOWER(username) = $1 OR mobile = $2', [identifier, identifier])
+    const { rows: studentRows } = await pool.query(
+      'SELECT id, name, username, mobile, level, password_hash, plain_password, first_login_date, registration_date FROM students WHERE LOWER(username) = $1 OR mobile = $2',
+      [identifier, identifier]
+    )
     const student = studentRows[0]
     if (student) {
       if (!student.password_hash) {
@@ -100,7 +103,10 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     console.error('[auth/login]', err)
-    return res.status(500).json({ message: 'Server error during login.' })
+    if (err.message && err.message.includes('exceeded the data transfer quota')) {
+      return res.status(500).json({ message: 'Database transfer limit reached on Neon. Please upgrade database plan.' })
+    }
+    return res.status(500).json({ message: 'Server error during login: ' + (err.message || String(err)) })
   }
 })
 
