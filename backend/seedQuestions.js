@@ -53,27 +53,46 @@ async function seed() {
     await client.query(`DELETE FROM question_bank WHERE level IN ('l2','l3','l4','l5','l6','l7','l8')`)
     
     let totalUpserted = 0
-    
-    // Helper to insert question into question_bank
-    async function insertQuestion(level, section, index, type, data) {
+    const buffer = []
+
+    async function flushBuffer() {
+      if (buffer.length === 0) return
+      const values = []
+      const placeholders = []
+      let paramIdx = 1
+
+      for (const row of buffer) {
+        placeholders.push(`($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, FALSE)`)
+        values.push(
+          row.level,
+          row.section,
+          row.index,
+          row.type,
+          row.data.addends ? JSON.stringify(row.data.addends) : null,
+          row.data.operand1 ?? null,
+          row.data.operator ?? null,
+          row.data.operand2 ?? null,
+          row.data.answer ?? null,
+          row.data.answer_text ?? null
+        )
+      }
+
       await client.query(
         `INSERT INTO question_bank 
           (level, section, question_index, question_type, addends, operand1, operator, operand2, answer, answer_text, is_teacher_input)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE)`,
-        [
-          level,
-          section,
-          index,
-          type,
-          data.addends ? JSON.stringify(data.addends) : null,
-          data.operand1 ?? null,
-          data.operator ?? null,
-          data.operand2 ?? null,
-          data.answer ?? null,
-          data.answer_text ?? null
-        ]
+         VALUES ${placeholders.join(', ')}`,
+        values
       )
-      totalUpserted++
+      totalUpserted += buffer.length
+      buffer.length = 0
+    }
+
+    // Helper to insert question into question_bank (batched)
+    async function insertQuestion(level, section, index, type, data) {
+      buffer.push({ level, section, index, type, data })
+      if (buffer.length >= 200) {
+        await flushBuffer()
+      }
     }
 
     console.log('[seedQuestions] Generating questions for Level 2...')
@@ -390,6 +409,8 @@ async function seed() {
         answer: q
       })
     }
+
+    await flushBuffer()
 
     console.log(`[seedQuestions] Done! Total questions inserted: ${totalUpserted}`)
   } catch (err) {

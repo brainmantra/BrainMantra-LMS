@@ -8,11 +8,17 @@ const { Pool } = pg
 let pool = null
 
 if (process.env.DATABASE_URL) {
+  let connectionString = process.env.DATABASE_URL
+  const isLocal = connectionString.includes('localhost')
+
+  if (!isLocal) {
+    // Strip sslmode param so custom SSL options take precedence
+    connectionString = connectionString.replace(/([?&])sslmode=[^&]+(&|$)/, '$1').replace(/[?&]$/, '')
+  }
+
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL.includes('localhost')
-      ? false
-      : { rejectUnauthorized: false },
+    connectionString,
+    ssl: isLocal ? false : { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
