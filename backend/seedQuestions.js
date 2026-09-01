@@ -49,7 +49,7 @@ async function seed() {
   const client = await pool.connect()
   
   try {
-    console.log('[seedQuestions] Clearing existing auto-generated questions from question_bank...')
+    console.log('[seedQuestions] Clearing existing questions from question_bank...')
     await client.query(`DELETE FROM question_bank`)
     
     let totalUpserted = 0
@@ -95,48 +95,58 @@ async function seed() {
       }
     }
 
-    console.log('[seedQuestions] Generating questions for Beginner...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: 1-digit, 2 to 3 row vertical (running sum >= 0)
-      const abacusRows = randomInt(2, 3)
-      const abacusData = generateAddends(abacusRows, 1, false)
-      await insertQuestion('beginner', 'abacus', i, 'add', abacusData)
+    // Helper to generate 500 questions (100 days x 5 questions) where all 5 on each day are strictly unique
+    async function generateSection(level, section, genFn) {
+      let qIdx = 1
+      for (let day = 1; day <= 100; day++) {
+        const daySet = new Set()
+        const dayQuestions = []
+        let attempts = 0
+        while (dayQuestions.length < 5 && attempts < 200) {
+          attempts++
+          const item = genFn(day, dayQuestions.length + 1)
+          const key = item.key || JSON.stringify(item.data)
+          if (!daySet.has(key)) {
+            daySet.add(key)
+            dayQuestions.push(item)
+          }
+        }
+        while (dayQuestions.length < 5) {
+          dayQuestions.push(genFn(day, dayQuestions.length + 1))
+        }
+        for (const item of dayQuestions) {
+          await insertQuestion(level, section, qIdx++, item.type, item.data)
+        }
+      }
     }
 
-    console.log('[seedQuestions] Generating questions for Level 1...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: 1-digit, 3 to 5 row vertical (running sum >= 0)
-      const abacusRows = randomInt(3, 5)
-      const abacusData = generateAddends(abacusRows, 1, false)
-      await insertQuestion('l1', 'abacus', i, 'add', abacusData)
-    }
+    console.log('[seedQuestions] Generating Beginner & Level 1...')
+    await generateSection('beginner', 'abacus', () => {
+      const data = generateAddends(randomInt(2, 3), 1, false)
+      return { type: 'add', data }
+    })
+    await generateSection('l1', 'abacus', () => {
+      const data = generateAddends(randomInt(3, 5), 1, false)
+      return { type: 'add', data }
+    })
 
-    console.log('[seedQuestions] Generating questions for Level 2...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: 2-digit, 4 to 5 row vertical (both add/sub, running sum >= 0)
-      const abacusRows = randomInt(4, 5)
-      const abacusData = generateAddends(abacusRows, 2, false)
-      await insertQuestion('l2', 'abacus', i, 'add', abacusData)
-      
-      // Visual: 1-digit, 6 or 7 row vertical (both add/sub, running sum >= 0)
-      const visualRows = randomInt(6, 7)
-      const visualData = generateAddends(visualRows, 1, false)
-      await insertQuestion('l2', 'visual', i, 'add', visualData)
-      
-      // Tables: 1-digit multiplied with 1 digit
-      const op1 = randomInt(1, 9)
-      const op2 = randomInt(1, 9)
-      await insertQuestion('l2', 'tables', i, 'mul_x', {
-        operand1: op1,
-        operator: '×',
-        operand2: op2,
-        answer: op1 * op2
-      })
-    }
+    console.log('[seedQuestions] Generating Level 2...')
+    await generateSection('l2', 'abacus', () => {
+      const data = generateAddends(randomInt(4, 5), 2, false)
+      return { type: 'add', data }
+    })
+    await generateSection('l2', 'visual', () => {
+      const data = generateAddends(randomInt(6, 7), 1, false)
+      return { type: 'add', data }
+    })
+    await generateSection('l2', 'tables', () => {
+      const op1 = randomInt(2, 9)
+      const op2 = randomInt(2, 9)
+      return { type: 'mul_x', data: { operand1: op1, operator: '×', operand2: op2, answer: op1 * op2 } }
+    })
 
-    console.log('[seedQuestions] Generating questions for Level 3...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: 2 or 3 digit, 3 to 4 row vertical zigzag
+    console.log('[seedQuestions] Generating Level 3...')
+    await generateSection('l3', 'abacus', () => {
       const rows = randomInt(3, 4)
       let addends = []
       let sum = 0
@@ -144,51 +154,33 @@ async function seed() {
         const digitCount = randomInt(2, 3)
         let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
         if (r > 0 && Math.random() > 0.4) val = -val
-        if (r === 0) val = Math.abs(val)
-        
-        if (sum + val < 0) val = Math.abs(val)
+        if (r === 0 || sum + val < 0) val = Math.abs(val)
         sum += val
         addends.push(val)
       }
-      await insertQuestion('l3', 'abacus', i, 'add', { addends, answer: sum })
-
-      // Visual: 1-digit 10 row OR 2-digit 3 or 4 row
-      let visData
-      if (Math.random() > 0.5) {
-        visData = generateAddends(10, 1, false)
-      } else {
-        visData = generateAddends(randomInt(3, 4), 2, false)
-      }
-      await insertQuestion('l3', 'visual', i, 'add', visData)
-
-      // Multiplication: 2-digit x 1-digit
+      return { type: 'add', data: { addends, answer: sum } }
+    })
+    await generateSection('l3', 'visual', () => {
+      const data = Math.random() > 0.5 ? generateAddends(10, 1, false) : generateAddends(randomInt(3, 4), 2, false)
+      return { type: 'add', data }
+    })
+    await generateSection('l3', 'multiplication', () => {
       const m1 = randomInt(10, 99)
       const m2 = randomInt(2, 9)
-      await insertQuestion('l3', 'multiplication', i, 'mul_x', {
-        operand1: m1,
-        operator: '×',
-        operand2: m2,
-        answer: m1 * m2
-      })
-
-      // 2 Steps: 2-digit x 1-digit formatted as e.g. 040 + 12
+      return { type: 'mul_x', data: { operand1: m1, operator: '×', operand2: m2, answer: m1 * m2 } }
+    })
+    await generateSection('l3', 'two_steps', () => {
       const s1 = randomInt(10, 99)
       const s2 = randomInt(2, 9)
       const t = Math.floor(s1 / 10)
       const u = s1 % 10
       const part1 = String(t * 10 * s2).padStart(3, '0')
       const part2 = String(u * s2).padStart(2, '0')
-      await insertQuestion('l3', 'two_steps', i, 'two_steps', {
-        operand1: s1,
-        operator: '×',
-        operand2: s2,
-        answer_text: `${part1} + ${part2}`
-      })
-    }
+      return { type: 'two_steps', data: { operand1: s1, operator: '×', operand2: s2, answer_text: `${part1} + ${part2}` } }
+    })
 
-    console.log('[seedQuestions] Generating questions for Level 4...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: 2 or 3 digit, 4 to 6 row vertical
+    console.log('[seedQuestions] Generating Level 4...')
+    await generateSection('l4', 'abacus', () => {
       const rows = randomInt(4, 6)
       let addends = []
       let sum = 0
@@ -196,47 +188,34 @@ async function seed() {
         const digitCount = randomInt(2, 3)
         let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
         if (r > 0 && Math.random() > 0.4) val = -val
-        if (r === 0) val = Math.abs(val)
-        if (sum + val < 0) val = Math.abs(val)
+        if (r === 0 || sum + val < 0) val = Math.abs(val)
         sum += val
         addends.push(val)
       }
-      await insertQuestion('l4', 'abacus', i, 'add', { addends, answer: sum })
-
-      // Visual: 2-digit, 4 to 6 row vertical
-      const visData = generateAddends(randomInt(4, 6), 2, false)
-      await insertQuestion('l4', 'visual', i, 'add', visData)
-
-      // Multiplication: 2-digit x 1-digit
+      return { type: 'add', data: { addends, answer: sum } }
+    })
+    await generateSection('l4', 'visual', () => {
+      const data = generateAddends(randomInt(4, 6), 2, false)
+      return { type: 'add', data }
+    })
+    await generateSection('l4', 'multiplication', () => {
       const m1 = randomInt(10, 99)
       const m2 = randomInt(2, 9)
-      await insertQuestion('l4', 'multiplication', i, 'mul_x', {
-        operand1: m1,
-        operator: '×',
-        operand2: m2,
-        answer: m1 * m2
-      })
-
-      // Division: 2 or 3 digit by 1 digit (without remainders)
+      return { type: 'mul_x', data: { operand1: m1, operator: '×', operand2: m2, answer: m1 * m2 } }
+    })
+    await generateSection('l4', 'division', () => {
       const q = randomInt(10, 99)
       const divisor = randomInt(2, 9)
       const dividend = q * divisor
-      await insertQuestion('l4', 'division', i, 'mul_div', {
-        operand1: dividend,
-        operator: '÷',
-        operand2: divisor,
-        answer: q
-      })
-    }
+      return { type: 'mul_div', data: { operand1: dividend, operator: '÷', operand2: divisor, answer: q } }
+    })
 
-    console.log('[seedQuestions] Generating questions for Level 5...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: Decimal, 5 to 6 row vertical
-      const abacusRows = randomInt(5, 6)
-      const abacusData = generateAddends(abacusRows, 2, true)
-      await insertQuestion('l5', 'abacus', i, 'add', abacusData)
-
-      // Visual: 2 to 3 digit, 3 to 5 row vertical
+    console.log('[seedQuestions] Generating Level 5...')
+    await generateSection('l5', 'abacus', () => {
+      const data = generateAddends(randomInt(5, 6), 2, true)
+      return { type: 'add', data }
+    })
+    await generateSection('l5', 'visual', () => {
       const rows = randomInt(3, 5)
       let addends = []
       let sum = 0
@@ -244,60 +223,38 @@ async function seed() {
         const digitCount = randomInt(2, 3)
         let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
         if (r > 0 && Math.random() > 0.4) val = -val
-        if (r === 0) val = Math.abs(val)
-        if (sum + val < 0) val = Math.abs(val)
+        if (r === 0 || sum + val < 0) val = Math.abs(val)
         sum += val
         addends.push(val)
       }
-      await insertQuestion('l5', 'visual', i, 'add', { addends, answer: sum })
-
-      // Multiplication: 3-digit x 1-digit
+      return { type: 'add', data: { addends, answer: sum } }
+    })
+    await generateSection('l5', 'multiplication', () => {
       const m1 = randomInt(100, 999)
       const m2 = randomInt(2, 9)
-      await insertQuestion('l5', 'multiplication', i, 'mul_x', {
-        operand1: m1,
-        operator: '×',
-        operand2: m2,
-        answer: m1 * m2
-      })
-
-      // Division: 3 digit by 1 digit (remainder answers 1-2 in 5 questions, so ~30% probability)
-      const hasRemainder = i % 5 === 1 || i % 5 === 3
+      return { type: 'mul_x', data: { operand1: m1, operator: '×', operand2: m2, answer: m1 * m2 } }
+    })
+    await generateSection('l5', 'division', (day, qNum) => {
+      const hasRemainder = qNum % 2 === 1
       const divisor = randomInt(2, 9)
       if (hasRemainder) {
         const q = randomInt(20, 150)
         const rem = randomInt(1, divisor - 1)
         const dividend = q * divisor + rem
-        await insertQuestion('l5', 'division', i, 'mul_div', {
-          operand1: dividend,
-          operator: '÷',
-          operand2: divisor,
-          answer_text: `${q}..${rem}`
-        })
+        return { type: 'mul_div', data: { operand1: dividend, operator: '÷', operand2: divisor, answer_text: `${q}..${rem}` } }
       } else {
         const q = randomInt(20, 150)
         const dividend = q * divisor
-        await insertQuestion('l5', 'division', i, 'mul_div', {
-          operand1: dividend,
-          operator: '÷',
-          operand2: divisor,
-          answer: q
-        })
+        return { type: 'mul_div', data: { operand1: dividend, operator: '÷', operand2: divisor, answer: q } }
       }
-    }
+    })
 
-    console.log('[seedQuestions] Generating questions for Level 6...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: Decimal 6-7 rows OR 4-digit 4-5 rows (shuffled)
-      let abacusData
-      if (Math.random() > 0.5) {
-        abacusData = generateAddends(randomInt(6, 7), 2, true)
-      } else {
-        abacusData = generateAddends(randomInt(4, 5), 4, false)
-      }
-      await insertQuestion('l6', 'abacus', i, 'add', abacusData)
-
-      // Visual: 2 to 3 digit, 4 to 5 row vertical zigzag
+    console.log('[seedQuestions] Generating Level 6...')
+    await generateSection('l6', 'abacus', () => {
+      const data = Math.random() > 0.5 ? generateAddends(randomInt(6, 7), 2, true) : generateAddends(randomInt(4, 5), 4, false)
+      return { type: 'add', data }
+    })
+    await generateSection('l6', 'visual', () => {
       const rows = randomInt(4, 5)
       let addends = []
       let sum = 0
@@ -305,144 +262,116 @@ async function seed() {
         const digitCount = randomInt(2, 3)
         let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
         if (r > 0 && Math.random() > 0.4) val = -val
-        if (r === 0) val = Math.abs(val)
-        if (sum + val < 0) val = Math.abs(val)
+        if (r === 0 || sum + val < 0) val = Math.abs(val)
         sum += val
         addends.push(val)
       }
-      await insertQuestion('l6', 'visual', i, 'add', { addends, answer: sum })
-
-      // Multiplication: 4 digit x 1 digit
+      return { type: 'add', data: { addends, answer: sum } }
+    })
+    await generateSection('l6', 'multiplication', () => {
       const m1 = randomInt(1000, 9999)
       const m2 = randomInt(2, 9)
-      await insertQuestion('l6', 'multiplication', i, 'mul_x', {
-        operand1: m1,
-        operator: '×',
-        operand2: m2,
-        answer: m1 * m2
-      })
-
-      // Division: 4 digit by 1 digit (without remainders)
+      return { type: 'mul_x', data: { operand1: m1, operator: '×', operand2: m2, answer: m1 * m2 } }
+    })
+    await generateSection('l6', 'division', () => {
       const q = randomInt(100, 999)
       const divisor = randomInt(2, 9)
       const dividend = q * divisor
-      await insertQuestion('l6', 'division', i, 'mul_div', {
-        operand1: dividend,
-        operator: '÷',
-        operand2: divisor,
-        answer: q
-      })
-    }
+      return { type: 'mul_div', data: { operand1: dividend, operator: '÷', operand2: divisor, answer: q } }
+    })
 
-    console.log('[seedQuestions] Generating questions for Level 7...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: 5 digit, 3 rows vertical
-      const abacusData = generateAddends(3, 5, false)
-      await insertQuestion('l7', 'abacus', i, 'add', abacusData)
-
-      // Visual: Decimal, 3 to 4 row vertical
-      const visualData = generateAddends(randomInt(3, 4), 2, true)
-      await insertQuestion('l7', 'visual', i, 'add', visualData)
-
-      // Multiplication: 2 digit x 2 digit
+    console.log('[seedQuestions] Generating Level 7...')
+    await generateSection('l7', 'abacus', () => {
+      const data = generateAddends(3, 5, false)
+      return { type: 'add', data }
+    })
+    await generateSection('l7', 'visual', () => {
+      const data = generateAddends(randomInt(3, 4), 2, true)
+      return { type: 'add', data }
+    })
+    await generateSection('l7', 'multiplication', () => {
       const m1 = randomInt(10, 99)
       const m2 = randomInt(10, 99)
-      await insertQuestion('l7', 'multiplication', i, 'mul_x', {
-        operand1: m1,
-        operator: '×',
-        operand2: m2,
-        answer: m1 * m2
-      })
-
-      // Division: 3 or 4-digit by 2-digit (without remainders)
+      return { type: 'mul_x', data: { operand1: m1, operator: '×', operand2: m2, answer: m1 * m2 } }
+    })
+    await generateSection('l7', 'division', () => {
       const q = randomInt(10, 99)
       const divisor = randomInt(10, 99)
       const dividend = q * divisor
-      await insertQuestion('l7', 'division', i, 'mul_div', {
-        operand1: dividend,
-        operator: '÷',
-        operand2: divisor,
-        answer: q
-      })
-
-      // 2 Steps: 2-digit x 2-digit, answer format e.g. 0520 + 052
+      return { type: 'mul_div', data: { operand1: dividend, operator: '÷', operand2: divisor, answer: q } }
+    })
+    await generateSection('l7', 'two_steps', () => {
       const s1 = randomInt(10, 99)
       const s2 = randomInt(10, 99)
       const tb = Math.floor(s2 / 10)
       const ub = s2 % 10
       const part1 = String(s1 * tb * 10).padStart(4, '0')
       const part2 = String(s1 * ub).padStart(3, '0')
-      await insertQuestion('l7', 'two_steps', i, 'two_steps', {
-        operand1: s1,
-        operator: '×',
-        operand2: s2,
-        answer_text: `${part1} + ${part2}`
-      })
-    }
+      return { type: 'two_steps', data: { operand1: s1, operator: '×', operand2: s2, answer_text: `${part1} + ${part2}` } }
+    })
 
-    console.log('[seedQuestions] Generating questions for Level 8...')
-    for (let i = 1; i <= 500; i++) {
-      // Abacus: 4 or 5 digit, 4 row, zigzag pattern (no negative answers)
-      const abacusRows = 4
-      let abacusAddends = []
-      let abacusSum = 0
-      for (let r = 0; r < abacusRows; r++) {
+    console.log('[seedQuestions] Generating Level 8...')
+    await generateSection('l8', 'abacus', () => {
+      const rows = 4
+      let addends = []
+      let sum = 0
+      for (let r = 0; r < rows; r++) {
         const digitCount = randomInt(4, 5)
         let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
         if (r > 0 && Math.random() > 0.4) val = -val
-        if (r === 0) val = Math.abs(val)
-        if (abacusSum + val < 0) val = Math.abs(val)
-        abacusSum += val
-        abacusAddends.push(val)
+        if (r === 0 || sum + val < 0) val = Math.abs(val)
+        sum += val
+        addends.push(val)
       }
-      await insertQuestion('l8', 'abacus', i, 'add', { addends: abacusAddends, answer: abacusSum })
-
-      // Visual: Decimal, 3 to 4 row, vertical questions (both addition and subtraction mixed, NO NEGATIVE ANSWERS)
-      const visualRows = randomInt(3, 4)
-      const visualData = generateAddends(visualRows, 2, true)
-      await insertQuestion('l8', 'visual', i, 'add', visualData)
-
-      // Multiplication: 2-digit x 2-digit
+      return { type: 'add', data: { addends, answer: sum } }
+    })
+    await generateSection('l8', 'visual', () => {
+      const data = generateAddends(randomInt(3, 4), 2, true)
+      return { type: 'add', data }
+    })
+    await generateSection('l8', 'multiplication', () => {
       const m1 = randomInt(10, 99)
       const m2 = randomInt(10, 99)
-      await insertQuestion('l8', 'multiplication', i, 'mul_x', {
-        operand1: m1,
-        operator: '×',
-        operand2: m2,
-        answer: m1 * m2
-      })
-
-      // Division: 4-digit by 2-digit (without remainders)
+      return { type: 'mul_x', data: { operand1: m1, operator: '×', operand2: m2, answer: m1 * m2 } }
+    })
+    await generateSection('l8', 'division', () => {
       const divisor = randomInt(10, 99)
       const minQ = Math.ceil(1000 / divisor)
       const maxQ = Math.floor(9999 / divisor)
       const q = randomInt(minQ, maxQ)
       const dividend = q * divisor
-      await insertQuestion('l8', 'division', i, 'mul_div', {
-        operand1: dividend,
-        operator: '÷',
-        operand2: divisor,
-        answer: q
-      })
-    }
+      return { type: 'mul_div', data: { operand1: dividend, operator: '÷', operand2: divisor, answer: q } }
+    })
 
-    console.log('[seedQuestions] Generating questions for Alumni & GM...')
-    for (let i = 1; i <= 500; i++) {
-      const abacusRows = 5
-      let abacusAddends = []
-      let abacusSum = 0
-      for (let r = 0; r < abacusRows; r++) {
+    console.log('[seedQuestions] Generating Alumni & GM...')
+    await generateSection('alumni', 'abacus', () => {
+      const rows = 5
+      let addends = []
+      let sum = 0
+      for (let r = 0; r < rows; r++) {
         const digitCount = randomInt(4, 5)
         let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
         if (r > 0 && Math.random() > 0.4) val = -val
-        if (r === 0) val = Math.abs(val)
-        if (abacusSum + val < 0) val = Math.abs(val)
-        abacusSum += val
-        abacusAddends.push(val)
+        if (r === 0 || sum + val < 0) val = Math.abs(val)
+        sum += val
+        addends.push(val)
       }
-      await insertQuestion('alumni', 'abacus', i, 'add', { addends: abacusAddends, answer: abacusSum })
-      await insertQuestion('gm', 'abacus', i, 'add', { addends: abacusAddends, answer: abacusSum })
-    }
+      return { type: 'add', data: { addends, answer: sum } }
+    })
+    await generateSection('gm', 'abacus', () => {
+      const rows = 5
+      let addends = []
+      let sum = 0
+      for (let r = 0; r < rows; r++) {
+        const digitCount = randomInt(4, 5)
+        let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
+        if (r > 0 && Math.random() > 0.4) val = -val
+        if (r === 0 || sum + val < 0) val = Math.abs(val)
+        sum += val
+        addends.push(val)
+      }
+      return { type: 'add', data: { addends, answer: sum } }
+    })
 
     await flushBuffer()
 
