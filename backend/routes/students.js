@@ -41,7 +41,8 @@ async function getStudentById(id) {
 }
 
 async function checkDayActive(studentId, dayNumber, currentDay) {
-  if (dayNumber === currentDay || dayNumber === currentDay - 1 || dayNumber === 0) return true;
+  // Allow day 47 to be attempted on day 48 (tomorrow) as well
+  if (dayNumber === currentDay || dayNumber === currentDay - 1 || dayNumber === 0 || (dayNumber === 47 && currentDay <= 48)) return true;
   
   const { rows } = await pool.query(
     `SELECT reset_at FROM day_records WHERE student_id = $1 AND day_number = $2`,

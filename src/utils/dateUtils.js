@@ -29,11 +29,15 @@ export function getDayDate(registrationDate, dayNumber) {
 
 export function isDayToday(registrationDate, dayNumber) {
   const currentDay = getChallengeDay(registrationDate)
+  // Allow day 47 to be attempted on day 48 (tomorrow) as well
+  if (dayNumber === 47 && currentDay <= 48) return true
   return dayNumber === currentDay
 }
 
 export function isDayPast(registrationDate, dayNumber) {
   const currentDay = getChallengeDay(registrationDate)
+  // Day 47 is not past when currentDay is 48
+  if (dayNumber === 47 && currentDay <= 48) return false
   return dayNumber < currentDay
 }
 
