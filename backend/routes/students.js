@@ -79,6 +79,9 @@ router.post('/login', async (req, res) => {
     }
 
     const cleanLoginId = String(loginId).trim().toLowerCase()
+    const normalizedUser = cleanLoginId.replace(/\s+/g, '_')
+    const cleanDigits = cleanLoginId.replace(/\D/g, '').slice(-10)
+    const cleanPass = String(password || '').trim()
 
     if (cleanLoginId === 'test' && password === 'password') {
       return res.json({
@@ -94,10 +97,15 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // 1. Search DB for matching username or mobile
+    // 1. Search DB for matching username, name, or mobile
     const { rows: existing } = await pool.query(
-      'SELECT * FROM students WHERE LOWER(username) = $1 OR mobile = $2',
-      [cleanLoginId, cleanLoginId]
+      `SELECT * FROM students 
+       WHERE LOWER(username) = $1 
+          OR LOWER(username) = $2 
+          OR LOWER(name) = $1 
+          OR mobile = $1 
+          OR ($3 != '' AND mobile = $3)`,
+      [cleanLoginId, normalizedUser, cleanDigits]
     )
 
     if (existing.length === 0) {
@@ -106,12 +114,19 @@ router.post('/login', async (req, res) => {
 
     const student = existing[0]
 
-    // Verify password if a password_hash is set
-    if (!student.password_hash) {
+    // Verify password if a password_hash or plain_password is set
+    if (!student.password_hash && !student.plain_password) {
       return res.status(401).json({ message: 'Account not set up properly. Please contact your teacher.' })
     }
     
-    const match = await bcrypt.compare(password, student.password_hash)
+    let match = student.password_hash ? await bcrypt.compare(cleanPass, student.password_hash) : false
+    if (!match && student.password_hash && cleanPass.toUpperCase() !== cleanPass) {
+      match = await bcrypt.compare(cleanPass.toUpperCase(), student.password_hash)
+    }
+    if (!match && student.plain_password) {
+      match = (student.plain_password === cleanPass || student.plain_password.toUpperCase() === cleanPass.toUpperCase())
+    }
+
     if (!match) {
       await logActivity({ userType: 'student', userId: student.id, userLabel: student.name, action: 'login_fail', req, metadata: { reason: 'wrong_password' } })
       return res.status(401).json({ message: 'Incorrect password.' })

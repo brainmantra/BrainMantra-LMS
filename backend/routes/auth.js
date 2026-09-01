@@ -61,16 +61,33 @@ router.post('/login', async (req, res) => {
     }
 
     // 3. Check Student Table
+    const cleanId = (identifier || '').trim().toLowerCase()
+    const normalizedUser = cleanId.replace(/\s+/g, '_')
+    const cleanDigits = cleanId.replace(/\D/g, '').slice(-10)
+    const cleanPass = (password || '').trim()
+
     const { rows: studentRows } = await pool.query(
-      'SELECT id, name, username, mobile, level, password_hash, plain_password, xp_total, streak, longest_streak, spent_xp, equipped_frame, equipped_theme, league_tier, quests_claimed, first_login_date, registration_date FROM students WHERE LOWER(username) = $1 OR mobile = $2',
-      [identifier, identifier]
+      `SELECT id, name, username, mobile, level, password_hash, plain_password, xp_total, streak, longest_streak, spent_xp, equipped_frame, equipped_theme, league_tier, quests_claimed, first_login_date, registration_date 
+       FROM students 
+       WHERE LOWER(username) = $1 
+          OR LOWER(username) = $2 
+          OR LOWER(name) = $1 
+          OR mobile = $1 
+          OR ($3 != '' AND mobile = $3)`,
+      [cleanId, normalizedUser, cleanDigits]
     )
     const student = studentRows[0]
     if (student) {
-      if (!student.password_hash) {
+      if (!student.password_hash && !student.plain_password) {
         return res.status(401).json({ message: 'Account not set up properly. Please contact your teacher.' })
       }
-      const valid = await bcrypt.compare(password, student.password_hash)
+      let valid = student.password_hash ? await bcrypt.compare(cleanPass, student.password_hash) : false
+      if (!valid && student.password_hash && cleanPass.toUpperCase() !== cleanPass) {
+        valid = await bcrypt.compare(cleanPass.toUpperCase(), student.password_hash)
+      }
+      if (!valid && student.plain_password) {
+        valid = (student.plain_password === cleanPass || student.plain_password.toUpperCase() === cleanPass.toUpperCase())
+      }
       if (valid) {
         // Set first_login_date on first ever login (starts the 100-day challenge clock)
         if (!student.first_login_date) {
