@@ -277,6 +277,7 @@ router.get('/:id/progress', async (req, res) => {
       days,
       streak: streakResult.streak,
       longestStreak: streakResult.longestStreak,
+      xp_total: student.xp_total ?? 0,
       currentDay: getChallengeDay(student.first_login_date || student.registration_date),
       validSections: validSections,
     })

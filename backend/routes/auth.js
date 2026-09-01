@@ -62,7 +62,7 @@ router.post('/login', async (req, res) => {
 
     // 3. Check Student Table
     const { rows: studentRows } = await pool.query(
-      'SELECT id, name, username, mobile, level, password_hash, plain_password, first_login_date, registration_date FROM students WHERE LOWER(username) = $1 OR mobile = $2',
+      'SELECT id, name, username, mobile, level, password_hash, plain_password, xp_total, streak, longest_streak, spent_xp, equipped_frame, equipped_theme, league_tier, quests_claimed, first_login_date, registration_date FROM students WHERE LOWER(username) = $1 OR mobile = $2',
       [identifier, identifier]
     )
     const student = studentRows[0]
@@ -89,6 +89,14 @@ router.post('/login', async (req, res) => {
             level: student.level,
             username: student.username,
             plain_password: student.plain_password,
+            xp_total: student.xp_total ?? 0,
+            streak: student.streak ?? 0,
+            longest_streak: student.longest_streak ?? 0,
+            spent_xp: student.spent_xp ?? 0,
+            equipped_frame: student.equipped_frame,
+            equipped_theme: student.equipped_theme,
+            league_tier: student.league_tier,
+            quests_claimed: student.quests_claimed,
             first_login_date: student.first_login_date,
             registration_date: student.registration_date
           }

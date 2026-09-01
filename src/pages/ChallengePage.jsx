@@ -11,10 +11,11 @@ import { calculateAchievements } from '../utils/achievements'
 import './ChallengePage.css'
 
 export default function ChallengePage() {
-  const { student } = useAuth()
+  const { student, login } = useAuth()
   const [days, setDays] = useState([])
   const [streak, setStreak] = useState(0)
   const [longestStreak, setLongestStreak] = useState(0)
+  const [xpTotal, setXpTotal] = useState(student?.xp_total || 0)
   const [loading, setLoading] = useState(true)
   const [selectedBadge, setSelectedBadge] = useState(null)
 
@@ -79,11 +80,19 @@ export default function ChallengePage() {
     let mounted = true
     async function load() {
       try {
-        const res = await api.get(`/students/${student.id}/progress`)
+        const [progRes, profRes] = await Promise.all([
+          api.get(`/students/${student.id}/progress`),
+          api.get(`/students/${student.id}/profile`).catch(() => ({ data: {} }))
+        ])
         if (!mounted) return
-        setDays(res.data.days || [])
-        setStreak(res.data.streak ?? 0)
-        setLongestStreak(res.data.longestStreak ?? 0)
+        setDays(progRes.data.days || [])
+        setStreak(progRes.data.streak ?? 0)
+        setLongestStreak(progRes.data.longestStreak ?? 0)
+        const currentXp = profRes.data.xp_total ?? progRes.data.xp_total ?? 0
+        setXpTotal(currentXp)
+        if (login && student && (student.xp_total !== currentXp || student.streak !== progRes.data.streak)) {
+          login({ ...student, ...profRes.data, streak: progRes.data.streak, longest_streak: progRes.data.longestStreak, xp_total: currentXp })
+        }
       } catch (err) {
         toast.error('Could not load your progress. Showing offline view.')
       } finally {
@@ -94,7 +103,7 @@ export default function ChallengePage() {
       load()
     }
     return () => { mounted = false }
-  }, [student])
+  }, [student?.id])
 
 
 
@@ -178,7 +187,7 @@ export default function ChallengePage() {
             `}</style>
             <div className="stat-card stat-card--gold card-shiny">
               <div className="stat-card__icon">⚡</div>
-              <div className="stat-card__value">{student?.xp_total || 0} XP</div>
+              <div className="stat-card__value">{xpTotal || student?.xp_total || 0} XP</div>
               <div className="stat-card__label">Total XP</div>
             </div>
             <div className="stat-card stat-card--success card-shiny">
