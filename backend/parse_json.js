@@ -1,11 +1,16 @@
 import pool from './db.js';
+import { selectQuestionsForDay, getSectionsForLevelAsync } from './utils/questionSelector.js';
 
-async function check() {
-  const { rows } = await pool.query("SELECT id, name, username, level, xp_total, streak, longest_streak FROM students WHERE name ILIKE '%Samriddhi%'");
-  console.log('Samriddhi in Supabase:', rows);
-  const { rows: days } = await pool.query("SELECT day_number, completed, xp_earned FROM day_records WHERE student_id = $1 ORDER BY day_number DESC LIMIT 5", [rows[0]?.id]);
-  console.log('Recent days:', days);
+async function testDay47() {
+  for (const lvl of ['beginner', 'l1', 'l2', 'l3', 'l4', 'l7', 'alumni']) {
+    const secs = await getSectionsForLevelAsync(lvl, 47);
+    console.log(`\nLevel ${lvl} Day 47 sections:`, secs);
+    for (const s of secs) {
+      const qs = await selectQuestionsForDay(lvl, s, 47);
+      console.log(`  - Section ${s}: ${qs.length} questions returned (sample: ${JSON.stringify(qs[0]?.addends || qs[0]?.operand1 + ' ' + (qs[0]?.operator || '') + ' ' + (qs[0]?.operand2 || ''))})`);
+    }
+  }
   await pool.end();
 }
 
-check();
+testDay47();

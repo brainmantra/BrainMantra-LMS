@@ -256,18 +256,27 @@ router.get('/:id/progress', async (req, res) => {
       recalculateStreak(studentId, student.first_login_date || student.registration_date)
     ])
     
+    const queryLevels = (targetLevel === 'beginner' || targetLevel === 'l1') ? ['beginner', 'l1'] : [targetLevel]
     const { rows: qbRows } = await pool.query(
-      `SELECT DISTINCT section FROM question_bank WHERE level = $1`,
-      [targetLevel]
+      `SELECT DISTINCT section FROM question_bank WHERE level = ANY($1)`,
+      [queryLevels]
     )
     let validSections = qbRows.map(r => r.section)
     
     const { rows: tRows } = await pool.query(
-      `SELECT DISTINCT section FROM teacher_questions WHERE level = $1`,
-      [targetLevel]
+      `SELECT DISTINCT section FROM teacher_questions WHERE level = ANY($1)`,
+      [queryLevels]
     )
     const tSecs = tRows.map(r => r.section.toLowerCase().replace(/ /g, '_'))
     for (const s of tSecs) {
+      if (!validSections.includes(s)) {
+        validSections.push(s)
+      }
+    }
+
+    // Always ensure default level sections are included
+    const defaultSecs = LEVEL_SECTIONS[level] || ['abacus']
+    for (const s of defaultSecs) {
       if (!validSections.includes(s)) {
         validSections.push(s)
       }

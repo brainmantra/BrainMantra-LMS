@@ -49,8 +49,8 @@ async function seed() {
   const client = await pool.connect()
   
   try {
-    console.log('[seedQuestions] Clearing existing auto-generated questions from question_bank (Levels 2-8)...')
-    await client.query(`DELETE FROM question_bank WHERE level IN ('l2','l3','l4','l5','l6','l7','l8')`)
+    console.log('[seedQuestions] Clearing existing auto-generated questions from question_bank...')
+    await client.query(`DELETE FROM question_bank`)
     
     let totalUpserted = 0
     const buffer = []
@@ -93,6 +93,22 @@ async function seed() {
       if (buffer.length >= 200) {
         await flushBuffer()
       }
+    }
+
+    console.log('[seedQuestions] Generating questions for Beginner...')
+    for (let i = 1; i <= 500; i++) {
+      // Abacus: 1-digit, 2 to 3 row vertical (running sum >= 0)
+      const abacusRows = randomInt(2, 3)
+      const abacusData = generateAddends(abacusRows, 1, false)
+      await insertQuestion('beginner', 'abacus', i, 'add', abacusData)
+    }
+
+    console.log('[seedQuestions] Generating questions for Level 1...')
+    for (let i = 1; i <= 500; i++) {
+      // Abacus: 1-digit, 3 to 5 row vertical (running sum >= 0)
+      const abacusRows = randomInt(3, 5)
+      const abacusData = generateAddends(abacusRows, 1, false)
+      await insertQuestion('l1', 'abacus', i, 'add', abacusData)
     }
 
     console.log('[seedQuestions] Generating questions for Level 2...')
@@ -408,6 +424,24 @@ async function seed() {
         operand2: divisor,
         answer: q
       })
+    }
+
+    console.log('[seedQuestions] Generating questions for Alumni & GM...')
+    for (let i = 1; i <= 500; i++) {
+      const abacusRows = 5
+      let abacusAddends = []
+      let abacusSum = 0
+      for (let r = 0; r < abacusRows; r++) {
+        const digitCount = randomInt(4, 5)
+        let val = randomInt(Math.pow(10, digitCount - 1), Math.pow(10, digitCount) - 1)
+        if (r > 0 && Math.random() > 0.4) val = -val
+        if (r === 0) val = Math.abs(val)
+        if (abacusSum + val < 0) val = Math.abs(val)
+        abacusSum += val
+        abacusAddends.push(val)
+      }
+      await insertQuestion('alumni', 'abacus', i, 'add', { addends: abacusAddends, answer: abacusSum })
+      await insertQuestion('gm', 'abacus', i, 'add', { addends: abacusAddends, answer: abacusSum })
     }
 
     await flushBuffer()
