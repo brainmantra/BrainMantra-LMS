@@ -34,6 +34,80 @@ export function isTeacherDay(dayNumber) {
 // ── Questions per section per day ──────────────────────────────────────────────
 const QUESTIONS_PER_SECTION = 5
 
+// ── Deterministic fallback generator in case question_bank is ever unavailable ───
+function generateFallbackQuestions(level, section, dayNumber, count = QUESTIONS_PER_SECTION) {
+  const list = []
+  for (let i = 0; i < count; i++) {
+    const seed = (Math.max(1, dayNumber) * 37 + i * 19 + 7)
+    let q = {
+      id: 80000 + Math.max(1, dayNumber) * 10 + i,
+      level,
+      section,
+      question_index: i + 1,
+      is_teacher_input: false,
+    }
+
+    if (section === 'multiplication') {
+      const op1 = 12 + (seed % 87)
+      const op2 = 2 + ((seed * 3) % 8)
+      q.question_type = 'mul_x'
+      q.operand1 = op1
+      q.operator = '×'
+      q.operand2 = op2
+      q.answer = op1 * op2
+    } else if (section === 'division') {
+      const divisor = 2 + (seed % 8)
+      const quotient = 10 + ((seed * 7) % 89)
+      const dividend = divisor * quotient
+      q.question_type = 'mul_div'
+      q.operand1 = dividend
+      q.operator = '÷'
+      q.operand2 = divisor
+      q.answer = quotient
+    } else if (section === 'tables') {
+      const op1 = 2 + (seed % 8)
+      const op2 = 2 + ((seed * 5) % 8)
+      q.question_type = 'mul_x'
+      q.operand1 = op1
+      q.operator = '×'
+      q.operand2 = op2
+      q.answer = op1 * op2
+    } else if (section === 'two_steps') {
+      const s1 = 12 + (seed % 87)
+      const s2 = 2 + ((seed * 3) % 8)
+      const t = Math.floor(s1 / 10)
+      const u = s1 % 10
+      const part1 = String(t * 10 * s2).padStart(3, '0')
+      const part2 = String(u * s2).padStart(2, '0')
+      q.question_type = 'two_steps'
+      q.operand1 = s1
+      q.operator = '×'
+      q.operand2 = s2
+      q.answer_text = `${part1} + ${part2}`
+      q.answer = s1 * s2
+    } else {
+      // Abacus / Visual addition & subtraction
+      const rowCount = (level === 'beginner') ? 3 : (level === 'l1') ? 4 : 5
+      const digitMax = (level === 'beginner' || level === 'l1') ? 9 : (level === 'l2' || level === 'l3') ? 99 : 999
+      const digitMin = (level === 'beginner' || level === 'l1') ? 1 : (level === 'l2' || level === 'l3') ? 10 : 100
+      let addends = []
+      let sum = 0
+      for (let r = 0; r < rowCount; r++) {
+        let val = digitMin + ((seed * (r + 1) * 13) % (digitMax - digitMin + 1))
+        if (r > 0 && ((seed + r) % 2 === 0)) val = -val
+        if (sum + val < 0) val = Math.abs(val)
+        sum += val
+        addends.push(val)
+      }
+      q.question_type = 'add'
+      q.addends = addends
+      q.answer = sum
+    }
+    list.push(q)
+  }
+  return list
+}
+
 // ── Select questions for a level/section/day from question_bank ────────────────
 export async function selectQuestionsForDay(level, section, dayNumber, count = QUESTIONS_PER_SECTION) {
   // If GM, use the exact same questions as Alumni
@@ -44,24 +118,33 @@ export async function selectQuestionsForDay(level, section, dayNumber, count = Q
   const isSharedSection = (targetLevel === 'beginner' || targetLevel === 'l1') && (secKey === 'bead_fun' || secKey === 'activity');
   const targetLevels = isSharedSection ? ['beginner', 'l1'] : [targetLevel];
 
-  // Fetch all questions for this level+section ordered by index
-  const { rows: allQs } = await pool.query(
-    `SELECT * FROM question_bank
-     WHERE level = ANY($1) AND section = $2
-     ORDER BY question_index ASC`,
-    [targetLevels, section]
-  )
+  try {
+    // Fetch all questions for this level+section ordered by index
+    const { rows: allQs } = await pool.query(
+      `SELECT * FROM question_bank
+       WHERE level = ANY($1) AND section = $2
+       ORDER BY question_index ASC`,
+      [targetLevels, section]
+    )
 
-  if (allQs.length === 0) return []
+    if (allQs.length === 0) {
+      return generateFallbackQuestions(targetLevel, section, dayNumber, count)
+    }
 
-  // Modular rotation: day N slot i → index ((N-1)*count + i) % total
-  const selected = []
-  for (let i = 0; i < count; i++) {
-    const idx = (dayNumber * count + i) % allQs.length
-    selected.push(allQs[idx])
+    // Modular unique rotation: day N slot i → index ((N-1)*count + i) % total
+    // 500 questions in bank / 5 questions per day = 100 completely distinct days!
+    const selected = []
+    const dayOffset = Math.max(0, dayNumber - 1)
+    for (let i = 0; i < count; i++) {
+      const idx = (dayOffset * count + i) % allQs.length
+      selected.push(allQs[idx])
+    }
+
+    return selected
+  } catch (err) {
+    console.error('[selectQuestionsForDay error, falling back to dynamic generator]:', err)
+    return generateFallbackQuestions(targetLevel, section, dayNumber, count)
   }
-
-  return selected
 }
 
 // ── Fetch teacher-submitted question for a section/day ─────────────────────────
