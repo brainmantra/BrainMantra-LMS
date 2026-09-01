@@ -154,24 +154,26 @@ router.post('/questions', requireTeacher, async (req, res) => {
       return res.status(400).json({ message: 'Question and answer required.' })
     }
 
-    // Fetch existing to log old value
-    const { rows: existing } = await pool.query(
-      `SELECT * FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
-      [level, day_number, section]
-    )
+    const secKey = (section || 'teacher_day').toLowerCase().replace(/ /g, '_')
+    const isShared = (level === 'beginner' || level === 'l1') && (secKey === 'bead_fun' || secKey === 'activity')
+    const targetLevels = isShared ? ['beginner', 'l1'] : [level]
 
-    const { rows } = await pool.query(
-      `INSERT INTO teacher_questions (level, day_number, section, question, answer, format_example, submitted_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (level, day_number, section)
-       DO UPDATE SET question = EXCLUDED.question, answer = EXCLUDED.answer,
-                     format_example = EXCLUDED.format_example,
-                     submitted_by = EXCLUDED.submitted_by, updated_at = NOW()
-       RETURNING *`,
-      [level, day_number, section, question, answer, format_example || null, teacherId]
-    )
+    let savedRow = null
+    for (const lvl of targetLevels) {
+      const { rows } = await pool.query(
+        `INSERT INTO teacher_questions (level, day_number, section, question, answer, format_example, submitted_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (level, day_number, section)
+         DO UPDATE SET question = EXCLUDED.question, answer = EXCLUDED.answer,
+                       format_example = EXCLUDED.format_example,
+                       submitted_by = EXCLUDED.submitted_by, updated_at = NOW()
+         RETURNING *`,
+        [lvl, day_number, section, question, answer, format_example || null, teacherId]
+      )
+      if (lvl === level) savedRow = rows[0]
+    }
 
-    res.json(rows[0])
+    res.json(savedRow)
   } catch (err) {
     console.error('[teachers/questions POST]', err)
     res.status(500).json({ message: 'Server error.' })
@@ -189,9 +191,13 @@ router.delete('/questions', requireTeacher, async (req, res) => {
       return res.status(403).json({ message: 'Not assigned to this level.' })
     }
 
+    const secKey = (section || '').toLowerCase().replace(/ /g, '_')
+    const isShared = (level === 'beginner' || level === 'l1') && (secKey === 'bead_fun' || secKey === 'activity')
+    const targetLevels = isShared ? ['beginner', 'l1'] : [level]
+
     await pool.query(
-      `DELETE FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
-      [level, parseInt(day_number, 10), section]
+      `DELETE FROM teacher_questions WHERE level = ANY($1) AND day_number = $2 AND section = $3`,
+      [targetLevels, parseInt(day_number, 10), section]
     )
 
     res.json({ success: true })
