@@ -79,8 +79,6 @@ router.post('/login', async (req, res) => {
     }
 
     const cleanLoginId = String(loginId).trim().toLowerCase()
-    const normalizedUser = cleanLoginId.replace(/\s+/g, '_')
-    const cleanDigits = cleanLoginId.replace(/\D/g, '').slice(-10)
     const cleanPass = String(password || '').trim()
 
     if (cleanLoginId === 'test' && password === 'password') {
@@ -97,15 +95,10 @@ router.post('/login', async (req, res) => {
       })
     }
 
-    // 1. Search DB for matching username, name, or mobile
+    // 1. Search DB for matching username or mobile
     const { rows: existing } = await pool.query(
-      `SELECT * FROM students 
-       WHERE LOWER(username) = $1 
-          OR LOWER(username) = $2 
-          OR LOWER(name) = $1 
-          OR mobile = $1 
-          OR ($3 != '' AND mobile = $3)`,
-      [cleanLoginId, normalizedUser, cleanDigits]
+      'SELECT * FROM students WHERE LOWER(username) = $1 OR mobile = $2',
+      [cleanLoginId, cleanLoginId]
     )
 
     if (existing.length === 0) {

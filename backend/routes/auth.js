@@ -62,19 +62,13 @@ router.post('/login', async (req, res) => {
 
     // 3. Check Student Table
     const cleanId = (identifier || '').trim().toLowerCase()
-    const normalizedUser = cleanId.replace(/\s+/g, '_')
-    const cleanDigits = cleanId.replace(/\D/g, '').slice(-10)
     const cleanPass = (password || '').trim()
 
     const { rows: studentRows } = await pool.query(
       `SELECT id, name, username, mobile, level, password_hash, plain_password, xp_total, streak, longest_streak, spent_xp, equipped_frame, equipped_theme, league_tier, quests_claimed, first_login_date, registration_date 
        FROM students 
-       WHERE LOWER(username) = $1 
-          OR LOWER(username) = $2 
-          OR LOWER(name) = $1 
-          OR mobile = $1 
-          OR ($3 != '' AND mobile = $3)`,
-      [cleanId, normalizedUser, cleanDigits]
+       WHERE LOWER(username) = $1 OR mobile = $2`,
+      [cleanId, cleanId]
     )
     const student = studentRows[0]
     if (student) {
