@@ -784,20 +784,12 @@ router.post('/:id/progress/:dayNumber/sections/:section/submit', async (req, res
       const streakBonus = streakResult.streak * 5
       totalXp += streakBonus
 
-      const { rows: studentResponses } = await pool.query(
-        `SELECT section_name, question_snapshot, correct_answer, student_answer, is_correct, time_taken_seconds, xp_earned, answered_at 
-         FROM ${tableName} 
-         WHERE student_id = $1 AND day_number = $2
-         ORDER BY answered_at ASC`,
-        [studentId, dayNumber]
-      )
-
       await pool.query(
         `UPDATE day_records
          SET completed = TRUE, completed_at = NOW(), total_marks = $1, accuracy = $2,
-             time_taken_seconds = $3, xp_earned = $4, answers = $5
-         WHERE student_id = $6 AND day_number = $7`,
-        [totalMarks, paperAccuracy, Math.round(totalTime), totalXp, JSON.stringify(studentResponses), studentId, dayNumber]
+             time_taken_seconds = $3, xp_earned = $4, answers = NULL
+         WHERE student_id = $5 AND day_number = $6`,
+        [totalMarks, paperAccuracy, Math.round(totalTime), totalXp, studentId, dayNumber]
       )
 
       await pool.query(

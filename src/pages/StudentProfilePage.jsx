@@ -135,7 +135,7 @@ export default function StudentProfilePage() {
     return () => { mounted = false }
   }, [student])
 
-  // Handle photo file selection
+  // Handle photo file selection with automatic lightweight compression
   const handleFileChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -143,14 +143,35 @@ export default function StudentProfilePage() {
       toast.error('Please select an image file.')
       return
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be under 2MB. Please compress it first.')
-      return
-    }
     const reader = new FileReader()
     reader.onload = (ev) => {
-      setPreview(ev.target.result)
-      setPicBase64(ev.target.result)
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const maxDim = 128
+        let w = img.width
+        let h = img.height
+        if (w > h) {
+          if (w > maxDim) {
+            h = Math.round((h * maxDim) / w)
+            w = maxDim
+          }
+        } else {
+          if (h > maxDim) {
+            w = Math.round((w * maxDim) / h)
+            h = maxDim
+          }
+        }
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, w, h)
+        // Compress to JPEG 0.7 quality (< 15 KB)
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7)
+        setPreview(compressedBase64)
+        setPicBase64(compressedBase64)
+      }
+      img.src = ev.target.result
     }
     reader.readAsDataURL(file)
   }
