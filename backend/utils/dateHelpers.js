@@ -14,7 +14,7 @@ function getISTMidnightUTC(d = new Date()) {
  * Uses IST (Asia/Kolkata) consistently.
  */
 export function getChallengeDay(registrationDate, now = new Date()) {
-  const thresholdUTC = Date.UTC(2026, 6, 15) // July 15, 2026 (Month is 0-indexed: 6 = July)
+  const thresholdUTC = Date.UTC(2026, 6, 17) // July 17, 2026 (Month is 0-indexed: 6 = July) - Resumes Day 47 on Sep 1
   const regDay = Math.max(getISTMidnightUTC(registrationDate), thresholdUTC)
   const today = getISTMidnightUTC(now)
   const diffDays = Math.round((today - regDay) / 86_400_000)

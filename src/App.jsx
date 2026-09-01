@@ -25,7 +25,7 @@ import TeacherLogin        from './pages/TeacherLogin'
 import TeacherDashboard    from './pages/TeacherDashboard'
 
 // Set to true to display the Maintenance Screen to students
-export const MAINTENANCE_MODE = true
+export const MAINTENANCE_MODE = false
 
 function ProtectedRoute({ children }) {
   const { student, loading } = useAuth()
