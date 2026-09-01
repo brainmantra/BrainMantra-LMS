@@ -331,16 +331,39 @@ export default function ChallengePage() {
                   </a>
                   
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `I just unlocked the "${selectedBadge.title}" badge in the 100 Days of Abacus Challenge! 🧮 Join me @brainmantra`
-                      )
-                      toast.success('Instagram tag text copied! Share your story & tag @brainmantra.')
+                    onClick={async () => {
+                      const shareText = `🎉 I just unlocked the "${selectedBadge.title}" badge in the 100 Days of Abacus Challenge! 🧮 Learn mental math with me @brainmantra #100DaysOfAbacus`
+                      try {
+                        await navigator.clipboard.writeText(shareText)
+                      } catch (e) {}
+                      toast.success('Caption copied! Opening Instagram... 📸')
+
+                      // Redirect to Instagram app on mobile or open Instagram in browser
+                      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                      if (isMobile) {
+                        window.location.href = 'instagram://app'
+                        setTimeout(() => {
+                          window.open('https://www.instagram.com/', '_blank')
+                        }, 1200)
+                      } else {
+                        window.open('https://www.instagram.com/', '_blank')
+                      }
                     }}
                     className="btn btn-ghost"
-                    style={{ border: '1.5px solid rgba(255,255,255,0.1)', height: '48px', fontSize: '0.95rem', justifyContent: 'center' }}
+                    style={{
+                      border: '1.5px solid rgba(225, 48, 108, 0.4)',
+                      background: 'rgba(225, 48, 108, 0.08)',
+                      color: '#f43f5e',
+                      height: '48px',
+                      fontSize: '0.95rem',
+                      justifyContent: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontWeight: '600'
+                    }}
                   >
-                    📸 Copy Instagram Tag
+                    📸 Share on Instagram
                   </button>
 
                   <button
