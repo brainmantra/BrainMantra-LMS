@@ -59,3 +59,4 @@ google-credentials.json
 *.xlsx
 Magic_QP_with_paper_no__2023.xls
 .env*
+.vercel/
