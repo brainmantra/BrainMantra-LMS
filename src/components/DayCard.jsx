@@ -63,11 +63,18 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   // Check if all expected sections are marked 'done' in section_data
   const normalizeLevel0 = (raw) => {
     if (!raw) return 'l1'
-    const low = raw.toLowerCase()
+    const low = raw.toLowerCase().trim()
+    if (low === 'beginner') return 'beginner'
+    if (low === 'alumni') return 'alumni'
+    if (low === 'gm' || low.includes('grandmaster')) return 'gm'
     if (/^l[1-8]$/.test(low)) return low
     if (/^[1-8]$/.test(low)) return `l${low}`
-    const map = { beginner: 'l1', elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
-    return map[low] || 'l1'
+    const match = low.match(/\d+/)
+    if (match && ['1', '2', '3', '4', '5', '6', '7', '8'].includes(match[0])) {
+      return `l${match[0]}`
+    }
+    const map = { elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
+    return map[low] || low
   }
   const _level = normalizeLevel0(student?.level)
   const _expectedBase = (LEVEL_SECTIONS[_level] || ['abacus']).filter(s => s !== 'teacher_input')
@@ -164,11 +171,18 @@ export default function DayCard({ dayNumber, registrationDate, dayRecord, isDemo
   // Determine sections list for this day
   const normalizeLevel = (raw) => {
     if (!raw) return 'l1'
-    const low = raw.toLowerCase()
+    const low = raw.toLowerCase().trim()
+    if (low === 'beginner') return 'beginner'
+    if (low === 'alumni') return 'alumni'
+    if (low === 'gm' || low.includes('grandmaster')) return 'gm'
     if (/^l[1-8]$/.test(low)) return low
     if (/^[1-8]$/.test(low)) return `l${low}`
-    const map = { beginner: 'l1', elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
-    return map[low] || 'l1'
+    const match = low.match(/\d+/)
+    if (match && ['1', '2', '3', '4', '5', '6', '7', '8'].includes(match[0])) {
+      return `l${match[0]}`
+    }
+    const map = { elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
+    return map[low] || low
   }
   const studentLevel = normalizeLevel(student?.level)
   const baseSecs = [...(LEVEL_SECTIONS[studentLevel] || ['abacus'])]

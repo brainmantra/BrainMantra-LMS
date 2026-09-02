@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import StudentLayout from '../components/StudentLayout'
 import { getChallengeDay } from '../utils/dateUtils'
@@ -12,12 +13,14 @@ import './ChallengePage.css'
 
 export default function ChallengePage() {
   const { student, login } = useAuth()
+  const navigate = useNavigate()
   const [days, setDays] = useState([])
   const [streak, setStreak] = useState(0)
   const [longestStreak, setLongestStreak] = useState(0)
   const [xpTotal, setXpTotal] = useState(student?.xp_total || 0)
   const [loading, setLoading] = useState(true)
   const [selectedBadge, setSelectedBadge] = useState(null)
+  const [showDay47Modal, setShowDay47Modal] = useState(false)
 
   const achievements = useMemo(() => calculateAchievements(days, streak, longestStreak), [days, streak, longestStreak])
 
@@ -85,13 +88,20 @@ export default function ChallengePage() {
           api.get(`/students/${student.id}/profile`).catch(() => ({ data: {} }))
         ])
         if (!mounted) return
-        setDays(progRes.data.days || [])
+        const loadedDays = progRes.data.days || []
+        setDays(loadedDays)
         setStreak(progRes.data.streak ?? 0)
         setLongestStreak(progRes.data.longestStreak ?? 0)
         const currentXp = profRes.data.xp_total ?? progRes.data.xp_total ?? 0
         setXpTotal(currentXp)
         if (login && student && (student.xp_total !== currentXp || student.streak !== progRes.data.streak)) {
           login({ ...student, ...profRes.data, streak: progRes.data.streak, longest_streak: progRes.data.longestStreak, xp_total: currentXp })
+        }
+
+        // Popup notice if Day 47 is reset and not completed
+        const d47 = loadedDays.find(d => d.day_number === 47)
+        if (d47 && !d47.completed && !sessionStorage.getItem('day47_modal_dismissed')) {
+          setShowDay47Modal(true)
         }
       } catch (err) {
         toast.error('Could not load your progress. Showing offline view.')
@@ -428,6 +438,59 @@ export default function ChallengePage() {
           </div>
         </div>
       </div>
+
+      {/* Day 47 Reset Notice Popup */}
+      {showDay47Modal && (
+        <div 
+          className="day-modal-overlay animate-fade" 
+          onClick={() => {
+            setShowDay47Modal(false)
+            sessionStorage.setItem('day47_modal_dismissed', 'true')
+          }}
+          style={{ zIndex: 1100 }}
+        >
+          <div 
+            className="day-modal-card animate-pop" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '440px' }}
+          >
+            <div className="day-modal-icon" style={{ background: 'rgba(255,122,0,0.15)', color: 'var(--primary)', borderColor: 'rgba(255,122,0,0.4)', fontSize: '2rem' }}>
+              📢
+            </div>
+            <h2 className="day-modal-title" style={{ fontSize: '1.4rem' }}>Day 47 Must Be Attempted Again</h2>
+            <p className="day-modal-text" style={{ fontSize: '0.92rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              Hello <strong>{student?.name?.split(' ')[0]}</strong>! Day 47 has been reset for all students. 
+              You must <strong>attempt Day 47 again</strong> to earn your XP points and maintain your streak!
+            </p>
+            <div style={{ background: 'var(--bg-elevated)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', border: '1px solid var(--border)', textAlign: 'center', fontSize: '0.88rem' }}>
+              ⏳ The deadline has been extended so you can complete it today alongside Day 48 & Day 49!
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setShowDay47Modal(false)
+                  sessionStorage.setItem('day47_modal_dismissed', 'true')
+                  navigate('/challenge/day/47/sections')
+                }} 
+                style={{ width: '100%', justifyContent: 'center', height: '44px' }}
+              >
+                Attempt Day 47 Now 🚀
+              </button>
+              <button 
+                className="btn btn-ghost" 
+                onClick={() => {
+                  setShowDay47Modal(false)
+                  sessionStorage.setItem('day47_modal_dismissed', 'true')
+                }} 
+                style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}
+              >
+                I'll do it later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </StudentLayout>
   )
 }

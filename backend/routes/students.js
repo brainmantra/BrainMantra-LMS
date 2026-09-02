@@ -41,8 +41,8 @@ async function getStudentById(id) {
 }
 
 async function checkDayActive(studentId, dayNumber, currentDay) {
-  // Allow day 47 to be attempted on day 48 (tomorrow) as well
-  if (dayNumber === currentDay || dayNumber === currentDay - 1 || dayNumber === 0 || (dayNumber === 47 && currentDay <= 48)) return true;
+  // Allow day 47 and day 48 to be attempted through day 49 (extended deadline)
+  if (dayNumber === currentDay || dayNumber === currentDay - 1 || dayNumber === 0 || ((dayNumber === 47 || dayNumber === 48) && currentDay <= 49)) return true;
   
   const { rows } = await pool.query(
     `SELECT reset_at FROM day_records WHERE student_id = $1 AND day_number = $2`,
@@ -62,10 +62,15 @@ function normalizeStudentLevel(raw) {
   if (!raw) return null
   const s = raw.toLowerCase().trim()
   if (s === 'beginner') return 'beginner'
-  if (s === 'gm') return 'gm'
+  if (s === 'gm' || s.includes('grandmaster')) return 'gm'
   if (s === 'alumni') return 'alumni'
   if (/^l[1-8]$/i.test(s)) return s
   if (/^[1-8]$/.test(s)) return `l${s}`
+
+  const match = s.match(/\d+/)
+  if (match && ['1', '2', '3', '4', '5', '6', '7', '8'].includes(match[0])) {
+    return `l${match[0]}`
+  }
   
   const map = { elementary: 'l2', intermediate: 'l3', advanced: 'l4', expert: 'l5' }
   return map[s] || s
@@ -254,7 +259,6 @@ router.get('/:id/progress', async (req, res) => {
     if (!student) return res.status(404).json({ message: 'Student not found.' })
 
     const level = normalizeStudentLevel(student.level) || student.level
-    const targetLevel = level === 'gm' ? 'alumni' : level
     const [{ rows: days }, streakResult] = await Promise.all([
       pool.query(
         `SELECT day_number, opened, opened_at, completed, completed_at, reset_at,
@@ -265,16 +269,15 @@ router.get('/:id/progress', async (req, res) => {
       recalculateStreak(studentId, student.first_login_date || student.registration_date)
     ])
     
-    const queryLevels = (targetLevel === 'beginner' || targetLevel === 'l1') ? ['beginner', 'l1'] : [targetLevel]
     const { rows: qbRows } = await pool.query(
-      `SELECT DISTINCT section FROM question_bank WHERE level = ANY($1)`,
-      [queryLevels]
+      `SELECT DISTINCT section FROM question_bank WHERE level = $1`,
+      [level]
     )
     let validSections = qbRows.map(r => r.section)
     
     const { rows: tRows } = await pool.query(
-      `SELECT DISTINCT section FROM teacher_questions WHERE level = ANY($1)`,
-      [queryLevels]
+      `SELECT DISTINCT section FROM teacher_questions WHERE level = $1`,
+      [level]
     )
     const tSecs = tRows.map(r => r.section.toLowerCase().replace(/ /g, '_'))
     for (const s of tSecs) {

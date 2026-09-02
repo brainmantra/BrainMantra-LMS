@@ -30,6 +30,71 @@ const isMultiLineRequired = (level, day) => {
   return false;
 };
 
+export function checkOptionMatch(studentVal, correctVal, options = []) {
+  if (correctVal === undefined || correctVal === null || studentVal === undefined || studentVal === null) return false;
+  
+  const sNorm = String(studentVal).trim().toLowerCase();
+  const cNorm = String(correctVal).trim().toLowerCase();
+  if (!sNorm || !cNorm) return false;
+  
+  // Direct equality
+  if (sNorm === cNorm) return true;
+  
+  if (Array.isArray(options) && options.length > 0) {
+    const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    
+    const studentIdx = options.findIndex((o, i) => {
+      if (!o) return false;
+      const oId = String(o.id || '').trim().toLowerCase();
+      const oText = String(o.text || '').trim().toLowerCase();
+      const letChar = letters[i];
+      return (
+        sNorm === oId ||
+        sNorm === oText ||
+        sNorm === String(i) ||
+        sNorm === letChar ||
+        sNorm === `option ${letChar}` ||
+        (oText && (sNorm === oText.replace(/\s+/g, ' ') || sNorm === oText.trim()))
+      );
+    });
+
+    const correctIdx = options.findIndex((o, i) => {
+      if (!o) return false;
+      const oId = String(o.id || '').trim().toLowerCase();
+      const oText = String(o.text || '').trim().toLowerCase();
+      const letChar = letters[i];
+      return (
+        cNorm === oId ||
+        cNorm === oText ||
+        cNorm === String(i) ||
+        cNorm === letChar ||
+        cNorm === `option ${letChar}` ||
+        (oText && (cNorm === oText.replace(/\s+/g, ' ') || cNorm === oText.trim()))
+      );
+    });
+
+    if (studentIdx !== -1 && correctIdx !== -1) {
+      return studentIdx === correctIdx;
+    }
+  }
+  
+  return false;
+}
+
+export function getOptionDisplayText(val, options = []) {
+  if (val === undefined || val === null) return '';
+  const str = String(val).trim();
+  if (Array.isArray(options) && options.length > 0) {
+    const found = options.find((o, i) => {
+      const oId = String(o.id || '').trim();
+      const letters = ['a', 'b', 'c', 'd', 'e', 'f'];
+      return oId === str || String(i) === str || letters[i] === str.toLowerCase();
+    });
+    if (found && found.text) return found.text.trim();
+  }
+  return str;
+}
+
 export default function SectionAttemptPage() {
   const { dayNumber, section } = useParams()
   const dayNum = parseInt(dayNumber, 10)
@@ -337,14 +402,14 @@ export default function SectionAttemptPage() {
 
       if (hasCorrectAnswer) {
         if (item.questionType === 'multiple_choice') {
-          const correctOpt = item.options.find(o => o.id === item.correctAnswer)
-          correctAnsStr = correctOpt ? (correctOpt.id || correctOpt.text) : String(item.correctAnswer)
-          isCorrect = correctAnsStr.toLowerCase().trim() === studentAns.toLowerCase().trim()
+          isCorrect = checkOptionMatch(studentAns, item.correctAnswer, item.options)
+          correctAnsStr = getOptionDisplayText(item.correctAnswer, item.options)
         } else if (item.questionType === 'checkbox') {
-          const correctOpts = item.options.filter(o => item.correctAnswer.includes(o.id)).map(o => o.id || o.text)
-          correctAnsStr = JSON.stringify(correctOpts)
+          const correctOpts = (item.options || []).filter(o => (item.correctAnswer || []).some(ca => checkOptionMatch(o.id, ca, item.options)))
+          correctAnsStr = JSON.stringify(correctOpts.map(o => o.text || o.id))
           const studentOpts = ans || []
-          isCorrect = correctOpts.length === studentOpts.length && correctOpts.every(o => studentOpts.includes(o))
+          isCorrect = Array.isArray(studentOpts) && correctOpts.length === studentOpts.length &&
+            correctOpts.every(co => studentOpts.some(so => checkOptionMatch(so, co.id, item.options)))
         } else {
           correctAnsStr = String(item.correctAnswer).trim()
           isCorrect = correctAnsStr.toLowerCase().trim() === studentAns.toLowerCase().trim()
@@ -360,7 +425,7 @@ export default function SectionAttemptPage() {
         question_id: currentQ.id,
         question_snapshot: item.questionText || 'Custom Question',
         correct_answer: correctAnsStr,
-        student_answer: studentAns,
+        student_answer: item.questionType === 'multiple_choice' ? getOptionDisplayText(studentAns, item.options) : studentAns,
         is_correct: isCorrect,
         time_taken_seconds: timePerQ,
       })
@@ -491,15 +556,17 @@ export default function SectionAttemptPage() {
 
         if (hasCorrectAnswer) {
           if (currentQ.questionType === 'multiple_choice') {
-            const correctOpt = currentQ.options.find(o => o.id === currentQ.correctAnswer)
-            correctAnsStr = correctOpt ? (correctOpt.id || correctOpt.text) : String(currentQ.correctAnswer)
-            isCorrect = correctAnsStr.toLowerCase().trim() === answer.toLowerCase().trim()
+            isCorrect = checkOptionMatch(answer, currentQ.correctAnswer, currentQ.options)
+            correctAnsStr = getOptionDisplayText(currentQ.correctAnswer, currentQ.options)
           } else if (currentQ.questionType === 'checkbox') {
-            const correctOpts = currentQ.options.filter(o => currentQ.correctAnswer.includes(o.id)).map(o => o.id || o.text)
-            correctAnsStr = JSON.stringify(correctOpts)
+            const correctOpts = (currentQ.options || []).filter(o => (currentQ.correctAnswer || []).some(ca => checkOptionMatch(o.id, ca, currentQ.options)))
+            correctAnsStr = JSON.stringify(correctOpts.map(o => o.text || o.id))
             let studentOpts = []
-            try { studentOpts = JSON.parse(answer) || [] } catch (e) {}
-            isCorrect = correctOpts.length === studentOpts.length && correctOpts.every(o => studentOpts.includes(o))
+            try { studentOpts = JSON.parse(answer) || [] } catch (e) {
+              if (Array.isArray(answer)) studentOpts = answer
+            }
+            isCorrect = Array.isArray(studentOpts) && correctOpts.length === studentOpts.length &&
+              correctOpts.every(co => studentOpts.some(so => checkOptionMatch(so, co.id, currentQ.options)))
           } else {
             correctAnsStr = String(currentQ.correctAnswer).trim()
             isCorrect = correctAnsStr.toLowerCase().trim() === answer.toLowerCase().trim()
@@ -560,7 +627,7 @@ export default function SectionAttemptPage() {
       question_id: isVirtual ? currentQ.dbQuestionId : currentQ.id,
       question_snapshot: isVirtual ? (currentQ.questionText || 'Custom Question') : buildSnapshot(currentQ),
       correct_answer: isVirtual ? correctAnsStr : (currentQ.answer_text ?? currentQ.answer ?? currentQ.computedAnswer ?? currentQ.correct_answer),
-      student_answer: isVirtual ? (currentQ.virtualType === 'image_only' ? '' : answer.trim()) : answer.trim(),
+      student_answer: isVirtual ? (currentQ.virtualType === 'image_only' ? '' : (currentQ.questionType === 'multiple_choice' ? getOptionDisplayText(answer, currentQ.options) : answer.trim())) : answer.trim(),
       is_correct: isCorrect,
       time_taken_seconds: parseFloat(timeTaken.toFixed(2)),
     }

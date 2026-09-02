@@ -83,6 +83,7 @@ export default function LoginPage() {
         toast.success(`Welcome back, Teacher ${user.name}!`)
         navigate(redirectUrl)
       } else if (role === 'student') {
+        sessionStorage.removeItem('day47_modal_dismissed')
         login(user)
         toast.success(`Welcome back, ${user.name}!`)
         navigate(redirectUrl)

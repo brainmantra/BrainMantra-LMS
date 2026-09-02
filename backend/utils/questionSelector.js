@@ -110,25 +110,17 @@ function generateFallbackQuestions(level, section, dayNumber, count = QUESTIONS_
 
 // ── Select questions for a level/section/day from question_bank ────────────────
 export async function selectQuestionsForDay(level, section, dayNumber, count = QUESTIONS_PER_SECTION) {
-  // If GM, use the exact same questions as Alumni
-  const targetLevel = level === 'gm' ? 'alumni' : level;
-  
-  // Shared question bank for bead_fun and activity between Level 1 and Beginner
-  const secKey = section.toLowerCase().replace(/ /g, '_');
-  const isSharedSection = (targetLevel === 'beginner' || targetLevel === 'l1') && (secKey === 'bead_fun' || secKey === 'activity');
-  const targetLevels = isSharedSection ? ['beginner', 'l1'] : [targetLevel];
-
   try {
     // Fetch all questions for this level+section ordered by index
     const { rows: allQs } = await pool.query(
       `SELECT * FROM question_bank
-       WHERE level = ANY($1) AND section = $2
+       WHERE level = $1 AND section = $2
        ORDER BY question_index ASC`,
-      [targetLevels, section]
+      [level, section]
     )
 
     if (allQs.length === 0) {
-      return generateFallbackQuestions(targetLevel, section, dayNumber, count)
+      return generateFallbackQuestions(level, section, dayNumber, count)
     }
 
     // Modular unique rotation: day N slot i → index ((N-1)*count + i) % total
@@ -143,33 +135,19 @@ export async function selectQuestionsForDay(level, section, dayNumber, count = Q
     return selected
   } catch (err) {
     console.error('[selectQuestionsForDay error, falling back to dynamic generator]:', err)
-    return generateFallbackQuestions(targetLevel, section, dayNumber, count)
+    return generateFallbackQuestions(level, section, dayNumber, count)
   }
 }
 
 // ── Fetch teacher-submitted question for a section/day ─────────────────────────
 export async function getTeacherQuestion(level, dayNumber, section = 'teacher_day') {
-  // If GM, use the exact same questions as Alumni
-  const targetLevel = level === 'gm' ? 'alumni' : level;
   const secKey = section.toLowerCase().replace(/ /g, '_');
-
-  // Shared teacher questions for bead_fun and activity between Level 1 and Beginner
-  if ((targetLevel === 'beginner' || targetLevel === 'l1') && (secKey === 'bead_fun' || secKey === 'activity')) {
-    const { rows } = await pool.query(
-      `SELECT * FROM teacher_questions
-       WHERE level IN ('beginner', 'l1') AND day_number = $1 
-       AND LOWER(REPLACE(section, ' ', '_')) = $2
-       ORDER BY CASE WHEN level = $3 THEN 0 ELSE 1 END LIMIT 1`,
-      [dayNumber, secKey, targetLevel]
-    )
-    return rows[0] || null
-  }
   
   const { rows } = await pool.query(
     `SELECT * FROM teacher_questions
      WHERE level = $1 AND day_number = $2 
      AND LOWER(REPLACE(section, ' ', '_')) = $3`,
-    [targetLevel, dayNumber, secKey]
+    [level, dayNumber, secKey]
   )
   return rows[0] || null
 }
@@ -198,14 +176,11 @@ export async function getSectionsForLevelAsync(level, dayNumber) {
     }
   }
 
-  const targetLevel = level === 'gm' ? 'alumni' : level;
-  const targetLevels = (targetLevel === 'beginner' || targetLevel === 'l1') ? ['beginner', 'l1'] : [targetLevel];
-
   try {
     const { rows: tRows } = await pool.query(
       `SELECT DISTINCT section FROM teacher_questions 
-       WHERE level = ANY($1) AND day_number = $2 AND section != 'teacher_day'`,
-      [targetLevels, dayNumber]
+       WHERE level = $1 AND day_number = $2 AND section != 'teacher_day'`,
+      [level, dayNumber]
     )
     const teacherSections = tRows.map(r => r.section.toLowerCase().replace(/ /g, '_'))
     const combined = [...defaultSections]
@@ -216,8 +191,8 @@ export async function getSectionsForLevelAsync(level, dayNumber) {
     }
 
     const { rows: qbRows } = await pool.query(
-      `SELECT DISTINCT section FROM question_bank WHERE level = ANY($1)`,
-      [targetLevels]
+      `SELECT DISTINCT section FROM question_bank WHERE level = $1`,
+      [level]
     )
     const validBankSections = new Set(qbRows.map(r => r.section))
 

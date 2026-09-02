@@ -109,14 +109,17 @@ router.get('/students', requireAdmin, async (req, res) => {
     }
     if (level) {
       const levelMap = {
-        l1: ['l1', 'beginner', 'level 1', 'level-1'],
+        beginner: ['beginner'],
+        l1: ['l1', 'level 1', 'level-1'],
         l2: ['l2', 'elementary', 'level 2', 'level-2'],
         l3: ['l3', 'intermediate', 'level 3', 'level-3'],
         l4: ['l4', 'advanced', 'level 4', 'level-4'],
         l5: ['l5', 'expert', 'level 5', 'level-5'],
         l6: ['l6', 'level 6', 'level-6'],
         l7: ['l7', 'level 7', 'level-7'],
-        l8: ['l8', 'level 8', 'level-8']
+        l8: ['l8', 'level 8', 'level-8'],
+        alumni: ['alumni'],
+        gm: ['gm', 'grandmaster']
       }
       const allowed = levelMap[level] || [level]
       params.push(allowed)
@@ -608,24 +611,16 @@ router.post('/teacher-questions', requireAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Question and answer required.' })
     }
 
-    const secKey = (section || 'teacher_day').toLowerCase().replace(/ /g, '_')
-    const isShared = (level === 'beginner' || level === 'l1') && (secKey === 'bead_fun' || secKey === 'activity')
-    const targetLevels = isShared ? ['beginner', 'l1'] : [level]
-
-    let savedRow = null
-    for (const lvl of targetLevels) {
-      const { rows } = await pool.query(
-        `INSERT INTO teacher_questions (level, day_number, section, question, answer, format_example, submitted_by)
-         VALUES ($1, $2, $3, $4, $5, $6, NULL)
-         ON CONFLICT (level, day_number, section)
-         DO UPDATE SET question = EXCLUDED.question, answer = EXCLUDED.answer,
-                       format_example = EXCLUDED.format_example, updated_at = NOW()
-         RETURNING *`,
-        [lvl, day_number, section, question, answer, format_example || null]
-      )
-      if (lvl === level) savedRow = rows[0]
-    }
-    res.json(savedRow)
+    const { rows } = await pool.query(
+      `INSERT INTO teacher_questions (level, day_number, section, question, answer, format_example, submitted_by)
+       VALUES ($1, $2, $3, $4, $5, $6, NULL)
+       ON CONFLICT (level, day_number, section)
+       DO UPDATE SET question = EXCLUDED.question, answer = EXCLUDED.answer,
+                     format_example = EXCLUDED.format_example, updated_at = NOW()
+       RETURNING *`,
+      [level, day_number, section, question, answer, format_example || null]
+    )
+    res.json(rows[0])
   } catch (err) {
     console.error('[admin/teacher-questions POST]', err)
     res.status(500).json({ message: 'Server error.' })
@@ -636,13 +631,9 @@ router.post('/teacher-questions', requireAdmin, async (req, res) => {
 router.delete('/teacher-questions', requireAdmin, async (req, res) => {
   try {
     const { level, day_number, section } = req.query
-    const secKey = (section || '').toLowerCase().replace(/ /g, '_')
-    const isShared = (level === 'beginner' || level === 'l1') && (secKey === 'bead_fun' || secKey === 'activity')
-    const targetLevels = isShared ? ['beginner', 'l1'] : [level]
-
     await pool.query(
-      `DELETE FROM teacher_questions WHERE level = ANY($1) AND day_number = $2 AND section = $3`,
-      [targetLevels, parseInt(day_number, 10), section]
+      `DELETE FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
+      [level, parseInt(day_number, 10), section]
     )
     res.json({ success: true })
   } catch (err) {

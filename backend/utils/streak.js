@@ -28,8 +28,9 @@ export async function recalculateStreak(studentId, registrationDate, now = new D
       runningStreak++
       if (runningStreak > longest) longest = runningStreak
     } else {
+      const isExtendedActive = ((d === 47 || d === 48 || d === 49) && currentDay <= 49)
       const isToday = d === currentDay
-      if (isToday) break          // today not over — don't penalise yet
+      if (isToday || isExtendedActive) break          // deadline active — don't penalise yet
       runningStreak = 0           // missed past day — break streak
     }
   }

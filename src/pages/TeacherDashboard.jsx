@@ -161,29 +161,23 @@ function StatCard({ icon, label, value, color }) {
 
 const getTeacherSectionsForLevel = (level, dayStr) => {
   const day = parseInt(dayStr, 10)
+  if (level === 'l1' || level === 'beginner') {
+    return [
+      { value: 'abacus', label: '🧮 Abacus' },
+      { value: 'bead_fun', label: '🧮 Bead Fun' },
+      { value: 'activity', label: '⚡ Activity' }
+    ]
+  }
   if (day === 0) {
-    if (level === 'l1' || level === 'beginner') {
-      return [
-        { value: 'abacus', label: '🧮 Abacus' }
-      ]
-    }
     return [
       { value: 'power_exercise', label: '⚡ Power Exercise' }
     ]
   }
   if (day > 0 && day % 5 === 0) {
-    if (level === 'l1' || level === 'beginner') {
-      return [
-        { value: 'abacus', label: '🧮 Abacus' }
-      ]
-    }
     return [
       { value: 'power_exercise', label: '⚡ Power Exercise' }
     ]
   }
-  if (level === 'l1' || level === 'beginner') return [
-    { value: 'abacus', label: '🧮 Abacus' }
-  ]
   if (level === 'l4') return [
     { value: 'form_the_question', label: '✏ Form The Question' }
   ]
