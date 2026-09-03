@@ -22,6 +22,18 @@ function formatTime(s) {
   return `${m}m ${String(sec).padStart(2, '0')}s`
 }
 
+function formatStudentName(name) {
+  if (!name || typeof name !== 'string') return 'Abacus Champion'
+  const clean = name.replace(/_/g, ' ').trim()
+  if (!clean) return 'Abacus Champion'
+  return clean
+    .toLowerCase()
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 export default function PerformanceReportPage() {
   const { dayNumber } = useParams()
   const dayNum = parseInt(dayNumber, 10)
@@ -103,18 +115,28 @@ export default function PerformanceReportPage() {
       ctx.font = 'italic 16px Georgia, serif'
       ctx.fillText('This certificate is proudly awarded to', 400, 205)
 
-      // Student Name
+      // Student Name with auto-scaling font & Title Case
+      const studentName = formatStudentName(report.student?.name || student?.name)
+      let fontSize = 32
+      ctx.font = `bold ${fontSize}px Georgia, serif`
+      let textWidth = ctx.measureText(studentName).width
+      while (textWidth > 540 && fontSize > 18) {
+        fontSize -= 2
+        ctx.font = `bold ${fontSize}px Georgia, serif`
+        textWidth = ctx.measureText(studentName).width
+      }
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 32px Georgia, serif'
-      ctx.fillText(report.student?.name || 'Abacus Champion', 400, 255)
+      ctx.fillText(studentName, 400, 255)
 
-      // Horizontal glow line
-      const lineGrad = ctx.createLinearGradient(250, 0, 550, 0)
+      // Horizontal glow line centered and scaled to student name width
+      const lineWidth = Math.max(300, Math.min(580, textWidth + 80))
+      const lineX = 400 - (lineWidth / 2)
+      const lineGrad = ctx.createLinearGradient(lineX, 0, lineX + lineWidth, 0)
       lineGrad.addColorStop(0, 'transparent')
       lineGrad.addColorStop(0.5, 'rgba(255, 122, 0, 0.6)')
       lineGrad.addColorStop(1, 'transparent')
       ctx.fillStyle = lineGrad
-      ctx.fillRect(250, 275, 300, 2)
+      ctx.fillRect(lineX, 275, lineWidth, 2)
 
       // Description text
       ctx.fillStyle = '#94a3b8'

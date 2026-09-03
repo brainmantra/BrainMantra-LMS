@@ -49,9 +49,14 @@ function WindingLevelMap({ days, currentDay, student, dayMap, onBack, defaultDay
     }
 
     if (dayNum === 0) return 'demo'
+    // Extended active days (Day 47 & 48 through Day 49)
+    if ((dayNum === 47 || dayNum === 48) && currentDay <= 49) return 'today'
     if (dayNum === currentDay || dayNum === currentDay - 1) return 'today'
-    if (record?.opened) return 'opened'
+    
+    // If past day is not completed, mark it in red color ('missed')
     if (dayNum < currentDay) return 'missed'
+    
+    if (record?.opened) return 'opened'
     return 'locked'
   }
 

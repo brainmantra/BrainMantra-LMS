@@ -1,6 +1,21 @@
 import React from 'react'
 
+function formatStudentName(name) {
+  if (!name || typeof name !== 'string') return 'Abacus Champion'
+  const clean = name.replace(/_/g, ' ').trim()
+  if (!clean) return 'Abacus Champion'
+  return clean
+    .toLowerCase()
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 export const CertificateTemplate = React.forwardRef(({ studentName, level, date }, ref) => {
+  const formattedName = formatStudentName(studentName)
+  const fontSize = formattedName.length > 24 ? '2.4rem' : formattedName.length > 18 ? '2.8rem' : '3.4rem'
+
   return (
     <div
       ref={ref}
@@ -52,13 +67,15 @@ export const CertificateTemplate = React.forwardRef(({ studentName, level, date 
 
           <h2 style={{ 
             color: '#111', 
-            fontSize: '3.5rem', 
+            fontSize, 
             margin: '0 0 30px 0', 
             borderBottom: '2px solid #ccc',
             display: 'inline-block',
-            padding: '0 40px 10px 40px'
+            padding: '0 40px 10px 40px',
+            maxWidth: '900px',
+            wordBreak: 'break-word'
           }}>
-            {studentName}
+            {formattedName}
           </h2>
 
           <p style={{ color: '#555', fontSize: '1.4rem', maxWidth: '700px', lineHeight: '1.6', margin: '0 0 50px 0' }}>
