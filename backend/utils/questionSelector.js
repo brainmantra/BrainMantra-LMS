@@ -149,7 +149,21 @@ export async function getTeacherQuestion(level, dayNumber, section = 'teacher_da
      AND LOWER(REPLACE(section, ' ', '_')) = $3`,
     [level, dayNumber, secKey]
   )
-  return rows[0] || null
+  if (rows[0]) return rows[0]
+
+  // From Day 51 onwards: merge bead_fun and activity between Level 1 and Beginner
+  if (dayNumber >= 51 && (level === 'l1' || level === 'beginner') && (secKey === 'bead_fun' || secKey === 'activity')) {
+    const altLevel = level === 'l1' ? 'beginner' : 'l1'
+    const { rows: altRows } = await pool.query(
+      `SELECT * FROM teacher_questions
+       WHERE level = $1 AND day_number = $2 
+       AND LOWER(REPLACE(section, ' ', '_')) = $3`,
+      [altLevel, dayNumber, secKey]
+    )
+    if (altRows[0]) return altRows[0]
+  }
+
+  return null
 }
 
 // ── Get section list for a level on a specific day ─────────────────────────────
@@ -177,11 +191,18 @@ export async function getSectionsForLevelAsync(level, dayNumber) {
   }
 
   try {
-    const { rows: tRows } = await pool.query(
-      `SELECT DISTINCT section FROM teacher_questions 
-       WHERE level = $1 AND day_number = $2 AND section != 'teacher_day'`,
-      [level, dayNumber]
-    )
+    let queryStr = `SELECT DISTINCT section FROM teacher_questions 
+                    WHERE level = $1 AND day_number = $2 AND section != 'teacher_day'`
+    let queryParams = [level, dayNumber]
+
+    // From Day 51 onwards, include bead_fun and activity from either l1 or beginner
+    if (dayNumber >= 51 && (level === 'l1' || level === 'beginner')) {
+      queryStr = `SELECT DISTINCT section FROM teacher_questions 
+                  WHERE ((level = $1) OR (level IN ('l1', 'beginner') AND LOWER(REPLACE(section, ' ', '_')) IN ('bead_fun', 'activity')))
+                  AND day_number = $2 AND section != 'teacher_day'`
+    }
+
+    const { rows: tRows } = await pool.query(queryStr, queryParams)
     const teacherSections = tRows.map(r => r.section.toLowerCase().replace(/ /g, '_'))
     const combined = [...defaultSections]
     for (const sec of teacherSections) {

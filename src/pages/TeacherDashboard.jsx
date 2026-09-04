@@ -164,8 +164,8 @@ const getTeacherSectionsForLevel = (level, dayStr) => {
   if (level === 'l1' || level === 'beginner') {
     return [
       { value: 'abacus', label: '🧮 Abacus' },
-      { value: 'bead_fun', label: '🧮 Bead Fun' },
-      { value: 'activity', label: '⚡ Activity' }
+      { value: 'bead_fun', label: day >= 51 ? '🧮 Bead Fun (Shared L1 & Beginner)' : '🧮 Bead Fun' },
+      { value: 'activity', label: day >= 51 ? '⚡ Activity (Shared L1 & Beginner)' : '⚡ Activity' }
     ]
   }
   if (day === 0) {
@@ -912,6 +912,12 @@ export default function TeacherDashboard() {
                   </select>
                 </div>
               </div>
+              {parseInt(qDay, 10) >= 51 && (qLevel === 'l1' || qLevel === 'beginner') && (qSection === 'bead_fun' || qSection === 'activity') && (
+                <div style={{ marginTop: '0.75rem', padding: '0.6rem 0.9rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', fontSize: '0.85rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>🔗</span>
+                  <span><strong>Shared Section (Day 51+):</strong> Questions saved here in <em>{LEVEL_LABELS[qLevel] || qLevel}</em> will automatically be synchronized and visible to students in both <strong>Level 1</strong> and <strong>Beginner</strong>!</span>
+                </div>
+              )}
             </div>
 
             {/* 5th-day guidance */}

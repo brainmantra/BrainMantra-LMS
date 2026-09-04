@@ -620,6 +620,22 @@ router.post('/teacher-questions', requireAdmin, async (req, res) => {
        RETURNING *`,
       [level, day_number, section, question, answer, format_example || null]
     )
+
+    // From Day 51 onwards: merge bead_fun and activity between Level 1 and Beginner
+    const dayNum = parseInt(day_number, 10)
+    const secKey = (section || '').toLowerCase().replace(/ /g, '_')
+    if (dayNum >= 51 && (level === 'l1' || level === 'beginner') && (secKey === 'bead_fun' || secKey === 'activity')) {
+      const altLevel = level === 'l1' ? 'beginner' : 'l1'
+      await pool.query(
+        `INSERT INTO teacher_questions (level, day_number, section, question, answer, format_example, submitted_by)
+         VALUES ($1, $2, $3, $4, $5, $6, NULL)
+         ON CONFLICT (level, day_number, section)
+         DO UPDATE SET question = EXCLUDED.question, answer = EXCLUDED.answer,
+                       format_example = EXCLUDED.format_example, updated_at = NOW()`,
+        [altLevel, day_number, section, question, answer, format_example || null]
+      )
+    }
+
     res.json(rows[0])
   } catch (err) {
     console.error('[admin/teacher-questions POST]', err)
@@ -631,10 +647,23 @@ router.post('/teacher-questions', requireAdmin, async (req, res) => {
 router.delete('/teacher-questions', requireAdmin, async (req, res) => {
   try {
     const { level, day_number, section } = req.query
+    const dayNum = parseInt(day_number, 10)
+    const secKey = (section || '').toLowerCase().replace(/ /g, '_')
+
     await pool.query(
       `DELETE FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
-      [level, parseInt(day_number, 10), section]
+      [level, dayNum, section]
     )
+
+    // From Day 51 onwards: also delete counterpart level for bead_fun and activity
+    if (dayNum >= 51 && (level === 'l1' || level === 'beginner') && (secKey === 'bead_fun' || secKey === 'activity')) {
+      const altLevel = level === 'l1' ? 'beginner' : 'l1'
+      await pool.query(
+        `DELETE FROM teacher_questions WHERE level = $1 AND day_number = $2 AND section = $3`,
+        [altLevel, dayNum, section]
+      )
+    }
+
     res.json({ success: true })
   } catch (err) {
     console.error('[delete question admin]', err)
